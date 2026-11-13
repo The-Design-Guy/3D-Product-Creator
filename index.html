@@ -114,6 +114,9 @@
   .btn.danger { color:#b3261e; border-color:#efc7c4; }
   .btn:disabled { opacity:.6; cursor:default; }
   .dlg-err { color:#b3261e; font-size:13px; margin-top:8px; }
+  .ratios { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; direction:rtl; }
+  .ratios button { direction:ltr; unicode-bidi:isolate; font:inherit; font-size:13px; padding:6px 0; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; color:var(--ink); }
+  .ratios button.on { background:var(--acc); color:#fff; border-color:var(--acc); }
   .r-out { margin-top:12px; border:1px solid var(--line); border-radius:10px; min-height:160px; display:flex; align-items:center; justify-content:center;
     background:repeating-conic-gradient(#f3f5f6 0 25%, #fff 0 50%) 0 0/16px 16px; }
   .r-out img { display:block; max-width:100%; max-height:52vh; border-radius:9px; }
@@ -1675,39 +1678,76 @@ $('renderBtn').onclick = () => {
     return;
   }
   if (!adminKey()) { toast('הרינדור זמין במצב ניהול'); $('lockBtn').click(); return; }
+  const ratios = ['1:1', '3:4', '4:3', '5:4', '4:5', '2:3', '3:2', '9:16', '16:9', 'custom'];
   openDialog(`
     <h3 dir="ltr" style="text-align:right">RENDER REALISTIC PHOTO?</h3>
     <p class="dlg-sub">התצוגה הנוכחית תהפוך לצילום מוצר ריאליסטי. זה לוקח בערך חצי דקה עד דקה.</p>
     <div class="lbl">רקע</div>
     <div class="seg2" id="rBg"><button data-v="transparent" class="on">שקוף</button><button data-v="studio">סטודיו</button></div>
+    <div class="lbl">יחס תמונה</div>
+    <div class="ratios" id="rRatio">${ratios.map(r => `<button data-v="${r}" class="${r === '1:1' ? 'on' : ''}">${r === 'custom' ? 'CUSTOM' : r}</button>`).join('')}</div>
+    <div class="pair" id="rCustom" hidden>
+      <label class="fld">רוחב (px)<input type="number" id="rW" min="256" max="3840" step="16" value="2048"></label>
+      <label class="fld">גובה (px)<input type="number" id="rH" min="256" max="3840" step="16" value="1536"></label>
+    </div>
+    <div class="pair">
+      <div><div class="lbl">רזולוציה</div>
+        <div class="seg2" id="rRes"><button data-v="std" class="on">רגילה</button><button data-v="high">גבוהה</button></div></div>
+      <div><div class="lbl">DPI</div>
+        <div class="seg2 three" id="rDpi"><button data-v="72">72</button><button data-v="150">150</button><button data-v="300" class="on">300</button></div></div>
+    </div>
+    <div class="use" id="rSize"></div>
     <div class="dlg-err" id="rErr" hidden></div>
     <div class="r-out" id="rOut" hidden></div>
     <div class="dlg-actions" id="rActs">
       <button class="btn primary" id="rGo">רנדר</button>
       <button class="btn" data-close>ביטול</button>
     </div>`, (card, close) => {
-    let bg = 'transparent';
-    card.querySelectorAll('#rBg button').forEach(b => b.onclick = () => {
-      bg = b.dataset.v; card.querySelectorAll('#rBg button').forEach(c => c.classList.toggle('on', c === b));
+    const st = { bg:'transparent', ratio:'1:1', res:'std', dpi:300 };
+    const q = (sel) => card.querySelector(sel);
+    const seg = (id, key, after) => card.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => {
+      st[key] = key === 'dpi' ? +b.dataset.v : b.dataset.v;
+      card.querySelectorAll(`#${id} button`).forEach(c => c.classList.toggle('on', c === b));
+      after && after(); showSize();
     });
-    card.querySelector('#rGo').onclick = async () => {
-      const go = card.querySelector('#rGo'), out = card.querySelector('#rOut'), er = card.querySelector('#rErr');
+    seg('rBg', 'bg'); seg('rRes', 'res'); seg('rDpi', 'dpi');
+    seg('rRatio', 'ratio', () => q('#rCustom').hidden = st.ratio !== 'custom');
+    q('#rW').oninput = q('#rH').oninput = showSize;
+    function size() {
+      if (st.ratio === 'custom') return fitSize(+q('#rW').value || 0, +q('#rH').value || 0);
+      const [a, b] = st.ratio.split(':').map(Number);
+      return sizeForRatio(a, b, st.res === 'high' ? 3686400 : 1572864);
+    }
+    function showSize() {
+      const z = size();
+      const cm = (px) => (px / st.dpi * 2.54).toFixed(1);
+      q('#rSize').innerHTML = z.error
+        ? `<span style="color:#b3261e">${z.error}</span>`
+        : `תצא תמונה בגודל <b>${z.w} × ${z.h}</b> px · בהדפסה ב־${st.dpi} DPI: <b>${cm(z.w)} × ${cm(z.h)}</b> ס"מ${z.note ? ` · ${z.note}` : ''}`;
+      q('#rGo').disabled = !!z.error;
+    }
+    showSize();
+    q('#rGo').onclick = async () => {
+      const z = size(); if (z.error) return;
+      const go = q('#rGo'), out = q('#rOut'), er = q('#rErr');
       er.hidden = true; go.disabled = true; go.textContent = 'מרנדר…';
       out.hidden = false; out.innerHTML = '<div class="spin" aria-label="מרנדר"></div>';
       try {
-        const cv = captureCanvas(1536);
+        // the view is framed to the chosen ratio, so the model keeps its composition
+        const cv = padToRatio(captureCanvas(1536), z.w, z.h);
         let image = cv.toDataURL('image/webp', 0.95);
         if (!image.startsWith('data:image/webp')) image = cv.toDataURL('image/png');
-        const r = await api('/api/render', { image, background: bg, description: describe() });
+        const r = await api('/api/render', { image, background: st.bg, description: describe(), size: `${z.w}x${z.h}` });
         out.innerHTML = `<img src="${r.image}" alt="רינדור ריאליסטי">`;
         go.textContent = 'רנדר שוב'; go.disabled = false;
-        if (!card.querySelector('#rDl')) {
+        if (!q('#rDl')) {
           const dl = document.createElement('button'); dl.className = 'btn'; dl.id = 'rDl'; dl.textContent = 'הורדה (PNG)';
-          card.querySelector('#rActs').insertBefore(dl, card.querySelector('[data-close]'));
+          q('#rActs').insertBefore(dl, q('[data-close]'));
           dl.onclick = async () => {
             const img = out.querySelector('img'); const c = document.createElement('canvas');
             c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0);
-            await saveFile(await toBlob(c), `${fileStem()}-realistic.png`);
+            const png = await withDpi(await toBlob(c), st.dpi);
+            await saveFile(png, `${fileStem()}-realistic-${c.width}x${c.height}-${st.dpi}dpi.png`);
           };
         }
       } catch (e) {
@@ -1717,6 +1757,51 @@ $('renderBtn').onclick = () => {
     };
   });
 };
+
+// ---------- output size rules (GPT Image 2.5): edges multiple of 16, ≤ 3840, ratio ≤ 3:1, 655,360–8,294,400 px ----------
+const IMG_MIN_PX = 655360, IMG_MAX_PX = 8294400, IMG_EXPERIMENTAL_PX = 3686400;
+const r16 = (v) => Math.max(16, Math.round(v / 16) * 16);
+function sizeForRatio(a, b, target) {
+  let w = Math.sqrt(target * a / b), h = w * b / a;
+  const k = Math.min(1, 3840 / Math.max(w, h)); w *= k; h *= k;
+  return fitSize(r16(w), r16(h));
+}
+function fitSize(w, h) {
+  if (!w || !h) return { error:'צריך רוחב וגובה' };
+  let note = '';
+  const w0 = w, h0 = h;
+  w = r16(w); h = r16(h);
+  if (w !== w0 || h !== h0) note = 'עוגל לכפולה של 16';
+  if (Math.max(w, h) > 3840) return { error:'כל צלע עד 3840 px' };
+  if (Math.max(w, h) / Math.min(w, h) > 3) return { error:'היחס בין הצלעות עד 3:1' };
+  if (w * h < IMG_MIN_PX) return { error:`קטן מדי: לפחות ${IMG_MIN_PX.toLocaleString()} פיקסלים (למשל 1024 × 640)` };
+  if (w * h > IMG_MAX_PX) return { error:`גדול מדי: עד ${IMG_MAX_PX.toLocaleString()} פיקסלים (למשל 3840 × 2160)` };
+  if (w * h > IMG_EXPERIMENTAL_PX) note = (note ? note + ' · ' : '') + 'מעל 2560×1440 – ניסיוני אצל OpenAI';
+  return { w, h, note };
+}
+// put the captured model in the middle of a canvas of the requested ratio (transparent margins)
+function padToRatio(src, w, h) {
+  const r = w / h; let cw = src.width, ch = src.height;
+  if (cw / ch > r) ch = Math.round(cw / r); else cw = Math.round(ch * r);
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+  c.getContext('2d').drawImage(src, (cw - src.width) / 2, (ch - src.height) / 2);
+  return c;
+}
+// write the DPI into the PNG (pHYs chunk), so print programs open it at the right physical size
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = (bytes) => { let c = 0xffffffff; for (const b of bytes) c = CRC_T[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+async function withDpi(blob, dpi) {
+  const src = new Uint8Array(await blob.arrayBuffer());
+  const ppm = Math.round(dpi / 0.0254);
+  const chunk = new Uint8Array(21), dv = new DataView(chunk.buffer);
+  dv.setUint32(0, 9); chunk.set([0x70, 0x48, 0x59, 0x73], 4);           // length 9, "pHYs"
+  dv.setUint32(8, ppm); dv.setUint32(12, ppm); chunk[16] = 1;              // pixels per metre, unit = metre
+  dv.setUint32(17, crc32(chunk.subarray(4, 17)));
+  const ihdrEnd = 8 + 8 + 13 + 4;                                         // signature + IHDR chunk
+  const out = new Uint8Array(src.length + chunk.length);
+  out.set(src.subarray(0, ihdrEnd)); out.set(chunk, ihdrEnd); out.set(src.subarray(ihdrEnd), ihdrEnd + chunk.length);
+  return new Blob([out], { type:'image/png' });
+}
 
 // ---------- start-up: load presets and open in the active one ----------
 (async () => {

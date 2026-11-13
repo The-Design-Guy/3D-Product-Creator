@@ -27,6 +27,15 @@ export default async function handler(req, res) {
   if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'OPENAI_API_KEY is not set' });
 
   const { image, background = 'transparent', description = '' } = req.body || {};
+  // output size: WIDTHxHEIGHT, edges multiple of 16, each ≤ 3840, ratio ≤ 3:1, 655,360–8,294,400 pixels
+  let size = 'auto';
+  const sm = /^(\d{3,4})x(\d{3,4})$/.exec(String(req.body?.size || ''));
+  if (sm) {
+    const w = +sm[1], h = +sm[2];
+    const ok = w % 16 === 0 && h % 16 === 0 && Math.max(w, h) <= 3840 && Math.max(w, h) / Math.min(w, h) <= 3 && w*h >= 655360 && w*h <= 8294400;
+    if (!ok) return res.status(400).json({ error: 'גודל תמונה לא חוקי' });
+    size = `${w}x${h}`;
+  }
   const m = /^data:image\/(png|webp|jpeg);base64,(.+)$/.exec(image || '');
   if (!m) return res.status(400).json({ error: 'expected a data:image/... base64 image' });
 
@@ -38,7 +47,7 @@ export default async function handler(req, res) {
   form.append('output_format', 'webp');          // smaller response than PNG, keeps transparency
   form.append('output_compression', '95');
   form.append('quality', QUALITY);
-  form.append('size', 'auto');
+  form.append('size', size);
 
   try {
     const r = await fetch('https://api.openai.com/v1/images/edits', {
