@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>רב תא – מודל תלת־ממדי</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#1d2328; --muted:#6b747c; --line:#d9dee2; --acc:#2f3b45; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; overflow:hidden; font-family:'Heebo',system-ui,sans-serif; color:var(--ink);
+    background: radial-gradient(120% 90% at 50% 35%, #ffffff 0%, #eef0f2 55%, #dfe3e6 100%); }
+  #c { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  .side { position:fixed; top:16px; right:16px; width:450px; max-height:calc(100vh - 32px); overflow:auto;
+    display:flex; flex-direction:column; gap:8px; padding-bottom:2px; }
+  .tabs { display:flex; gap:4px; direction:rtl; border-bottom:1px solid var(--line); padding:0 2px; }
+  .tab { font:inherit; font-size:13px; font-weight:500; padding:8px 14px; border:1px solid transparent; border-bottom:none;
+    background:transparent; color:var(--muted); border-radius:10px 10px 0 0; cursor:pointer; margin-bottom:-1px; }
+  .tab.on { background:rgba(255,255,255,.9); color:var(--ink); border-color:var(--line); font-weight:700; }
+  .panel { background:rgba(255,255,255,.82);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border:1px solid var(--line);
+    border-radius:14px; padding:16px; box-shadow:0 8px 30px rgba(30,40,50,.08); }
+  h1 { font-size:17px; margin:0 0 2px; font-weight:700; }
+  .sub { font-size:12px; color:var(--muted); display:block; }
+  .head { all:unset; box-sizing:border-box; display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; cursor:pointer; text-align:right; }
+  .head:focus-visible { outline:2px solid var(--acc); outline-offset:4px; border-radius:6px; }
+  .ttl { display:block; }
+  .chev { flex:none; color:var(--muted); transition:transform .25s ease; transform:rotate(0deg); }
+  .panel.open > .head .chev { transform:rotate(180deg); }
+  .body { display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s ease; }
+  .panel.open .body { grid-template-rows:1fr; }
+  .body > .inner { overflow:hidden; min-height:0; }
+  .panel.open .body > .inner { padding-top:8px; }
+  .lbl { font-size:12px; color:var(--muted); margin:12px 0 6px; }
+  .seg { display:grid; grid-template-columns:repeat(6,1fr); gap:4px; }
+  .seg button { font:inherit; font-size:14px; font-weight:500; padding:7px 0; border:1px solid var(--line); background:#fff;
+    border-radius:8px; cursor:pointer; color:var(--ink); }
+  .seg button.on { background:var(--acc); color:#fff; border-color:var(--acc); }
+  .row { display:flex; align-items:center; justify-content:space-between; padding:7px 0; font-size:14px; border-top:1px solid #eef0f2; }
+  .row:first-of-type { border-top:0; }
+  .sw { position:relative; width:38px; height:22px; flex:none; }
+  .sw input { opacity:0; width:0; height:0; }
+  .sw span { position:absolute; inset:0; background:#cfd5da; border-radius:22px; transition:.2s; cursor:pointer; }
+  .sw span::after { content:""; position:absolute; width:16px; height:16px; top:3px; right:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+  .sw input:checked + span { background:var(--acc); }
+  .sw input:checked + span::after { transform:translateX(-16px); }
+  .cells { display:grid; gap:4px; margin-bottom:6px; direction:ltr; }
+  .cells button { font:inherit; font-size:13px; min-width:0; padding:5px 0; border:1px solid var(--line); background:#fff; border-radius:7px; cursor:pointer; flex:1; color:var(--ink); }
+  .cells button.on { background:#e6ebef; border-color:#9aa7b2; font-weight:700; }
+  #shared { display:none; }
+  .slot #shared { display:block; }
+  .seg2 { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+  .seg2.three { grid-template-columns:repeat(3,1fr); }
+  .seg2 button { font:inherit; font-size:13px; font-weight:500; padding:7px 0; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; color:var(--ink); }
+  .seg2 button.on { background:var(--acc); color:#fff; border-color:var(--acc); }
+  #mode { margin-bottom:4px; }
+  [hidden] { display:none !important; }
+  .comp { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; direction:rtl; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .toggles { display:grid; grid-template-columns:1fr 1fr; column-gap:18px; }
+  .toggles .row:nth-child(2) { border-top:0; }
+  .ci { display:flex; flex-direction:column; align-items:center; gap:4px; font-size:13px; padding:4px 0; border:1px solid #eef0f2; border-radius:9px; background:rgba(255,255,255,.6); }
+  .ci img { display:block; width:100%; max-width:66px; height:40px; object-fit:contain; }
+  .ci .n { color:var(--muted); }
+  .ci .ctl { display:flex; align-items:center; gap:4px; direction:ltr; }
+  .ci button { font:inherit; width:20px; height:20px; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer; color:var(--ink); line-height:1; padding:0; }
+  .ci button:disabled { opacity:.35; cursor:default; }
+  .ci.na { opacity:.45; }
+  .ci b { min-width:12px; text-align:center; font-weight:700; }
+  .bar { height:6px; background:#e6eaed; border-radius:6px; margin-top:10px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--acc); border-radius:6px; transition:width .2s; }
+  .use { font-size:12px; color:var(--muted); margin-top:4px; }
+  .num { font:inherit; font-size:14px; width:100%; height:33px; padding:0 10px; border:1px solid var(--line); border-radius:8px; color:var(--ink); background:#fff; }
+  .wings { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+  .wing { border:1px solid var(--line); border-radius:9px; background:rgba(255,255,255,.7); }
+  .wing.open { grid-column:1 / -1; }
+  .wing-head { all:unset; box-sizing:border-box; display:flex; align-items:center; gap:7px; width:100%; padding:6px 9px; cursor:pointer; font-size:13px; }
+  .wing-head:focus-visible { outline:2px solid var(--acc); outline-offset:1px; border-radius:8px; }
+  .wing-head .wname { font-weight:700; }
+  .wing-head .wmeta { color:var(--muted); font-size:12px; margin-inline-start:auto; }
+  .wing-head .chev { color:var(--muted); transition:transform .2s; }
+  .wing.open .wing-head .chev { transform:rotate(180deg); }
+  .wdot { width:10px; height:10px; border-radius:3px; flex:none; }
+  .wdot.front { background:#8cc3e8; } .wdot.middle { background:#efd768; } .wdot.rear { background:#ecaac3; }
+  .wing-body { padding:2px 9px 10px; }
+  .slide { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted); margin-top:8px; }
+  .slide input { flex:1; accent-color:var(--acc); direction:ltr; }   /* left on screen = left in the cabinet */
+  .dims { font-size:12px; color:var(--muted); margin-top:12px; line-height:1.6; direction:rtl; }
+  .dims b { color:var(--ink); font-weight:500; }
+  .toolbar { position:fixed; top:16px; left:16px; display:flex; align-items:center; gap:6px; direction:rtl;
+    background:rgba(255,255,255,.82); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border:1px solid var(--line); border-radius:12px; padding:6px; box-shadow:0 8px 30px rgba(30,40,50,.08); }
+  .tb { font:inherit; display:inline-flex; align-items:center; justify-content:center; gap:6px; height:34px; min-width:34px; padding:0 8px;
+    border:1px solid transparent; background:transparent; border-radius:8px; color:var(--ink); cursor:pointer; }
+  .tb:hover { background:#eef1f3; }
+  .tb:focus-visible, .preset select:focus-visible { outline:2px solid var(--acc); outline-offset:1px; }
+  .tb.big { background:var(--acc); color:#fff; padding:0 12px; font-size:13px; font-weight:700; letter-spacing:.02em; }
+  .tb.big:hover { background:#1f2932; }
+  .tb.on { background:#e6ebef; color:var(--acc); }
+  .preset { display:inline-flex; align-items:center; gap:4px; height:34px; padding:0 6px 0 4px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--muted); }
+  .preset select { font:inherit; font-size:13px; border:0; background:transparent; color:var(--ink); max-width:170px; cursor:pointer; }
+  .dlg { position:fixed; inset:0; background:rgba(20,26,32,.28); display:flex; align-items:center; justify-content:center; z-index:20; }
+  .dlg-card { width:min(420px, calc(100vw - 32px)); max-height:calc(100vh - 40px); overflow:auto; background:#fff; border-radius:14px;
+    padding:18px; box-shadow:0 20px 60px rgba(20,30,40,.25); direction:rtl; }
+  .dlg-card h3 { margin:0 0 6px; font-size:17px; letter-spacing:.01em; }
+  .dlg-sub { font-size:13px; color:var(--muted); margin:0 0 12px; line-height:1.5; }
+  .fld { display:block; font-size:13px; color:var(--muted); margin:8px 0; }
+  .fld input { display:block; width:100%; margin-top:4px; font:inherit; font-size:14px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; color:var(--ink); }
+  .chk { display:flex; align-items:center; gap:8px; font-size:13px; margin:10px 0; }
+  .dlg-actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  .btn { font:inherit; font-size:14px; padding:8px 14px; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; color:var(--ink); }
+  .btn.primary { background:var(--acc); color:#fff; border-color:var(--acc); }
+  .btn.danger { color:#b3261e; border-color:#efc7c4; }
+  .btn:disabled { opacity:.6; cursor:default; }
+  .dlg-err { color:#b3261e; font-size:13px; margin-top:8px; }
+  .r-out { margin-top:12px; border:1px solid var(--line); border-radius:10px; min-height:160px; display:flex; align-items:center; justify-content:center;
+    background:repeating-conic-gradient(#f3f5f6 0 25%, #fff 0 50%) 0 0/16px 16px; }
+  .r-out img { display:block; max-width:100%; max-height:52vh; border-radius:9px; }
+  .spin { width:28px; height:28px; border:3px solid #d5dbe0; border-top-color:var(--acc); border-radius:50%; animation:sp 0.9s linear infinite; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation-duration:3s; } }
+  .toast { position:fixed; top:64px; left:16px; background:var(--acc); color:#fff; font-size:13px; padding:8px 12px; border-radius:8px; z-index:30; }
+  @media (max-width:640px){ .toolbar{ top:8px; left:8px; right:8px; } .preset select{ max-width:110px; } .tb.big span{ display:none; } }
+  .hint { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); font-size:12px; color:var(--muted);
+    background:rgba(255,255,255,.75); padding:6px 12px; border-radius:20px; border:1px solid var(--line); white-space:nowrap; }
+  .note { font-size:11px; color:#8a6d3b; margin-top:10px; line-height:1.5; }
+  @media (max-width:640px){ .side{ top:auto; bottom:52px; right:8px; left:8px; width:auto; max-height:55vh; } .panel{ padding:12px; } .sub,.note{display:none;} }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="side">
+  <div class="tabs" role="tablist" aria-label="משפחות מוצרים">
+    <button class="tab on" role="tab" aria-selected="true">משפחת רב תא</button>
+  </div>
+
+  <div class="panel open" id="pUnit" data-mode="unit">
+    <button class="head" aria-expanded="true">
+      <span class="ttl"><h1>רב תא</h1><span class="sub">2 · 3 · 4 · 5 · 6 · 9 תאים · RAL 7035</span></span>
+      <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="body"><div class="inner">
+      <div class="lbl">מספר תאים</div>
+      <div class="seg" id="models"></div>
+      <div id="cellsWrap">
+        <div class="lbl">פתיחת תא</div>
+        <div class="cells" id="cells"></div>
+      </div>
+      <div class="slot"></div>
+    </div></div>
+  </div>
+
+  <div class="panel" id="pStand" data-mode="stand">
+    <button class="head" aria-expanded="false">
+      <span class="ttl"><h1>עגלה ומעמד לרב תא</h1><span class="sub">חד / דו צדדי · גלגלים או רגליים</span></span>
+      <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="body"><div class="inner">
+      <div class="pair">
+        <div><div class="lbl">סוג</div>
+          <div class="seg2" id="stType"><button data-v="single" class="on">חד צדדי</button><button data-v="double">דו צדדי</button></div></div>
+        <div><div class="lbl">בסיס</div>
+          <div class="seg2" id="stBase"><button data-v="legs" class="on">רגליים</button><button data-v="wheels">גלגלים</button></div></div>
+      </div>
+      <div class="pair" id="wheelOpts" hidden>
+        <div><div class="lbl">ידית</div>
+          <div class="seg2" id="stHandle"><button data-v="right">ידית מימין</button><button data-v="left" class="on">ידית משמאל</button></div></div>
+        <div><div class="lbl">גלגלים</div>
+          <div class="seg2" id="stBrake"><button data-v="brake" class="on">עם מעצור</button><button data-v="plain">רגילים</button></div></div>
+      </div>
+      <div class="lbl">גובה עמודים (ללא בסיס)</div>
+      <div class="seg2 three" id="stHeight"><button data-v="1160">116</button><button data-v="1800">180</button><button data-v="2000" class="on">200</button></div>
+      <div class="lbl" id="compLbl">הרכב</div>
+      <div class="comp" id="comp"></div>
+      <div class="bar"><i id="useBar"></i></div>
+      <div class="use" id="useTxt"></div>
+      <div class="slot"></div>
+    </div></div>
+  </div>
+
+  <div class="panel" id="pTena" data-mode="tena">
+    <button class="head" aria-expanded="false">
+      <span class="ttl"><h1>תא-נע DELUX</h1><span class="sub">ארון עם כנפיים נעות · 4 / 7 / 10 כנפיים</span></span>
+      <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="body"><div class="inner">
+      <div class="lbl">גודל</div>
+      <div class="seg2 three" id="tnSize"><button data-v="4" class="on">4 כנפיים</button><button data-v="7">7 כנפיים</button><button data-v="10">10 כנפיים</button></div>
+      <div class="pair">
+        <div><div class="lbl">עומק</div>
+          <div class="seg2" id="tnDepthMode"><button data-v="std" class="on">סטנדרטי</button><button data-v="custom">CUSTOM</button></div></div>
+        <div id="tnDepthFld" hidden><div class="lbl">עומק בס"מ</div>
+          <input class="num" type="number" id="tnDepth" min="40" max="120" step="0.5" value="62.5" aria-label="עומק הארון בסנטימטרים"></div>
+      </div>
+      <div class="use" id="tnDepthNote"></div>
+      <div class="lbl">כנפיים</div>
+      <div class="wings" id="tnWings"></div>
+      <div class="slot"></div>
+    </div></div>
+  </div>
+
+  <div class="panel" id="pSmart" data-mode="smart">
+    <button class="head" aria-expanded="false">
+      <span class="ttl"><h1>תא-נע SMART</h1><span class="sub">מסגרת פלדה כחולה · 4 כנפיים · 135 × 68 × 210 ס"מ</span></span>
+      <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="body"><div class="inner">
+      <div class="use" style="margin-top:0">גודל אחד: רוחב <b>135</b> · עומק <b>68</b> · גובה <b>210</b> ס"מ · 1 קדמית + 1 אמצעית + 2 אחוריות</div>
+      <div class="use" id="smDepthNote"></div>
+      <div class="lbl">כנפיים</div>
+      <div class="wings" id="smWings"></div>
+      <div class="slot"></div>
+    </div></div>
+  </div>
+
+  <div id="shared">
+    <div class="lbl">תצוגה</div>
+    <div class="toggles">
+    <div class="row"><span>מוט אבטוח</span><label class="sw"><input type="checkbox" id="rod"><span></span></label></div>
+    <div class="row"><span>פתיחת כל המגירות</span><label class="sw"><input type="checkbox" id="openAll"><span></span></label></div>
+    <div class="row"><span>תוויות</span><label class="sw"><input type="checkbox" id="labelsOn"><span></span></label></div>
+    <div class="row"><span>סיבוב אוטומטי</span><label class="sw"><input type="checkbox" id="spin"><span></span></label></div>
+    </div>
+    <div class="dims" id="dims"></div>
+    <div class="note">הערכה: הציר והמסילות הפנימיות, ומיקום חורי המוט.</div>
+  </div>
+</div>
+<div class="toolbar" role="toolbar" aria-label="כלי תצוגה">
+  <label class="preset" title="הגדרת קטלוג">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
+    <select id="presetSel" aria-label="הגדרת קטלוג"></select>
+  </label>
+  <button class="tb" id="resetBtn" title="פוזיציית ברירת מחדל" aria-label="פוזיציית ברירת מחדל"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+  <button class="tb admin-only" id="saveBtn" title="קבע פוזיציה והגדרות כהגדרת קטלוג" aria-label="קבע פוזיציה כברירת מחדל"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
+  <button class="tb" id="spreadBtn" hidden aria-pressed="false" title="פריסה – הכנפיים יוצאות מהארון" aria-label="פריסת כנפיים"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="5" height="14" rx="1"/><rect x="10" y="5" width="5" height="14" rx="1"/><rect x="17" y="5" width="4" height="14" rx="1"/><path d="M12 2v2M5.5 2v2M19 2v2"/></svg><span>פריסה</span></button>
+  <button class="tb" id="shotBtn" title="צילום המודל (PNG שקוף)" aria-label="צילום המודל"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+  <button class="tb big" id="renderBtn" title="RENDER REALISTIC PHOTO?" aria-label="רינדור ריאליסטי"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg><span>Render</span></button>
+  <button class="tb" id="lockBtn" hidden aria-label="מצב ניהול"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+</div>
+<div class="dlg" id="dlg" hidden></div>
+<div class="toast" id="toast" hidden role="status"></div>
+<div class="hint">גרירה לסיבוב · גלגלת לזום · לחיצה על מגירה פותחת אותה</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+// ---------- product data (mm) ----------
+const MODELS = {
+  2: { sku:'2020', W:600, H:354, D:246 },
+  3: { sku:'2030', W:600, H:240, D:198 },
+  4: { sku:'2040', W:600, H:209, D:171 },
+  5: { sku:'2050', W:600, H:167, D:138 },
+  6: { sku:'2060', W:600, H:112, D:94 },
+  9: { sku:'2090', W:600, H:81,  D:64 },
+};
+const T_BODY = 4, T_DIV = 3, T_BACK = 3, T_CLEAR = 2.2, ROD_R = 2.4;
+
+// ---------- renderer / scene ----------
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.86;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+scene.environmentIntensity = 0.75;
+
+const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 50);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 0.15; controls.maxDistance = 7;
+controls.maxPolarAngle = Math.PI * 0.53;
+controls.autoRotateSpeed = 1.2;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0xa9b0b6, 0.25));
+const key = new THREE.DirectionalLight(0xffffff, 2.2);
+key.position.set(-1.4, 3.4, 0.7);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.left = -1.4; key.shadow.camera.right = 1.4;
+key.shadow.camera.top = 1.4; key.shadow.camera.bottom = -1.4;
+key.shadow.camera.near = 0.1; key.shadow.camera.far = 8;
+key.shadow.radius = 6; key.shadow.bias = -0.0004;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xe8f0ff, 0.6);
+rim.position.set(1.2, 0.8, -1.0); scene.add(rim);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), new THREE.ShadowMaterial({ opacity:0.16 }));
+ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; ground.visible = false; // no floor shadow in the viewer
+const contact = (() => {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(128, 64, 4, 128, 64, 120);
+  g.addColorStop(0, 'rgba(40,48,56,0.55)'); g.addColorStop(1, 'rgba(40,48,56,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 256, 128);
+  const t = new THREE.CanvasTexture(c);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map:t, transparent:true, depthWrite:false }));
+  m.rotation.x = -Math.PI/2; m.position.y = 0.0004; m.visible = false; scene.add(m); return m;
+})();
+
+// ---------- materials ----------
+const bodyMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#cbd0cc'), roughness:0.5, metalness:0,
+  clearcoat:0.18, clearcoatRoughness:0.5 });
+
+function clearFace() {
+  const m = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#f4f7ff'), roughness:0.03, metalness:0,
+    ior:1.49, transparent:true, opacity:0.10, side:THREE.DoubleSide, depthWrite:false, envMapIntensity:2.2,
+    specularIntensity:1 });
+  // fresnel: plastic gets denser/more reflective at grazing angles
+  m.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>',
+      `float fr = pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 2.5);
+       diffuseColor.a = mix(diffuseColor.a, 0.6, fr);
+       #include <opaque_fragment>`);
+  };
+  return m;
+}
+const clearMat = clearFace();
+// cut edges of the plastic: the light-piping "thickness" look (bluish, denser)
+const edgeMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#7f97c4'), roughness:0.08, metalness:0,
+  transparent:true, opacity:0.78, depthWrite:false, envMapIntensity:1.4 });
+const labelMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#fbfbf8'), roughness:0.85, metalness:0 });
+const rodMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#e3e6e9'), metalness:1, roughness:0.22 });
+
+// box faces order: +x,-x,+y,-y,+z,-z ; thin axis = y  → y faces are surfaces, others are edges
+const panelMats = [edgeMat, edgeMat, clearMat, clearMat, edgeMat, edgeMat];
+const extrudeClearMats = [clearMat, edgeMat];
+
+// ---------- helpers ----------
+// panel spanning two points in the (z,y) plane, width along x
+function panelZY(a, b, width, thick, mats = panelMats) {
+  const dz = b[0]-a[0], dy = b[1]-a[1];
+  const L = Math.hypot(dz, dy);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(width, thick, L), mats);
+  m.position.set(0, (a[1]+b[1])/2, (a[0]+b[0])/2);
+  m.rotation.x = -Math.atan2(dy, dz);
+  return m;
+}
+// 2D shape drawn in (z,y), extruded along x
+function extrudeZY(shape, depth, bevel = 0) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: bevel > 0, bevelThickness:bevel,
+    bevelSize:bevel, bevelSegments:1, curveSegments:14 });
+  g.rotateY(-Math.PI/2);       // shape x → world z, extrude → world -x
+  return g;
+}
+function roundedRectShape(x0, y0, x1, y1, r) {
+  const s = new THREE.Shape();
+  s.moveTo(x0 + r, y0); s.lineTo(x1 - r, y0); s.quadraticCurveTo(x1, y0, x1, y0 + r);
+  s.lineTo(x1, y1 - r); s.quadraticCurveTo(x1, y1, x1 - r, y1);
+  s.lineTo(x0 + r, y1); s.quadraticCurveTo(x0, y1, x0, y1 - r);
+  s.lineTo(x0, y0 + r); s.quadraticCurveTo(x0, y0, x0 + r, y0);
+  return s;
+}
+function circlePath(cx, cy, r) { const p = new THREE.Path(); p.absarc(cx, cy, r, 0, Math.PI*2, true); return p; }
+// keyhole: big circle at (cx,cy), slot of half-width a and length L in direction ang
+function keyholePath(cx, cy, R, a, L, ang) {
+  const yi = Math.sqrt(R*R - a*a), phi = Math.atan2(yi, a);
+  const p = new THREE.Path();
+  p.moveTo(a, yi); p.lineTo(a, L); p.absarc(0, L, a, 0, Math.PI, false);
+  p.lineTo(-a, yi); p.absarc(0, 0, R, Math.PI - phi, 2*Math.PI + phi, false);
+  const pts = p.getPoints(8);
+  const c = Math.cos(ang), s = Math.sin(ang);
+  const out = new THREE.Path();
+  pts.forEach((q, i) => { const x = cx + q.x*c - q.y*s, y = cy + q.x*s + q.y*c; i ? out.lineTo(x, y) : out.moveTo(x, y); });
+  out.closePath();
+  return out;
+}
+function roundedPolyline(pts, r) {
+  const path = new THREE.CurvePath();
+  let prev = pts[0].clone();
+  for (let i = 1; i < pts.length - 1; i++) {
+    const p = pts[i];
+    const din = p.clone().sub(pts[i-1]); const lin = din.length(); din.normalize();
+    const dout = pts[i+1].clone().sub(p); const lout = dout.length(); dout.normalize();
+    const rr = Math.min(r, lin/2, lout/2);
+    const a = p.clone().addScaledVector(din, -rr), b = p.clone().addScaledVector(dout, rr);
+    path.add(new THREE.LineCurve3(prev, a));
+    path.add(new THREE.QuadraticBezierCurve3(a, p.clone(), b));
+    prev = b;
+  }
+  path.add(new THREE.LineCurve3(prev, pts[pts.length-1].clone()));
+  return path;
+}
+const put = (p, o) => { p.add(o); return o; };
+const shadowOn = (o) => { o.castShadow = true; o.receiveShadow = true; return o; };
+
+// ---------- drawer (tilt bin) ----------
+// local origin = pivot at bottom-front; +z = forward, +y = up
+function drawerProfile(h, d) {
+  return {
+    p: 0.13*h,           // nose projection
+    yNose: 0.62*h,
+    yLip: 0.80*h,
+    q: 0.015*h,
+    R: h,                // arc radius = drawer height (clears the top when tilting)
+    dd: d,
+  };
+}
+// ---------- performance: merge a group's static meshes into one mesh per material ----------
+function sliceGeom(g, start, count) {
+  const out = new THREE.BufferGeometry();
+  for (const name of ['position', 'normal', 'uv']) {
+    const a = g.getAttribute(name); if (!a) continue;
+    out.setAttribute(name, new THREE.BufferAttribute(a.array.slice(start * a.itemSize, (start + count) * a.itemSize), a.itemSize));
+  }
+  return out;
+}
+function bake(root, keep = () => false) {
+  root.updateMatrixWorld(true);
+  const inv = root.matrixWorld.clone().invert();
+  const buckets = new Map(), done = [];
+  const visit = (o) => {
+    for (const c of [...o.children]) {
+      if (keep(c)) continue;
+      if (c.isMesh) {
+        const m = new THREE.Matrix4().multiplyMatrices(inv, c.matrixWorld);
+        let g = c.geometry.index ? c.geometry.toNonIndexed() : c.geometry.clone();
+        g.applyMatrix4(m);
+        const mats = Array.isArray(c.material) ? c.material : [c.material];
+        const groups = (Array.isArray(c.material) && g.groups.length) ? g.groups : [{ start:0, count:g.getAttribute('position').count, materialIndex:0 }];
+        for (const gr of groups) {
+          const mat = mats[gr.materialIndex]; if (!mat) continue;
+          if (!buckets.has(mat)) buckets.set(mat, { list:[], shadow:c.castShadow });
+          buckets.get(mat).list.push(sliceGeom(g, gr.start, gr.count));
+        }
+        g.dispose(); done.push(c);
+      }
+      if (!c.isMesh) visit(c);
+    }
+  };
+  visit(root);
+  done.forEach(c => c.parent.remove(c));
+  for (const [mat, b] of buckets) {
+    const merged = mergeGeometries(b.list, false);
+    b.list.forEach(x => x.dispose());
+    const mesh = new THREE.Mesh(merged, mat);
+    mesh.castShadow = b.shadow; mesh.receiveShadow = true;
+    root.add(mesh);
+  }
+}
+
+function buildDrawer(w, h, d) {
+  const g = new THREE.Group();
+  const P = drawerProfile(h, d);
+  const a1 = P.dd < P.R ? Math.acos(-P.dd / P.R) : Math.PI;
+  const backTop = P.R * Math.sin(a1);
+
+  // side plates (fan shaped)
+  const s = new THREE.Shape();
+  s.moveTo(0, 0);
+  s.lineTo(P.p, P.yNose);
+  s.lineTo(P.q, P.yLip);
+  s.lineTo(0, P.yLip);
+  s.lineTo(0, h);
+  s.absarc(0, 0, P.R, Math.PI/2, a1, false);
+  s.lineTo(-P.dd, 0);
+  s.lineTo(0, 0);
+  const sideGeo = extrudeZY(s, T_CLEAR, 0);
+  for (const sx of [-w/2 + T_CLEAR, w/2]) {
+    const m = new THREE.Mesh(sideGeo, extrudeClearMats); m.position.x = sx; g.add(m);
+  }
+  const iw = w - 2*T_CLEAR;
+  // front lower face, upper lip, label strip
+  g.add(panelZY([0, 0], [P.p, P.yNose], iw, T_CLEAR));
+  g.add(panelZY([P.p, P.yNose], [P.q, P.yLip], iw, T_CLEAR));
+  g.add(panelZY([-T_CLEAR/2, P.yLip], [-T_CLEAR/2, h], iw, T_CLEAR));
+  // floor & back wall
+  g.add(panelZY([0, T_CLEAR/2], [-P.dd, T_CLEAR/2], iw, T_CLEAR));
+  g.add(panelZY([-P.dd + T_CLEAR/2, 0], [-P.dd + T_CLEAR/2, backTop], iw, T_CLEAR));
+  // label holder: two vertical ribs + bottom ledge (double-wall look)
+  const lh = h - P.yLip;
+  for (const rx of [-iw*0.36, iw*0.36]) {
+    const rib = new THREE.Mesh(new THREE.BoxGeometry(1.6, lh - 1, 3.2), [clearMat, clearMat, edgeMat, edgeMat, edgeMat, edgeMat]);
+    rib.position.set(rx, P.yLip + lh/2, 0.4); g.add(rib);
+  }
+  const ledge = new THREE.Mesh(new THREE.BoxGeometry(iw*0.72, 1.6, 3.6), [edgeMat, edgeMat, clearMat, clearMat, edgeMat, edgeMat]);
+  ledge.position.set(0, P.yLip + 0.8, 0.6); g.add(ledge);
+  // paper label insert, sits behind the clear label window
+  const lw = iw*0.72 - 3, lhh = Math.max(6, lh - 5);
+  const label = new THREE.Mesh(new THREE.PlaneGeometry(lw, lhh),
+    labelMat);
+  label.position.set(0, P.yLip + 1.6 + lhh/2 + 0.6, -T_CLEAR - 0.35);
+  label.visible = false; label.name = 'label'; g.add(label);
+  // pivot pins
+  const pinGeo = new THREE.CylinderGeometry(2.2, 2.2, 2.5, 8); pinGeo.rotateZ(Math.PI/2);
+  for (const sx of [-w/2 - 1.0, w/2 + 1.0]) {
+    const pin = new THREE.Mesh(pinGeo, edgeMat); pin.position.set(sx, 4, -4); g.add(pin);
+  }
+  // opens until the top-back corner of the bin reaches the front edge of the top panel
+  g.name = 'drawer';
+  g.userData = { labelSize:[lw, lhh], P, open: a1 - Math.PI/2 - 0.1 };
+  bake(g, (c) => c.name === 'label');
+  return g;
+}
+
+// ---------- full unit ----------
+const RIM = 3;                        // stacking rim on top / nesting ribs underneath
+let world = null, drawers = [], rods = [], current = 3, mode = 'unit';
+const rodOn = () => document.getElementById('rod').checked;
+
+// Returns a unit in metres: x centred, y = 0 at the underside ribs, back face at z = 0, front towards +z.
+// Each size is built once (template) and cloned: clones share geometry, so big cabinets stay fast.
+const TEMPLATES = {};
+function makeUnit(n) {
+  const t = TEMPLATES[n] || (TEMPLATES[n] = buildUnitTemplate(n));
+  const group = t.clone(true);
+  const list = []; let rod = null;
+  group.traverse(o => { if (o.name === 'drawer') list.push(o); if (o.name === 'rod') rod = o; });
+  list.forEach(d => {
+    const s = d.userData;
+    d.userData = { P:s.P, open:s.open, labelSize:s.labelSize, angle:0, target:0, pending:false, label:d.getObjectByName('label'), rod };
+    d.rotation.x = 0;
+  });
+  rod.userData = { angle:0, target:0, lift:rod.userData.lift, drawers:list }; rod.rotation.x = 0;
+  return { group, drawers:list, rod };
+}
+function buildUnitTemplate(n) {
+  const { W, D } = MODELS[n];
+  const H = MODELS[n].H - 2*RIM;      // body height, so the total stays as in the catalogue
+  const unit = new THREE.Group(), list = [];
+  const root = new THREE.Group(); root.scale.setScalar(0.001); unit.add(root);
+  root.position.y = RIM * 0.001;
+  root.position.z = D * 0.001;
+
+  const innerH = H - 2*T_BODY;
+  const cw = (W - 2*T_BODY - (n-1)*T_DIV) / n;
+
+  // rod hole location (estimated): near top, ~28% of depth from the front
+  const holeY = H - Math.max(9, H*0.06), holeZ = -Math.max(16, D*0.28), holeR = 3.2;
+
+  // side walls with rod holes
+  const sideShape = roundedRectShape(-D, 0, 0, H, 2.5);
+  sideShape.holes.push(circlePath(holeZ, holeY, holeR));
+  const sideGeo = extrudeZY(sideShape, T_BODY - 1.2, 0.6);
+  for (const x of [-W/2 + T_BODY - 0.6, W/2 - 0.6]) put(root, shadowOn(new THREE.Mesh(sideGeo, bodyMat))).position.x = x;
+  // top & bottom
+  const tbGeo = new THREE.BoxGeometry(W - 2*T_BODY, T_BODY, D);
+  put(root, shadowOn(new THREE.Mesh(tbGeo, bodyMat))).position.set(0, H - T_BODY/2, -D/2);
+  put(root, shadowOn(new THREE.Mesh(tbGeo, bodyMat))).position.set(0, T_BODY/2, -D/2);
+  // back with keyholes, small screw holes, injection mark
+  const bx0 = -W/2 + T_BODY, bx1 = W/2 - T_BODY, by0 = T_BODY, by1 = H - T_BODY;
+  const backShape = new THREE.Shape();
+  backShape.moveTo(bx0, by0); backShape.lineTo(bx1, by0); backShape.lineTo(bx1, by1); backShape.lineTo(bx0, by1); backShape.lineTo(bx0, by0);
+  const ky = by1 - Math.min(32, innerH*0.55);
+  const kR = Math.min(7, innerH*0.12), ka = kR*0.5, kL = Math.min(22, innerH*0.35);
+  backShape.holes.push(keyholePath(bx0 + 30, ky, kR, ka, kL, 0));
+  backShape.holes.push(keyholePath(bx1 - 30, ky, kR, ka, kL, 0));
+  const hy = by1 - Math.min(24, innerH*0.3);
+  backShape.holes.push(keyholePath(-W*0.22, hy, kR, ka, kL, Math.PI/2));
+  backShape.holes.push(keyholePath( W*0.22, hy, kR, ka, kL, -Math.PI/2));
+  for (const x of [-W*0.12, -W*0.08, W*0.08, W*0.12]) backShape.holes.push(circlePath(x, hy, Math.min(3.5, innerH*0.05)));
+  const backGeo = new THREE.ExtrudeGeometry(backShape, { depth:T_BACK, bevelEnabled:false, curveSegments:8 });
+  const back = shadowOn(new THREE.Mesh(backGeo, bodyMat)); back.position.z = -D + 1.5; root.add(back);
+  const mark = new THREE.Mesh(new THREE.CylinderGeometry(Math.min(9, innerH*0.1), Math.min(9, innerH*0.1), 0.4, 12), bodyMat);
+  mark.rotation.x = Math.PI/2; mark.position.set(0, H*0.38, -D + 1.3); root.add(mark);
+
+  // stacking rim (front + sides on top) and nesting ribs underneath, set slightly inward
+  const rimF = new THREE.BoxGeometry(W, RIM, RIM), rimS = new THREE.BoxGeometry(RIM, RIM, D);
+  put(root, shadowOn(new THREE.Mesh(rimF, bodyMat))).position.set(0, H + RIM/2, -RIM/2);
+  for (const sx of [-1, 1]) put(root, shadowOn(new THREE.Mesh(rimS, bodyMat))).position.set(sx*(W/2 - RIM/2), H + RIM/2, -D/2);
+  const ins = RIM + 0.6;
+  const ribF = new THREE.BoxGeometry(W - 2*ins - RIM, RIM, RIM);
+  const ribS = new THREE.BoxGeometry(RIM, RIM, D - ins - RIM/2);
+  put(root, shadowOn(new THREE.Mesh(ribF, bodyMat))).position.set(0, -RIM/2, -ins - RIM/2);
+  for (const sx of [-1, 1]) put(root, shadowOn(new THREE.Mesh(ribS, bodyMat))).position.set(sx*(W/2 - ins - RIM/2), -RIM/2, -(ins + RIM/2) - (D - ins - RIM/2)/2 + RIM/2);
+
+  // dividers
+  const divGeo = new THREE.BoxGeometry(T_DIV, innerH, D - 1.5 - T_BACK);
+  for (let i = 1; i < n; i++) {
+    const x = -W/2 + T_BODY + i*cw + (i - 0.5)*T_DIV;
+    put(root, shadowOn(new THREE.Mesh(divGeo, bodyMat))).position.set(x, H/2, -(D - 1.5 - T_BACK)/2);
+  }
+
+  // drawers + guide rails
+  const dh = innerH - 2, dw = cw - 2, dd = D - T_BACK - 1.5 - 6;
+  let railGeo = null;
+  for (let i = 0; i < n; i++) {
+    const cx = -W/2 + T_BODY + cw/2 + i*(cw + T_DIV);
+    const dr = buildDrawer(dw, dh, dd);
+    dr.position.set(cx, T_BODY + 1, 0);
+    root.add(dr); list.push(dr);
+    if (!railGeo) {
+      const P = dr.userData.P, a1 = P.dd < P.R ? Math.acos(-P.dd / P.R) : Math.PI;
+      const s = new THREE.Shape();
+      const r0 = P.R + 0.6, r1 = P.R + Math.max(3, P.R*0.03), aa = Math.PI/2 + 0.12, ab = a1 - 0.04;
+      s.absarc(0, 0, r1, aa, ab, false); s.absarc(0, 0, r0, ab, aa, true);
+      railGeo = extrudeZY(s, 1.4, 0);
+    }
+    for (const rx of [cx - cw/2 + 1.4, cx + cw/2]) {
+      const rail = new THREE.Mesh(railGeo, bodyMat); rail.position.set(rx, T_BODY + 1, 0); root.add(rail);
+    }
+  }
+
+  // security rod (separate accessory) – routed in front of the drawer lip
+  const P = list[0].userData.P;
+  const yl = 0.70*dh;
+  const zl = P.p + (yl - P.yNose) / (P.yLip - P.yNose) * (P.q - P.p);
+  const yr = T_BODY + 1 + yl, zr = zl + ROD_R + 1.5, xo = W/2 + 7;
+  const pts = [
+    new THREE.Vector3(-W/2 + T_BODY - 0.5, holeY, holeZ), new THREE.Vector3(-xo, holeY, holeZ),
+    new THREE.Vector3(-xo, yr, zr), new THREE.Vector3(xo, yr, zr),
+    new THREE.Vector3(xo, holeY, holeZ), new THREE.Vector3(W/2 - T_BODY + 0.5, holeY, holeZ),
+  ];
+  // the rod pivots in the side holes: its front bar swings up so a drawer can open
+  const rodMesh = shadowOn(new THREE.Mesh(new THREE.TubeGeometry(roundedPolyline(pts, 7), 90, ROD_R, 8, false), rodMat));
+  const rod = new THREE.Group(); rod.position.set(0, holeY, holeZ);
+  rodMesh.position.set(0, -holeY, -holeZ); rod.add(rodMesh); root.add(rod);
+  const phi0 = Math.atan2(yr - holeY, zr - holeZ);          // bar angle when resting on the drawers
+  rod.name = 'rod';
+  rod.userData = { lift: phi0 - THREE.MathUtils.degToRad(82) };
+  bake(root, (c) => c.name === 'drawer' || c.name === 'rod');
+  unit.traverse(o => { if (o.geometry) o.geometry.userData.shared = true; });
+  return unit;
+}
+
+// ---------- stand parts (mm) ----------
+const PROF = 30;                                  // 30×30 slotted aluminium profile
+const profileMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#cbd0cc'), roughness:0.42, metalness:0.15, clearcoat:0.1 });
+const capMat = new THREE.MeshStandardMaterial({ color:0x1b1c1e, roughness:0.55 });
+const endCapMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#cbd0cc'), roughness:0.6 });   // end caps in RAL 7035, like the profiles
+const rubberMat = new THREE.MeshStandardMaterial({ color:0x2a2c2f, roughness:0.75 });
+const zincMat = new THREE.MeshStandardMaterial({ color:0xc9ced3, metalness:1, roughness:0.32 });
+const hubMat = new THREE.MeshStandardMaterial({ color:0x9aa1a8, roughness:0.4, metalness:0.3 });
+const plyMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#d8c49f'), roughness:0.8 });
+
+const profileShape = (() => {
+  // one face with a T-slot, repeated on all four sides (rotated 90°)
+  const side = [[-15,-15],[-4,-15],[-4,-12.8],[-6.5,-12.8],[-6.5,-9],[6.5,-9],[6.5,-12.8],[4,-12.8],[4,-15]];
+  const s = new THREE.Shape();
+  let first = true;
+  for (let r = 0; r < 4; r++) for (let [x, y] of side) {
+    for (let k = 0; k < r; k++) [x, y] = [-y, x];
+    first ? s.moveTo(x, y) : s.lineTo(x, y); first = false;
+  }
+  s.closePath();
+  s.holes.push(circlePath(0, 0, 3.3));
+  return s;
+})();
+function bar(parent, L, axis, x, y, z) {
+  const g = new THREE.ExtrudeGeometry(profileShape, { depth:L, bevelEnabled:false, curveSegments:6 });
+  g.translate(0, 0, -L/2);
+  if (axis === 'y') g.rotateX(Math.PI/2);
+  if (axis === 'x') g.rotateY(Math.PI/2);
+  const m = shadowOn(new THREE.Mesh(g, profileMat)); m.position.set(x, y, z); parent.add(m); return m;
+}
+function cap(parent, axis, x, y, z) {   // black end cap
+  const g = axis === 'y' ? new THREE.BoxGeometry(PROF, 3, PROF) : axis === 'x' ? new THREE.BoxGeometry(3, PROF, PROF) : new THREE.BoxGeometry(PROF, PROF, 3);
+  const m = new THREE.Mesh(g, endCapMat); m.position.set(x, y, z); parent.add(m);
+}
+function caster(parent, x, z, plateY, brake) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); parent.add(g);
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(60, 4, 60), zincMat); plate.position.y = plateY - 2; g.add(plate);
+  const swivel = new THREE.Mesh(new THREE.CylinderGeometry(20, 22, 9, 32), zincMat); swivel.position.y = plateY - 8.5; g.add(swivel);
+  const R = 37.5, wy = R, off = -14;               // wheel centre, swivel offset
+  for (const sx of [-1, 1]) {
+    const fork = new THREE.Mesh(new THREE.BoxGeometry(3, plateY - 13 - wy + 10, 34), zincMat);
+    fork.position.set(sx*16.5, wy + (plateY - 13 - wy + 10)/2 - 10, off/2); g.add(fork);
+  }
+  const wheel = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 25, 40), rubberMat); wheel.rotation.z = Math.PI/2; wheel.position.set(0, wy, off); g.add(wheel);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(19, 19, 27, 32), hubMat); hub.rotation.z = Math.PI/2; hub.position.set(0, wy, off); g.add(hub);
+  const axle = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 37, 16), zincMat); axle.rotation.z = Math.PI/2; axle.position.set(0, wy, off); g.add(axle);
+  if (brake) {
+    const lever = new THREE.Mesh(new THREE.BoxGeometry(22, 5, 26), capMat);
+    lever.position.set(0, wy + R - 6, off + R + 6); lever.rotation.x = -0.35; g.add(lever);
+  }
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+}
+function levelFoot(parent, x, z, topY) {
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, topY - 12, 16), zincMat); stem.position.set(x, 12 + (topY - 12)/2, z); parent.add(stem);
+  const nut = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 5, 6), zincMat); nut.position.set(x, topY - 4, z); parent.add(nut);
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(20, 22, 12, 32), capMat); pad.position.set(x, 6, z); parent.add(pad);
+  pad.castShadow = true;
+}
+function handle(parent, x, yTop, z, dir = 1) {
+  const pts = [new THREE.Vector3(x, yTop, z), new THREE.Vector3(x + dir*30, yTop, z),
+               new THREE.Vector3(x + dir*30, yTop - 130, z), new THREE.Vector3(x, yTop - 130, z)];
+  const m = shadowOn(new THREE.Mesh(new THREE.TubeGeometry(roundedPolyline(pts, 12), 120, 9, 16, false), capMat));
+  parent.add(m);
+  for (const yy of [yTop, yTop - 130]) { const f = new THREE.Mesh(new THREE.BoxGeometry(8, 26, 24), capMat); f.position.set(x + dir*4, yy, z); parent.add(f); }
+}
+
+// ---------- stand ----------
+const STAND = { W:599, D:424, BASE_TOP:127, CASTER:97 };
+const stand = { type:'single', base:'legs', height:2000, handle:'left', brake:'brake' };
+const DEFAULT_COMP = {
+  1160: { 2:1, 3:1, 4:1, 5:1, 6:1, 9:1 },
+  1800: { 2:2, 3:1, 4:1, 5:2, 6:1, 9:1 },
+  2000: { 2:2, 3:2, 4:1, 5:1, 6:2, 9:1 },
+};
+// double-sided: no 2-cell units – the base is not deep enough for them on both sides
+const DEFAULT_COMP_DOUBLE = {
+  1160: { 3:2, 4:1, 5:1, 6:1, 9:1 },
+  1800: { 3:3, 4:2, 5:2, 6:1, 9:1 },
+  2000: { 3:3, 4:2, 5:2, 6:2, 9:2 },
+};
+const comp = {};
+for (const h in DEFAULT_COMP) { comp['single-' + h] = { ...DEFAULT_COMP[h] }; comp['double-' + h] = { ...DEFAULT_COMP_DOUBLE[h] }; }
+const curComp = () => comp[stand.type + '-' + stand.height];
+const allowed = (n) => !(stand.type === 'double' && n === 2);
+const ORDER = [2, 3, 4, 5, 6, 9];                  // biggest first = bottom of the stack
+function stackHeight(c) {
+  let h = 0, k = 0;
+  for (const n of ORDER) for (let i = 0; i < (c[n] || 0); i++) { h += MODELS[n].H; k++; }
+  return k ? h - RIM*(k - 1) : 0;                  // nested rims overlap
+}
+
+function buildStand() {
+  const g = new THREE.Group();
+  const root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
+  const { W, D, BASE_TOP, CASTER } = STAND, Hc = stand.height;
+  const xU = W/2 - PROF/2, zF = D/2 - PROF/2;
+  const zUp = stand.type === 'double' ? D/2 - 190 - PROF/2 : -zF;   // uprights: centre (double) / back (single)
+  const yB = BASE_TOP - PROF/2;
+
+  // base frame
+  for (const sx of [-1, 1]) {
+    bar(root, D, 'z', sx*xU, yB, 0);
+    cap(root, 'z', sx*xU, yB, D/2 + 1.5); cap(root, 'z', sx*xU, yB, -D/2 - 1.5);
+  }
+  const crossZ = [zF, -zF]; if (Math.abs(zUp + zF) > 1) crossZ.push(zUp);
+  for (const z of crossZ) bar(root, W - 2*PROF, 'x', 0, yB, z);
+  // plywood boards between the cross members
+  const zs = [...crossZ].sort((a, b) => a - b);
+  for (let i = 0; i < zs.length - 1; i++) {
+    const z0 = zs[i] + PROF/2, z1 = zs[i+1] - PROF/2;
+    const p = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(W - 2*PROF, 17, z1 - z0), plyMat));
+    p.position.set(0, BASE_TOP - 8.5, (z0 + z1)/2); root.add(p);
+  }
+  // uprights + top bar + caps
+  for (const sx of [-1, 1]) {
+    bar(root, Hc, 'y', sx*xU, BASE_TOP + Hc/2, zUp);
+    cap(root, 'y', sx*xU, BASE_TOP + Hc + 1.5, zUp);
+  }
+  bar(root, W - 2*PROF, 'x', 0, BASE_TOP + Hc - PROF/2, zUp);
+
+  // wheels or legs
+  const corners = [[-xU, zF], [xU, zF], [-xU, -zF], [xU, -zF]];
+  if (stand.base === 'wheels') {
+    // braked version: the two front wheels have a stopper (as in the drawing)
+    corners.forEach(([x, z], i) => caster(root, x, z, BASE_TOP - PROF, stand.brake === 'brake' && i < 2));
+    const hs = stand.handle === 'right' ? 1 : -1;            // right / left as seen from the front
+    handle(root, hs*W/2, BASE_TOP + Hc - 120, zUp, hs);      // handle only on a cart
+  } else {
+    const legTop = BASE_TOP - PROF, legBot = 32;
+    corners.forEach(([x, z]) => {
+      bar(root, legTop - legBot, 'y', x, (legTop + legBot)/2, z);
+      cap(root, 'y', x, legBot - 1.5, z);
+      levelFoot(root, x, z, legBot - 3);
+    });
+  }
+
+  // units: sorted biggest at the bottom; the same stack on both sides of a double stand
+  const sides = stand.type === 'double' ? [1, -1] : [1];
+  const c = curComp();
+  let y = BASE_TOP;
+  const list = [], rodList = [];
+  for (const n of ORDER) for (let i = 0; i < (c[n] || 0); i++) {
+    for (const sd of sides) {
+      const u = makeUnit(n);
+      u.group.position.set(0, y*0.001, (zUp + sd*(PROF/2 + 0.5))*0.001);
+      if (sd < 0) u.group.rotation.y = Math.PI;
+      g.add(u.group); list.push(...u.drawers); rodList.push(u.rod);
+    }
+    y += MODELS[n].H - RIM;
+  }
+  return { group:g, drawers:list, rods:rodList, totalH: BASE_TOP + Hc + 3 };
+}
+
+// ---------- תא-נע cabinets: DELUX (closed, PVC) and SMART (open steel frame) ----------
+// Fixed rear wings + sliding middle/front wings on top/bottom tracks.
+const pvcMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#f4f5f3'), roughness:0.22, metalness:0, clearcoat:0.6, clearcoatRoughness:0.2 });
+const trackMat = new THREE.MeshStandardMaterial({ color:0xb9bec3, metalness:0.7, roughness:0.35 });
+const SMART_COLORS = { blue:'#1f3f8f', ral7035:'#cbd0cc' };
+const steelMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color(SMART_COLORS.blue), roughness:0.38, metalness:0.25, clearcoat:0.3 });
+
+const TENA_SIZES = {          // wings = front + middle + rear ; mm
+  4:  { F:1, M:1, R:2, W:1270 },
+  7:  { F:2, M:2, R:3, W:1900 },
+  10: { F:3, M:3, R:4, W:2500 },
+};
+const TENA = { D_STD:625, FOOT:40, GAP:38, FRAME:30 };
+const VARIANT = {
+  delux: { name:'תא-נע DELUX', H:2200, TOP:280, COL:1750, D_STD:625, closed:true },
+  smart: { name:'תא-נע SMART', H:2100, TOP:110, COL:1880, D_STD:680, closed:false,
+           size:{ F:1, M:1, R:2, W:1350 } },          // SMART comes in one size only
+};
+const LAYER_NAME = { front:'קדמית', middle:'אמצעית', rear:'אחורית' };
+const STD_ALLOWED = { rear:[4, 5, 6, 9], middle:[5, 6, 9], front:[5, 6, 9] };
+const TENA_DEFAULT = {
+  delux: { rear:{ 4:3, 5:3, 6:3, 9:3 }, middle:{ 5:5, 6:4, 9:6 }, front:{ 5:5, 6:4, 9:6 } },
+  smart: { rear:{ 4:9 }, middle:{ 5:10, 6:1 }, front:{ 5:10, 6:1 } },
+};
+const WING_GROUPS = new Map();
+const WING_FRAMES = new Map();                 // aluminium wing frames: slide with the wing but stay in the cabinet when spread                 // wing id → its 3D group (rebuilt with the scene)
+const TN = {
+  delux: { variant:'delux', size:4, depthMode:'std', depth:625, bySize:{} },
+  smart: { variant:'smart', size:4, depthMode:'std', depth:680, color:'blue', bySize:{} },
+};
+let tena = TN.delux;                           // the cabinet currently shown
+let tenaOpenWing = null;                       // selected wing (expanded in the panel, outlined in 3D)
+const isCab = () => mode === 'tena' || mode === 'smart';
+const PX = () => mode === 'smart' ? 'sm' : 'tn';
+const cfg = () => VARIANT[tena.variant];
+const sizeDef = () => cfg().size || TENA_SIZES[tena.size];
+
+function tenaState() {                         // per size: wings with their stacks and slide positions
+  const k = tena.size;
+  if (!tena.bySize[k]) {
+    const S = sizeDef(), wings = [];
+    for (const [layer, n] of [['front', S.F], ['middle', S.M], ['rear', S.R]])
+      for (let i = 0; i < n; i++) wings.push({ id:`${layer}-${i}`, layer, i, comp:{ ...TENA_DEFAULT[tena.variant][layer] }, pos:null });
+    tena.bySize[k] = { wings };
+  }
+  return tena.bySize[k];
+}
+const tenaDepth = () => tena.depthMode === 'std' ? cfg().D_STD : tena.depth;
+const layerDepth = (layer) => {                 // deepest unit used anywhere on that layer
+  let d = 0;
+  for (const w of tenaState().wings) if (w.layer === layer) for (const n in w.comp) if (w.comp[n] > 0) d = Math.max(d, MODELS[n].D);
+  return d;
+};
+const STD_LAYER = { rear:171, middle:138, front:138 };   // fixed track positions of the standard cabinet
+const BASE_DEPTH = TENA.FRAME + 2*TENA.GAP + 2*TENA.FRAME + 10;   // back profile + 2 gaps + 2 wing frames + front clearance
+function tenaAllowed(layer, n) {
+  if (tena.depthMode === 'std') return STD_ALLOWED[layer].includes(+n);
+  const others = ['rear', 'middle', 'front'].filter(l => l !== layer).reduce((a, l) => a + layerDepth(l), 0);
+  return BASE_DEPTH + others + Math.max(layerDepth(layer), MODELS[n].D) <= tenaDepth();
+}
+function tenaWhyNot(layer, n) {
+  if (tena.depthMode === 'std') return layer === 'rear' ? 'לא בעומק הסטנדרטי' : 'בכנף אמצעית/קדמית: רק רב תא 5, 6, 9 בעומק הסטנדרטי';
+  return 'לא נכנס בעומק הארון';
+}
+// SMART frame: rectangular painted steel tube
+function tube(parent, len, axis, x, y, z, a = 40, b = 30) {
+  const dims = axis === 'y' ? [a, len, b] : axis === 'x' ? [len, a, b] : [b, a, len];
+  const m = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(...dims), steelMat)); m.position.set(x, y, z); parent.add(m); return m;
+}
+
+let CAB = null;                                // layout of the cabinet on screen (for drag / spread)
+function buildTena() {
+  const g = new THREE.Group();
+  const root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
+  const C = cfg(), S = sizeDef(), W = S.W, H = C.H, D = tenaDepth(), P = PROF, F = TENA.FOOT;
+  const st = tenaState();
+  const x0 = -W/2 + P/2, x1 = W/2 - P/2, zf = D/2 - P/2, zb = -D/2 + P/2;
+  const yB = F + P/2, yT = H - P/2, yTop = H - C.TOP;
+  const midPost = W > 1500;
+  const postXs = midPost ? [x0, 0, x1] : [x0, x1];
+
+  if (C.closed) {
+    // DELUX: 30×30 aluminium profiles + white PVC
+    for (const x of postXs) for (const z of [zf, zb]) { bar(root, H - F, 'y', x, F + (H - F)/2, z); levelFoot(root, x, z, F - 3); }
+    for (const z of [zf, zb]) { bar(root, W - 2*P, 'x', 0, yB, z); bar(root, W - 2*P, 'x', 0, yT, z); }
+    for (const x of [x0, x1]) for (const y of [yB, yT, (yB + yT)/2]) bar(root, D - 2*P, 'z', x, y, 0);
+    bar(root, W - 2*P, 'x', 0, yTop, zf);
+    const fasN = S.R;
+    for (let i = 1; i < fasN; i++) { const x = -W/2 + P + i*(W - 2*P)/fasN; if (!midPost || Math.abs(x) > 40) bar(root, yT - yTop - P, 'y', x, (yT + yTop)/2, zf); }
+    const pvc = (w, h, d, x, y, z) => { const m = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), pvcMat)); m.position.set(x, y, z); root.add(m); };
+    pvc(W - 2*P, H - F - 2*P, 4, 0, (yB + yT)/2, -D/2 + 2);
+    for (const sx of [-1, 1]) for (const [ya, yb2] of [[yB + P/2, (yB + yT)/2 - P/2], [(yB + yT)/2 + P/2, yT - P/2]])
+      pvc(4, yb2 - ya, D - 2*P, sx*(W/2 - 2), (ya + yb2)/2, 0);
+    pvc(W, 4, D, 0, H + 2, 0);
+    pvc(W - 2*P, 4, D - 2*P, 0, F + P - 2, 0);
+    for (let i = 0; i < fasN; i++) {
+      const xa = -W/2 + P + i*(W - 2*P)/fasN, xb = xa + (W - 2*P)/fasN;
+      pvc(xb - xa - (i < fasN - 1 ? P : 0) - 2, yT - yTop - P - 2, 4, (xa + xb)/2 - (i < fasN - 1 ? P/2 : 0), (yT + yTop)/2, D/2 - 6);
+    }
+  } else {
+    // SMART: open frame of painted rectangular steel tube (no panels)
+    steelMat.color.set(SMART_COLORS[tena.color] || SMART_COLORS.blue);
+    const a = 40, hx = W/2 - a/2, hz = D/2 - 15;
+    for (const x of (midPost ? [-hx, 0, hx] : [-hx, hx])) for (const z of [hz, -hz]) { tube(root, H - F, 'y', x, F + (H - F)/2, z); levelFoot(root, x, z, F - 3); }
+    for (const z of [hz, -hz]) { tube(root, W - 2*a, 'x', 0, F + 30 + 20, z); tube(root, W - 2*a, 'x', 0, H - 20, z); }
+    for (const x of [-hx, hx]) for (const y of [F + 50, H - 20, H*0.36, H*0.68]) tube(root, D - 60, 'z', x, y, 0);
+    // bolt heads at the joints
+    const bolt = new THREE.CylinderGeometry(5, 5, 3, 10); bolt.rotateZ(Math.PI/2);
+    for (const sx of [-1, 1]) for (const y of [F + 50, H - 20, H*0.36, H*0.68]) for (const z of [hz - 40, -hz + 40]) {
+      const b = new THREE.Mesh(bolt, zincMat); b.position.set(sx*(W/2 + 1), y, z); root.add(b);
+    }
+  }
+
+  // depth layout (z of the back of each layer's units)
+  const dR = tena.depthMode === 'std' ? STD_LAYER.rear   : Math.max(layerDepth('rear'), 64);
+  const dM = tena.depthMode === 'std' ? STD_LAYER.middle : Math.max(layerDepth('middle'), 64);
+  const zRear = -D/2 + P;
+  const zMidFrame = zRear + dR + TENA.GAP;
+  const zFrontFrame = zMidFrame + P + dM + TENA.GAP;
+  const yBotTrack = C.closed ? F + P + 5 : F + 70 + 6;          // SMART: on top of the bottom steel rail
+  const yUnits = C.closed ? F + P + 22 : yBotTrack + 22;
+  const innerW = W - 2*P, travel = innerW/2 - 300 - 8;
+
+  // top tracks: DELUX under the fascia; SMART level with the top side rails, so they bolt onto them
+  const yTrack = C.closed ? yTop - 20 : H - 40 - 16;              // SMART: hangs under the top steel rail
+  const yRailTop = C.closed ? yTop : H - 40;
+  // tracks: top and bottom pair for each sliding layer
+  for (const zFr of [zMidFrame, zFrontFrame]) for (const dz of [-6, P + 6]) {
+    const t1 = new THREE.Mesh(new THREE.BoxGeometry(innerW, C.closed ? 12 : 30, C.closed ? 10 : 14), trackMat); t1.position.set(0, yTrack, zFr + dz); root.add(t1);
+    const t2 = new THREE.Mesh(new THREE.BoxGeometry(innerW, 10, 10), trackMat); t2.position.set(0, yBotTrack, zFr + dz); root.add(t2);
+  }
+  // rear mounting rails
+  const pitch = innerW / S.R;
+  for (let i = 0; i < S.R; i++) {
+    const cx = -innerW/2 + pitch*(i + 0.5);
+    // DELUX: between the bottom frame and the fascia beam; SMART: from the bottom steel rail up to the top steel rail
+    const ra = C.closed ? yB + P/2 : F + 70, rb = C.closed ? yRailTop - P/2 : yRailTop;
+    for (const sx of [-1, 1]) bar(root, rb - ra, 'y', cx + sx*(300 - 20), (ra + rb)/2, -D/2 + P/2);
+  }
+
+  // wings: each one is a group whose origin is the cabinet origin, moved only along x (slide) or out (spread)
+  const list = [], rodList = [];
+  const stack = (wing, parent, zBack, wingDrawers) => {
+    let y = yUnits;
+    for (const n of ORDER) for (let i = 0; i < (wing.comp[n] || 0); i++) {
+      const u = makeUnit(n);
+      u.group.position.set(0, y*0.001, zBack*0.001);
+      parent.add(u.group); list.push(...u.drawers); wingDrawers.push(...u.drawers); rodList.push(u.rod);
+      y += MODELS[n].H - RIM;
+    }
+    return y;
+  };
+  const slotX = (j) => -innerW/2 + pitch*(j + 0.5);
+  const top = yTrack - (C.closed ? 14 : 23), bot = yBotTrack + 9;
+  for (const w of st.wings) {
+    const wg = new THREE.Group(); g.add(wg);
+    const wd = [];
+    let zBack, zFrontEdge;
+    if (w.layer === 'rear') { w.pos = slotX(w.i); zBack = zRear; }
+    else {
+      const n = w.layer === 'front' ? S.F : S.M;
+      if (w.pos === null) w.pos = w.layer === 'front' ? slotX(w.i) : slotX(S.R - n + w.i);
+      w.pos = Math.max(-travel, Math.min(travel, w.pos));
+      const zFr = w.layer === 'front' ? zFrontFrame : zMidFrame;
+      const frw = new THREE.Group(); frw.userData.wingId = w.id; g.add(frw); WING_FRAMES.set(w.id, frw);
+      const fr = new THREE.Group(); fr.scale.setScalar(0.001); frw.add(fr);
+      const hw = 300 - P/2;
+      for (const sx of [-1, 1]) bar(fr, top - bot, 'y', sx*hw, (top + bot)/2, zFr + P/2);
+      for (const y of [top - P/2, bot + P/2, (top + bot)/2]) bar(fr, 600 - 2*P, 'x', 0, y, zFr + P/2);
+      for (const sx of [-1, 1]) {
+        const roller = new THREE.Mesh(new THREE.BoxGeometry(34, 16, 26), trackMat); roller.position.set(sx*(hw - 40), top + 8, zFr + P/2); fr.add(roller);
+      }
+      zBack = zFr + P;
+    }
+    const yEnd = stack(w, wg, zBack, wd);
+    wg.position.x = w.pos * 0.001;
+    wg.userData = { wingId:w.id, zBack:(w.layer === 'rear' ? zRear : zBack - P), yTop:Math.max(yEnd, w.layer === 'rear' ? yEnd : top), drawers:wd };
+    WING_GROUPS.set(w.id, wg);
+  }
+  CAB = { W, D, H, travel, innerW, zRear, rows:st.wings };
+  layoutSpread();
+  return { group:g, drawers:list, rods:rodList, totalH:H + 4, W, D, travel };
+}
+
+// ---------- spread mode: every wing comes out and stands in a row in front of the cabinet ----------
+let spread = 0, spreadTarget = 0;              // 0 = inside, 1 = spread out (animated)
+function layoutSpread() {
+  if (!CAB) return;
+  const order = ['rear', 'middle', 'front'];
+  const ws = [...CAB.rows].sort((a, b) => order.indexOf(a.layer) - order.indexOf(b.layer) || a.i - b.i);
+  const gap = 220, rowW = ws.length*600 + (ws.length - 1)*gap;
+  const zRow = CAB.D/2 + 520;                  // back of every wing lines up here
+  ws.forEach((w, k) => {
+    const g = WING_GROUPS.get(w.id); if (!g) return;
+    g.userData.out = { x: -rowW/2 + 300 + k*(600 + gap), z: zRow - g.userData.zBack, k, n: ws.length };
+  });
+  CAB.rowW = rowW; CAB.zRow = zRow;
+}
+const ease = (t) => t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2)/2;
+function stepWings(k, dt) {
+  if (!isCab()) return;
+  spread += Math.sign(spreadTarget - spread) * Math.min(Math.abs(spreadTarget - spread), dt * 0.8);
+  for (const w of tenaState().wings) {
+    const g = WING_GROUPS.get(w.id); if (!g) continue;
+    if (w.layer !== 'rear' && w.target !== undefined && w.target !== null) w.pos += (w.target - w.pos) * k;
+    const o = g.userData.out;
+    // staggered: each wing starts a little after the previous one
+    const t = o ? ease(Math.max(0, Math.min(1, spread * (1 + o.n*0.12) - o.k*0.12))) : 0;
+    g.position.x = (w.pos + (o ? (o.x - w.pos) * t : 0)) * 0.001;
+    g.position.z = (o ? o.z * t : 0) * 0.001;
+    const fw = WING_FRAMES.get(w.id); if (fw) fw.position.x = w.pos * 0.001;   // frame stays on its track
+  }
+}
+function setSpread(on) {
+  spreadTarget = on ? 1 : 0;
+  $('spreadBtn').classList.toggle('on', on);
+  $('spreadBtn').setAttribute('aria-pressed', on);
+  // frame the cabinet together with the row of wings
+  if (CAB && lastAuto) {
+    const s = 0.001, w = on ? Math.max(CAB.W, CAB.rowW) * 1.3 : CAB.W;
+    frame(w, CAB.H + 4, true);
+    if (on && !activeCamera()) {
+      // look between the cabinet and the row, nudged left so the side panel doesn't hide the last wing
+      const off = new THREE.Vector3(innerWidth < 640 ? 0 : CAB.rowW * s * 0.12, 0, CAB.zRow * s * 0.5);
+      controls.target.add(off); camera.position.add(off); controls.update();
+    }
+  }
+}
+
+// ---------- selected wing: outline + name tag in 3D ----------
+const selMat = new THREE.LineBasicMaterial({ color:0x1f6feb, depthTest:false, transparent:true, opacity:0.95 });
+let selHelper = null;
+function makeTag(text) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+  const x = c.getContext('2d');
+  x.fillStyle = '#1f6feb'; x.beginPath(); x.roundRect(8, 16, 496, 96, 48); x.fill();
+  x.fillStyle = '#fff'; x.font = '700 56px Heebo, Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = 'rtl';
+  x.fillText(text, 256, 66);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:t, depthTest:false, transparent:true }));
+  sp.scale.set(0.52, 0.13, 1); sp.renderOrder = 10;
+  return sp;
+}
+function showSelection() {
+  if (selHelper) { selHelper.parent && selHelper.parent.remove(selHelper); selHelper.traverse(o => { o.geometry && o.geometry.dispose(); o.material && o.material.map && o.material.map.dispose(); }); selHelper = null; }
+  if (!isCab() || !tenaOpenWing) return;
+  const g = WING_GROUPS.get(tenaOpenWing); if (!g) return;
+  const w = tenaState().wings.find(x => x.id === tenaOpenWing);
+  // bounding box in the wing's own space (so it moves with the wing)
+  const saved = g.position.clone(); g.position.set(0, 0, 0); g.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(g); g.position.copy(saved); g.updateMatrixWorld(true);
+  const size = box.getSize(new THREE.Vector3()).addScalar(0.02), c = box.getCenter(new THREE.Vector3());
+  selHelper = new THREE.Group();
+  const lines = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(size.x, size.y, size.z)), selMat);
+  lines.position.copy(c); lines.renderOrder = 9; selHelper.add(lines);
+  const tag = makeTag(`${LAYER_NAME[w.layer]} ${w.i + 1}`); tag.position.set(c.x, box.max.y + 0.13, c.z); selHelper.add(tag);
+  g.add(selHelper);
+}
+function selectWing(id) {
+  tenaOpenWing = id; renderTena(); showSelection();
+}
+
+// ---------- drag a sliding wing along its track ----------
+const dragRay = new THREE.Raycaster(), dragPlane = new THREE.Plane(), dragHit = new THREE.Vector3();
+let drag = null;
+function wingOf(obj) { while (obj && !(obj.userData && obj.userData.wingId)) obj = obj.parent; return obj; }
+function pointerNDC(e) { const r = canvas.getBoundingClientRect(); return new THREE.Vector2((e.clientX - r.left)/r.width*2 - 1, -(e.clientY - r.top)/r.height*2 + 1); }
+canvas.addEventListener('pointerdown', (e) => {
+  if (!isCab() || spread > 0.01 || e.button !== 0) return;
+  dragRay.setFromCamera(pointerNDC(e), camera);
+  const hit = dragRay.intersectObjects([...WING_GROUPS.values()], true)[0];
+  const g = hit && wingOf(hit.object); if (!g) return;
+  const w = tenaState().wings.find(x => x.id === g.userData.wingId);
+  if (!w || w.layer === 'rear') return;
+  dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 0, 1), hit.point);
+  drag = { w, x0: hit.point.x, pos0: w.pos, sx: e.clientX, moved: false };
+  controls.enabled = false;
+}, { capture:true });
+addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  if (!drag.moved && Math.abs(e.clientX - drag.sx) < 5) return;
+  drag.moved = true; canvas.style.cursor = 'grabbing';
+  dragRay.setFromCamera(pointerNDC(e), camera);
+  if (dragRay.ray.intersectPlane(dragPlane, dragHit)) {
+    drag.w.target = drag.pos0 + (dragHit.x - drag.x0) * 1000;
+    clampWings(drag.w);
+    drag.w.pos = drag.w.target;                 // follow the hand directly while dragging
+    const sl = document.querySelector(`#${PX()}Wings .wing.open .slide input`);
+    if (sl && tenaOpenWing === drag.w.id) sl.value = Math.round((drag.w.pos + tenaTravel()) / (2*tenaTravel()) * 1000);
+  }
+});
+addEventListener('pointerup', () => {
+  if (!drag) return;
+  if (drag.moved) suppressClick = true;
+  drag = null; controls.enabled = true; canvas.style.cursor = '';
+});
+let suppressClick = false;
+
+// ---------- cabinet panels ----------
+function wingUsed(w) { return stackHeight(w.comp); }
+function renderTena() {
+  if (!isCab()) return;
+  const st = tenaState(), box = document.getElementById(PX() + 'Wings');
+  if (!THUMBS) { try { THUMBS = makeThumbs(); } catch (e) { THUMBS = {}; } }
+  box.innerHTML = '';
+  const COL = cfg().COL;
+  for (const w of st.wings) {
+    const used = wingUsed(w), cnt = Object.values(w.comp).reduce((a, b) => a + b, 0);
+    const open = tenaOpenWing === w.id;
+    const el = document.createElement('div'); el.className = 'wing' + (open ? ' open' : '');
+    el.innerHTML = `
+      <button class="wing-head" aria-expanded="${open}">
+        <span class="wdot ${w.layer}" aria-hidden="true"></span>
+        <span class="wname">${LAYER_NAME[w.layer]} ${w.i + 1}</span>
+        <span class="wmeta">${w.layer === 'rear' ? 'קבועה' : 'נעה'} · ${cnt}</span>
+        <svg class="chev" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>`;
+    if (open) {
+      const body = document.createElement('div'); body.className = 'wing-body';
+      const grid = document.createElement('div'); grid.className = 'comp';
+      for (const n of ORDER) {
+        const ok = tenaAllowed(w.layer, n), c = w.comp[n] || 0;
+        const add = used === 0 ? MODELS[n].H : MODELS[n].H - RIM;
+        const row = document.createElement('div'); row.className = 'ci' + (ok || c ? '' : ' na');
+        row.title = ok ? `רב תא ${n}` : `רב תא ${n} – ${tenaWhyNot(w.layer, n)}`;
+        row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="ctl"><button aria-label="פחות">−</button><b>${c}</b><button aria-label="יותר">+</button></span>`;
+        const [minus, plus] = row.querySelectorAll('button');
+        minus.disabled = !(c > 0);
+        plus.disabled = !ok || used + add > COL + 5;
+        minus.onclick = () => { w.comp[n] = Math.max(0, c - 1); rebuild(true); };
+        plus.onclick = () => { w.comp[n] = c + 1; rebuild(true); };
+        grid.appendChild(row);
+      }
+      body.appendChild(grid);
+      body.insertAdjacentHTML('beforeend', `<div class="bar"><i style="width:${Math.min(100, used / COL * 100)}%"></i></div><div class="use">גובה מנוצל בכנף: <b>${used}</b> מתוך <b>${COL}</b> מ"מ · הגדול תמיד למטה</div>`);
+      if (w.layer !== 'rear') {
+        const sl = document.createElement('label'); sl.className = 'slide';
+        sl.innerHTML = `<span>מיקום על המסילה</span><input type="range" min="0" max="1000" step="1">`;
+        const inp = sl.querySelector('input'), tr = tenaTravel();
+        inp.value = Math.round((w.pos + tr) / (2*tr) * 1000);
+        inp.oninput = () => { w.target = -tr + inp.value / 1000 * 2*tr; clampWings(w); };
+        body.appendChild(sl);
+      }
+      el.appendChild(body);
+    }
+    el.querySelector('.wing-head').onclick = () => selectWing(open ? null : w.id);
+    box.appendChild(el);
+  }
+  const D = tenaDepth();
+  const need = BASE_DEPTH + layerDepth('rear') + layerDepth('middle') + layerDepth('front');
+  document.getElementById(PX() + 'DepthNote').innerHTML = tena.depthMode === 'std'
+    ? `עומק סטנדרטי ${(cfg().D_STD/10).toFixed(1).replace('.0','')} ס"מ: אחורית 4/5/6/9 · אמצעית וקדמית 5/6/9`
+    : `עומק נדרש להרכב הנוכחי: <b>${Math.ceil(need/10)}</b> ס"מ מתוך <b>${(D/10).toFixed(1)}</b>`;
+}
+let tenaTravelMm = 0;
+const tenaTravel = () => tenaTravelMm;
+function clampWings(moved) {
+  const st = tenaState();
+  for (const layer of ['front', 'middle']) {
+    const ws = st.wings.filter(w => w.layer === layer).sort((a, b) => a.i - b.i);
+    const tr = tenaTravel(), wide = 600 + 6;
+    ws.forEach(w => { if (w.target === undefined || w.target === null) w.target = w.pos; });
+    if (moved && moved.layer === layer) {
+      const k = ws.indexOf(moved);
+      moved.target = Math.max(-tr + k*wide, Math.min(tr - (ws.length - 1 - k)*wide, moved.target));
+      for (let j = k + 1; j < ws.length; j++) ws[j].target = Math.max(ws[j].target, ws[j-1].target + wide);
+      for (let j = k - 1; j >= 0; j--) ws[j].target = Math.min(ws[j].target, ws[j+1].target - wide);
+    }
+  }
+}
+
+// ---------- (re)build the scene ----------
+function rebuild(keepCamera = false) {
+  if (!isCab()) { spread = spreadTarget = 0; CAB = null; }
+  document.getElementById('spreadBtn').hidden = !isCab();
+  if (world) { scene.remove(world); world.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); }
+  world = new THREE.Group();
+  if (mode === 'unit') {
+    const u = makeUnit(current), D = MODELS[current].D;
+    u.group.position.z = -D/2 * 0.001;
+    world.add(u.group); drawers = u.drawers; rods = [u.rod];
+    if (!keepCamera) frame(MODELS[current].W, MODELS[current].H, false);
+    document.getElementById('dims').innerHTML =
+      `מק"ט <b>${MODELS[current].sku}</b> · רוחב <b>${MODELS[current].W}</b> · גובה <b>${MODELS[current].H}</b> · עומק <b>${D}</b> מ"מ`;
+    makeCellButtons(current);
+  } else if (isCab()) {
+    tena = TN[mode === 'smart' ? 'smart' : 'delux'];
+    WING_GROUPS.clear(); WING_FRAMES.clear();
+    const tb = buildTena();
+    world.add(tb.group); drawers = tb.drawers; rods = tb.rods; tenaTravelMm = tb.travel; clampWings();
+    if (!keepCamera) { frame(tb.W, tb.totalH, true); if (spreadTarget > 0.5) setSpread(true); }
+    const S = sizeDef();
+    document.getElementById('dims').innerHTML =
+      `${cfg().name} · <b>${tena.size}</b> כנפיים (${S.F} קדמיות + ${S.M} אמצעיות + ${S.R} אחוריות) · רוחב <b>${tb.W/10}</b> · גובה <b>${cfg().H/10}</b> · עומק <b>${(tb.D/10).toFixed(1)}</b> ס"מ`;
+    renderTena(); showSelection();
+  } else {
+    const st = buildStand();
+    world.add(st.group); drawers = st.drawers; rods = st.rods;
+    if (!keepCamera) frame(700, st.totalH, true);
+    const t = stand.type === 'double' ? 'דו צדדי' : 'חד צדדי', b = stand.base === 'wheels' ? 'על גלגלים' : 'על רגליים';
+    document.getElementById('dims').innerHTML =
+      `מעמד <b>${t}</b> ${b} · רוחב <b>599</b> · עומק בסיס <b>424</b> · גובה כולל <b>${st.totalH}</b> מ"מ`;
+    renderComp();
+  }
+  scene.add(world);
+  rods.forEach(r => r.visible = rodOn());
+  applyOpenAll();
+  refreshLabels();
+}
+
+function frame(W, H, tall) {
+  const s = 0.001, size = (tall ? Math.max(W, H) * 1.05 : Math.max(W, H*1.8)) * s;
+  const dist = size / (2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))) * (innerWidth < 640 ? 1.9 : 1.25);
+  controls.target.set(innerWidth < 640 ? 0 : (tall ? 0.3 : 0.12), H*s*(tall ? 0.5 : 0.45), 0);
+  const dir = tall ? new THREE.Vector3(-0.75, 0.22, 1).normalize() : new THREE.Vector3(-0.5, 0.3, 1).normalize();
+  camera.position.copy(controls.target).addScaledVector(dir, dist);
+  lastAuto = { target: controls.target.clone(), dist };
+  lastFrame = [W, H, tall];
+  if (typeof activeCamera === 'function' && activeCamera()) applyCamera(activeCamera());
+  controls.update();
+}
+
+// ---------- UI ----------
+const seg = document.getElementById('models');
+Object.keys(MODELS).forEach(k => {
+  const b = document.createElement('button'); b.textContent = k; b.dataset.n = k;
+  b.onclick = () => { current = +k; [...seg.children].forEach(c => c.classList.toggle('on', c === b)); rebuild(); };
+  if (+k === current) b.classList.add('on');
+  seg.appendChild(b);
+});
+function segGroup(id, onPick) {
+  const el = document.getElementById(id);
+  [...el.children].forEach(b => b.onclick = () => {
+    [...el.children].forEach(c => c.classList.toggle('on', c === b)); onPick(b.dataset.v ?? b.dataset.m);
+  });
+}
+function setSeg(id, v) { [...document.getElementById(id).children].forEach(c => c.classList.toggle('on', (c.dataset.v ?? c.dataset.m) === String(v))); }
+// accordion: each panel is a product in the family; opening one switches the model
+const panels = [...document.querySelectorAll('.panel')];
+function placeShared() {
+  const p = panels.find(x => x.dataset.mode === mode);
+  p.querySelector('.slot').appendChild(document.getElementById('shared'));
+}
+panels.forEach(p => p.querySelector('.head').onclick = () => {
+  const isActive = p.dataset.mode === mode;
+  if (isActive) {
+    const open = !p.classList.contains('open');
+    p.classList.toggle('open', open); p.querySelector('.head').setAttribute('aria-expanded', open);
+    return;
+  }
+  mode = p.dataset.mode;
+  panels.forEach(x => { const on = x === p; x.classList.toggle('open', on); x.querySelector('.head').setAttribute('aria-expanded', on); });
+  placeShared();
+  rebuild();
+});
+placeShared();
+segGroup('stType', (v) => {
+  stand.type = v;
+  // a double-sided stand is usually a cart
+  if (v === 'double') { stand.base = 'wheels'; if (stand.height === 2000) stand.height = 1800; }
+  setSeg('stBase', stand.base); setSeg('stHeight', stand.height); syncWheelOpts();
+  rebuild();
+});
+segGroup('stBase', (v) => { stand.base = v; syncWheelOpts(); rebuild(true); });
+segGroup('stHandle', (v) => { stand.handle = v; rebuild(true); });
+segGroup('stBrake', (v) => { stand.brake = v; rebuild(true); });
+function syncWheelOpts() { document.getElementById('wheelOpts').hidden = stand.base !== 'wheels'; }
+segGroup('stHeight', (v) => { stand.height = +v; rebuild(); });
+
+// small rendered thumbnails of each unit, made once with a separate offscreen renderer
+let THUMBS = null;
+function makeThumbs() {
+  const tw = 128, th = 72;
+  const r = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:true });
+  r.setPixelRatio(2); r.setSize(tw, th, false);
+  r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.9;
+  const sc = new THREE.Scene();
+  const pm = new THREE.PMREMGenerator(r);
+  const env = pm.fromScene(new RoomEnvironment(r), 0.04).texture;
+  sc.environment = env; sc.environmentIntensity = 0.8;
+  sc.add(new THREE.HemisphereLight(0xffffff, 0xa9b0b6, 0.4));
+  const dl = new THREE.DirectionalLight(0xffffff, 2.0); dl.position.set(-1, 2, 1.2); sc.add(dl);
+  const cam = new THREE.PerspectiveCamera(20, tw/th, 0.01, 20);
+  const out = {};
+  for (const n of ORDER) {
+    const u = makeUnit(n);
+    u.group.position.z = -MODELS[n].D/2 * 0.001;
+    sc.add(u.group);
+    const box = new THREE.Box3().setFromObject(u.group), c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
+    const dir = new THREE.Vector3(-0.42, 0.28, 1).normalize();
+    const fitW = sz.x * 1.12 / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov/2)) / cam.aspect;
+    cam.position.copy(c).addScaledVector(dir, fitW + sz.z);
+    cam.lookAt(c);
+    r.render(sc, cam);
+    out[n] = r.domElement.toDataURL('image/png');
+    sc.remove(u.group);
+  }
+  env.dispose(); pm.dispose(); r.dispose(); r.forceContextLoss();
+  return out;
+}
+
+for (const px of ['tn', 'sm']) {
+  if (document.getElementById(px + 'Size')) segGroup(px + 'Size', (v) => { tena.size = +v; tenaOpenWing = null; rebuild(); });
+  if (!document.getElementById(px + 'DepthMode')) continue;   // SMART: fixed depth, no CUSTOM
+  segGroup(px + 'DepthMode', (v) => {
+    tena.depthMode = v; document.getElementById(px + 'DepthFld').hidden = v !== 'custom';
+    rebuild(true);
+  });
+  document.getElementById(px + 'Depth').onchange = (e) => {
+    const cm = Math.max(40, Math.min(120, parseFloat(e.target.value) || 62.5));
+    e.target.value = cm; tena.depth = Math.round(cm * 10); rebuild(true);
+  };
+}
+
+function renderComp() {
+  if (!THUMBS) { try { THUMBS = makeThumbs(); } catch (e) { THUMBS = {}; } }
+  const c = curComp(), box = document.getElementById('comp');
+  box.innerHTML = '';
+  const used = stackHeight(c);
+  document.getElementById('compLbl').textContent = stand.type === 'double' ? 'הרכב (זהה בשני הצדדים)' : 'הרכב';
+  for (const n of ORDER) {
+    const add = used === 0 ? MODELS[n].H : MODELS[n].H - RIM;
+    const row = document.createElement('div'); row.className = 'ci';
+    const ok = allowed(n);
+    row.title = `רב תא ${n}`;
+    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n} תאים`}</span><span class="ctl"><button aria-label="פחות">−</button><b>${ok ? (c[n] || 0) : '–'}</b><button aria-label="יותר">+</button></span>`;
+    if (!ok) { row.classList.add('na'); row.title = `רב תא ${n} – לא אפשרי בדו צדדי: הבסיס לא עמוק מספיק`; }
+    const [minus, plus] = row.querySelectorAll('button');
+    minus.disabled = !ok || !(c[n] > 0);
+    plus.disabled = !ok || used + add > stand.height + 5;
+    minus.onclick = () => { c[n] = Math.max(0, (c[n] || 0) - 1); rebuild(true); };
+    plus.onclick = () => { c[n] = (c[n] || 0) + 1; rebuild(true); };
+    box.appendChild(row);
+  }
+  document.getElementById('useBar').style.width = Math.min(100, used / stand.height * 100) + '%';
+  document.getElementById('useTxt').innerHTML = `גובה מנוצל: <b>${used}</b> מתוך <b>${stand.height}</b> מ"מ · הגדול תמיד למטה`
+    + (stand.type === 'double' ? '<br>בדו צדדי אין רב תא 2 – הבסיס לא עמוק מספיק' : '');
+}
+
+// ---------- labels (plain white inserts) ----------
+function refreshLabels() {
+  const on = document.getElementById('labelsOn').checked;
+  drawers.forEach(d => d.userData.label.visible = on);
+}
+document.getElementById('labelsOn').onchange = refreshLabels;
+
+function syncCells() {
+  if (mode !== 'unit') return;
+  [...document.getElementById('cells').children].forEach((b, i) => b.classList.toggle('on', drawers[i] && (drawers[i].userData.target > 0.1 || drawers[i].userData.pending)));
+}
+// open a drawer: if the security rod is mounted, lift it first, then the drawer opens
+function openDrawer(d) {
+  const u = d.userData, r = u.rod;
+  if (r && r.visible) { r.userData.target = r.userData.lift; u.pending = true; }
+  else u.target = u.open;
+}
+function closeDrawer(d) { d.userData.target = 0; d.userData.pending = false; }
+function toggleDrawer(d) {
+  (d.userData.target > 0.1 || d.userData.pending) ? closeDrawer(d) : openDrawer(d);
+  syncCells();
+}
+// per frame: drawers waiting for the rod open once it is up; a rod drops back when all its drawers are closed
+function stepRods(k) {
+  for (const r of rods) {
+    const ru = r.userData;
+    if (r.visible && ru.target !== 0) {
+      const busy = ru.drawers.some(d => d.userData.pending || d.userData.target > 0.01 || d.userData.angle > 0.02);
+      if (!busy) ru.target = 0;
+    }
+    ru.angle += (ru.target - ru.angle) * k;
+    r.rotation.x = ru.angle;
+    if (ru.target !== 0 && Math.abs(ru.angle - ru.target) < Math.abs(ru.target) * 0.35)
+      ru.drawers.forEach(d => { if (d.userData.pending) { d.userData.pending = false; d.userData.target = d.userData.open; } });
+  }
+}
+function makeCellButtons(n) {
+  const box = document.getElementById('cells'); box.innerHTML = '';
+  box.style.gridTemplateColumns = `repeat(${n},1fr)`;
+  for (let i = 0; i < n; i++) {
+    const b = document.createElement('button'); b.textContent = i + 1;
+    b.onclick = () => toggleDrawer(drawers[i]); box.appendChild(b);
+  }
+  syncCells();
+}
+function applyOpenAll() {
+  const on = document.getElementById('openAll').checked;
+  drawers.forEach(d => on ? openDrawer(d) : closeDrawer(d));
+  syncCells();
+}
+document.getElementById('openAll').onchange = applyOpenAll;
+document.getElementById('rod').onchange = (e) => {
+  rods.forEach(r => {
+    r.visible = e.target.checked;
+    // mounting the rod while drawers are open: it starts in the lifted position
+    const open = r.userData.drawers.some(d => d.userData.target > 0.01 || d.userData.angle > 0.02);
+    r.userData.target = r.userData.angle = open && r.visible ? r.userData.lift : 0;
+    r.rotation.x = r.userData.angle;
+  });
+};
+document.getElementById('spin').onchange = (e) => controls.autoRotate = e.target.checked;
+
+// click a drawer to toggle it (the rod lifts out of the way first)
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+let down = null;
+canvas.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
+canvas.addEventListener('pointerup', e => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+  const r = canvas.getBoundingClientRect();
+  mouse.set((e.clientX - r.left)/r.width*2 - 1, -(e.clientY - r.top)/r.height*2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const hit = ray.intersectObjects(drawers, true)[0];
+  if (!hit) return;
+  if (isCab()) {
+    const g = wingOf(hit.object);
+    if (g && spread > 0.5 && tenaOpenWing !== g.userData.wingId) { selectWing(g.userData.wingId); return; }
+  }
+  let o = hit.object; while (o && !drawers.includes(o)) o = o.parent;
+  if (!o) return;
+  toggleDrawer(o);
+});
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight, false);
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+// =====================================================================
+// Toolbar: catalog settings (named presets), reset view, PNG, realistic render
+// Works in two places:
+//   • on Vercel  → presets live on the server (/api/presets), render via /api/render
+//   • elsewhere (e.g. the Claude preview) → presets in this browser, render unavailable
+// =====================================================================
+const FAMILY = 'ravta';                       // this page's product family
+const $ = (id) => document.getElementById(id);
+let server = false;                           // true when /api/* answers
+let store = { active:null, presets:{} };      // { active, presets:{ name:{ camera, families:{ ravta:{...} } } } }
+let activeName = null;
+
+// ---------- small storage helpers ----------
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const adminKey = () => LS.get('rbt-admin-key', '');
+const isAdmin = () => !server || !!adminKey();
+
+async function api(path, body) {
+  const r = await fetch(path, body ? { method:'POST', headers:{ 'content-type':'application/json', 'x-admin-key':adminKey() }, body:JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+async function loadStore() {
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 4000);
+    const r = await fetch('/api/presets', { signal:ctl.signal }); clearTimeout(t);
+    if (!r.ok) throw 0;
+    store = await r.json(); server = true;
+  } catch { server = false; store = LS.get('rbt-presets', { active:null, presets:{} }); }
+  store.presets = store.presets || {};
+}
+async function persist(action, payload) {
+  if (server) { store = await api('/api/presets', { action, ...payload }); }
+  else {
+    if (action === 'save') { store.presets[payload.name] = payload.data; if (payload.makeActive) store.active = payload.name; }
+    if (action === 'delete') { delete store.presets[payload.name]; if (store.active === payload.name) store.active = null; }
+    if (action === 'activate') store.active = payload.name;
+    LS.set('rbt-presets', store);
+  }
+}
+
+// ---------- camera relative to the product's automatic framing ----------
+let lastAuto = null;                              // { target:Vector3, dist:number }
+function cameraSnapshot() {
+  const off = camera.position.clone().sub(controls.target);
+  const d = off.length();
+  return {
+    dir: off.normalize().toArray().map(v => +v.toFixed(5)),
+    distF: +(d / lastAuto.dist).toFixed(5),
+    tOff: controls.target.clone().sub(lastAuto.target).divideScalar(lastAuto.dist).toArray().map(v => +v.toFixed(5)),
+  };
+}
+function applyCamera(cam) {
+  if (!cam || !lastAuto) return;
+  const t = lastAuto.target.clone().add(new THREE.Vector3().fromArray(cam.tOff).multiplyScalar(lastAuto.dist));
+  controls.target.copy(t);
+  camera.position.copy(t).addScaledVector(new THREE.Vector3().fromArray(cam.dir).normalize(), cam.distF * lastAuto.dist);
+  controls.update();
+}
+const activeCamera = () => (activeName && store.presets[activeName] && store.presets[activeName].camera) || null;
+
+// ---------- family settings (everything in the panel) ----------
+function captureFamily() {
+  return {
+    mode, current,
+    stand: { ...stand },
+    comp: JSON.parse(JSON.stringify(comp)),
+    tn: JSON.parse(JSON.stringify(TN)), spread: spreadTarget > 0.5, wing: tenaOpenWing,
+    rod: $('rod').checked, labels: $('labelsOn').checked, openAll: $('openAll').checked,
+    open: drawers.map((d, i) => (d.userData.target > 0.1 || d.userData.pending) ? i : -1).filter(i => i >= 0),
+  };
+}
+function applyFamily(f) {
+  if (!f) return;
+  mode = f.mode || mode; current = f.current || current;
+  if (f.stand) Object.assign(stand, f.stand);
+  if (f.comp) for (const k in f.comp) comp[k] = { ...f.comp[k] };
+  const tn = f.tn || (f.tena ? { delux:f.tena } : null);
+  if (tn) for (const v of ['delux', 'smart']) if (tn[v]) {
+    Object.assign(TN[v], JSON.parse(JSON.stringify(tn[v])));
+    const px = v === 'smart' ? 'sm' : 'tn';
+    if (v === 'smart') { TN.smart.depthMode = 'std'; continue; }   // CUSTOM depth exists only in DELUX
+    if ($(px + 'Size')) setSeg(px + 'Size', TN[v].size); setSeg(px + 'DepthMode', TN[v].depthMode);
+    $(px + 'DepthFld').hidden = TN[v].depthMode !== 'custom'; $(px + 'Depth').value = TN[v].depth / 10;
+  }
+  tenaOpenWing = f.wing || null; spreadTarget = spread = f.spread ? 1 : 0;
+  $('rod').checked = !!f.rod; $('labelsOn').checked = !!f.labels; $('openAll').checked = !!f.openAll;
+  [...seg.children].forEach(c => c.classList.toggle('on', +c.dataset.n === current));
+  setSeg('stType', stand.type); setSeg('stBase', stand.base); setSeg('stHeight', stand.height);
+  setSeg('stHandle', stand.handle); setSeg('stBrake', stand.brake); syncWheelOpts();
+  panels.forEach(x => { const on = x.dataset.mode === mode; x.classList.toggle('open', on); x.querySelector('.head').setAttribute('aria-expanded', on); });
+  placeShared();
+  rebuild();
+  if (!f.openAll && f.open) f.open.forEach(i => drawers[i] && openDrawer(drawers[i]));
+  syncCells();
+}
+
+// ---------- preset picker ----------
+function renderPresetPicker() {
+  const sel = $('presetSel');
+  const names = Object.keys(store.presets).sort((a, b) => a.localeCompare(b, 'he'));
+  sel.innerHTML = '<option value="">זווית אוטומטית</option>' +
+    names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}${n === store.active ? ' ★' : ''}</option>`).join('');
+  sel.value = activeName || '';
+  document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
+  $('lockBtn').hidden = !server;
+  $('lockBtn').classList.toggle('on', server && !!adminKey());
+  $('lockBtn').title = adminKey() ? 'מצב ניהול פעיל – לחיצה ליציאה' : 'כניסה למצב ניהול';
+}
+function selectPreset(name, applySettings = true) {
+  activeName = name || null;
+  const p = activeName && store.presets[activeName];
+  if (p && applySettings && p.families && p.families[FAMILY]) applyFamily(p.families[FAMILY]);
+  resetView();
+  renderPresetPicker();
+}
+$('presetSel').onchange = (e) => selectPreset(e.target.value);
+
+// ---------- reset view ----------
+let lastFrame = null;
+function resetView() { if (lastFrame) frame(...lastFrame); }
+$('resetBtn').onclick = resetView;
+$('spreadBtn').onclick = () => setSpread(spreadTarget < 0.5);
+
+// ---------- dialogs ----------
+function openDialog(html, onReady) {
+  const wrap = $('dlg'); wrap.innerHTML = `<div class="dlg-card" role="dialog" aria-modal="true">${html}</div>`;
+  wrap.hidden = false;
+  const close = () => { wrap.hidden = true; wrap.innerHTML = ''; };
+  wrap.onclick = (e) => { if (e.target === wrap) close(); };
+  wrap.querySelectorAll('[data-close]').forEach(b => b.onclick = close);
+  onReady && onReady(wrap.firstElementChild, close);
+  const first = wrap.querySelector('input,select,button'); first && first.focus();
+}
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2600);
+}
+
+// save the current view + panel settings under a name
+$('saveBtn').onclick = () => {
+  const names = Object.keys(store.presets);
+  openDialog(`
+    <h3>שמירת הגדרת קטלוג</h3>
+    <p class="dlg-sub">נשמרים: זווית המצלמה (יחסית לגודל המוצר, לכל המשפחות) וכל ההגדרות של "משפחת רב תא".</p>
+    <label class="fld">שם ההגדרה
+      <input id="pName" list="pNames" placeholder="למשל: קטלוג חוליות" value="${activeName ? activeName.replace(/"/g, '&quot;') : ''}">
+      <datalist id="pNames">${names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">`).join('')}</datalist>
+    </label>
+    <label class="chk"><input type="checkbox" id="pActive" ${!store.active || store.active === activeName ? 'checked' : ''}> הגדרה פעילה – כולם נפתחים בה</label>
+    <div class="dlg-err" id="pErr" hidden></div>
+    <div class="dlg-actions">
+      <button class="btn primary" id="pSave">שמור</button>
+      <button class="btn danger" id="pDel" ${activeName ? '' : 'hidden'}>מחק הגדרה</button>
+      <button class="btn" data-close>ביטול</button>
+    </div>`, (card, close) => {
+    const err = (m) => { const e = card.querySelector('#pErr'); e.textContent = m; e.hidden = false; };
+    card.querySelector('#pSave').onclick = async () => {
+      const name = card.querySelector('#pName').value.trim();
+      if (!name) return err('צריך לתת שם להגדרה.');
+      const prev = store.presets[name] || {};
+      const data = { camera: cameraSnapshot(), families: { ...(prev.families || {}), [FAMILY]: captureFamily() }, updated: new Date().toISOString() };
+      try {
+        await persist('save', { name, data, makeActive: card.querySelector('#pActive').checked });
+        activeName = name; renderPresetPicker(); close(); toast(`נשמר: ${name}`);
+      } catch (e) { err('השמירה נכשלה: ' + e.message); }
+    };
+    card.querySelector('#pDel').onclick = async () => {
+      if (!activeName) return;
+      try { await persist('delete', { name: activeName }); activeName = store.active; renderPresetPicker(); close(); toast('ההגדרה נמחקה'); resetView(); }
+      catch (e) { err('המחיקה נכשלה: ' + e.message); }
+    };
+  });
+};
+
+// admin login (server mode only)
+$('lockBtn').onclick = () => {
+  if (adminKey()) { LS.set('rbt-admin-key', ''); renderPresetPicker(); toast('יצאת ממצב ניהול'); return; }
+  openDialog(`
+    <h3>מצב ניהול</h3>
+    <label class="fld">סיסמה<input id="aPass" type="password" autocomplete="current-password"></label>
+    <div class="dlg-err" id="aErr" hidden></div>
+    <div class="dlg-actions"><button class="btn primary" id="aGo">כניסה</button><button class="btn" data-close>ביטול</button></div>`,
+  (card, close) => {
+    const go = async () => {
+      LS.set('rbt-admin-key', card.querySelector('#aPass').value);
+      try { await api('/api/presets', { action:'login' }); renderPresetPicker(); close(); toast('מצב ניהול פעיל'); }
+      catch { LS.set('rbt-admin-key', ''); const e = card.querySelector('#aErr'); e.textContent = 'סיסמה שגויה'; e.hidden = false; }
+    };
+    card.querySelector('#aGo').onclick = go;
+    card.querySelector('#aPass').onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  });
+};
+
+// ---------- capture the model as an image (transparent background) ----------
+function captureCanvas(maxSide = 2400) {
+  const w = renderer.domElement.clientWidth, h = renderer.domElement.clientHeight;
+  const pr = Math.min(3, maxSide / Math.max(w, h));
+  const oldPr = renderer.getPixelRatio();
+  renderer.setPixelRatio(pr); renderer.setSize(w, h, false);
+  renderer.render(scene, camera);
+  // crop to the model with a small margin
+  const src = renderer.domElement, cw = src.width, ch = src.height;
+  const tmp = document.createElement('canvas'); tmp.width = cw; tmp.height = ch;
+  const tx = tmp.getContext('2d'); tx.drawImage(src, 0, 0);
+  const px = tx.getImageData(0, 0, cw, ch).data;
+  let x0 = cw, y0 = ch, x1 = 0, y1 = 0;
+  for (let y = 0; y < ch; y += 2) for (let x = 0; x < cw; x += 2) {
+    if (px[(y*cw + x)*4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  renderer.setPixelRatio(oldPr); renderer.setSize(w, h, false);
+  if (x1 <= x0) return tmp;
+  const m = Math.round(Math.max(x1 - x0, y1 - y0) * 0.05);
+  x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m); x1 = Math.min(cw, x1 + m); y1 = Math.min(ch, y1 + m);
+  const out = document.createElement('canvas'); out.width = x1 - x0; out.height = y1 - y0;
+  out.getContext('2d').drawImage(tmp, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+  return out;
+}
+const toBlob = (cv, type = 'image/png', q) => new Promise(r => cv.toBlob(r, type, q));
+function fileStem() {
+  if (mode === 'unit') return `rav-ta-${current}`;
+  if (isCab()) return `ta-na-${tena.variant}-${tena.size}${spreadTarget > 0.5 ? '-spread' : ''}`;
+  return `rav-ta-${stand.type === 'double' ? 'double' : 'single'}-${stand.base}-${stand.height / 10}`;
+}
+async function saveFile(blob, filename) {
+  // inside the Claude preview downloads go through the platform; on Vercel a plain link works
+  try {
+    if (window.claude && window.claude.use) {
+      const dl = await window.claude.use('downloads');
+      if (dl) { await dl.save({ filename, data: blob }); return; }
+    }
+  } catch (e) { /* fall back to a link */ }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+$('shotBtn').onclick = async () => {
+  const blob = await toBlob(captureCanvas());
+  await saveFile(blob, `${fileStem()}.png`);
+};
+
+// ---------- realistic render (GPT Image via /api/render) ----------
+function describe() {
+  const base = 'Wall-mounted tilt-bin storage unit: injection-moulded body in light grey RAL 7035 (matte, slightly satin), with clear transparent polystyrene tilt-out bins';
+  const flags = [];
+  if ($('rod').checked) flags.push('a thin stainless steel security rod across the front');
+  if ($('labelsOn').checked) flags.push('plain white paper labels in the label windows');
+  if (isCab()) { const S = sizeDef();
+    const shell = tena.variant === 'smart'
+      ? `An open storage rack ("Ta-Na SMART"), ${S.W} mm wide, ${cfg().H} mm high: open frame of rectangular painted steel tube in ${tena.color === 'blue' ? 'deep blue' : 'light grey RAL 7035'}, levelling feet, no panels.`
+      : `A closed storage cabinet ("Ta-Na DELUX"), ${S.W} mm wide, 2200 mm high: frame of 30x30 mm aluminium profiles powder-coated RAL 7035, closed with glossy white PVC panels on top, bottom, back and sides, white framed panels across the top front.`;
+    return `${shell} Inside: ${S.R} fixed rear columns and ${S.M}+${S.F} sliding columns on top/bottom tracks, each column a stack of ${base.toLowerCase()} (largest at the bottom)${flags.length ? '; ' + flags.join('; ') : ''}.`; }
+  if (mode === 'unit') return `${base}; ${current} bins side by side; 600 mm wide, ${MODELS[current].H} mm high, ${MODELS[current].D} mm deep${flags.length ? '; ' + flags.join('; ') : ''}.`;
+  const t = stand.type === 'double' ? 'double-sided (units on front and back)' : 'single-sided';
+  const b = stand.base === 'wheels' ? `on 4 castors${stand.brake === 'brake' ? ' (front castors with brakes)' : ''} with a black side handle` : 'on short legs with levelling feet';
+  return `A ${t} mobile stand made of 30x30 mm slotted aluminium profiles powder-coated RAL 7035, ${stand.height} mm uprights, ${b}, holding stacked ${base.toLowerCase()} (largest at the bottom)${flags.length ? '; ' + flags.join('; ') : ''}.`;
+}
+$('renderBtn').onclick = () => {
+  if (!server) {
+    openDialog(`<h3 dir="ltr" style="text-align:right">RENDER REALISTIC PHOTO?</h3>
+      <p class="dlg-sub">הרינדור הריאליסטי זמין רק בגרסה שעולה ל־Vercel, כי הוא עובר דרך השרת והמפתח של OpenAI.</p>
+      <div class="dlg-actions"><button class="btn" data-close>הבנתי</button></div>`);
+    return;
+  }
+  if (!adminKey()) { toast('הרינדור זמין במצב ניהול'); $('lockBtn').click(); return; }
+  openDialog(`
+    <h3 dir="ltr" style="text-align:right">RENDER REALISTIC PHOTO?</h3>
+    <p class="dlg-sub">התצוגה הנוכחית תהפוך לצילום מוצר ריאליסטי. זה לוקח בערך חצי דקה עד דקה.</p>
+    <div class="lbl">רקע</div>
+    <div class="seg2" id="rBg"><button data-v="transparent" class="on">שקוף</button><button data-v="studio">סטודיו</button></div>
+    <div class="dlg-err" id="rErr" hidden></div>
+    <div class="r-out" id="rOut" hidden></div>
+    <div class="dlg-actions" id="rActs">
+      <button class="btn primary" id="rGo">רנדר</button>
+      <button class="btn" data-close>ביטול</button>
+    </div>`, (card, close) => {
+    let bg = 'transparent';
+    card.querySelectorAll('#rBg button').forEach(b => b.onclick = () => {
+      bg = b.dataset.v; card.querySelectorAll('#rBg button').forEach(c => c.classList.toggle('on', c === b));
+    });
+    card.querySelector('#rGo').onclick = async () => {
+      const go = card.querySelector('#rGo'), out = card.querySelector('#rOut'), er = card.querySelector('#rErr');
+      er.hidden = true; go.disabled = true; go.textContent = 'מרנדר…';
+      out.hidden = false; out.innerHTML = '<div class="spin" aria-label="מרנדר"></div>';
+      try {
+        const cv = captureCanvas(1536);
+        let image = cv.toDataURL('image/webp', 0.95);
+        if (!image.startsWith('data:image/webp')) image = cv.toDataURL('image/png');
+        const r = await api('/api/render', { image, background: bg, description: describe() });
+        out.innerHTML = `<img src="${r.image}" alt="רינדור ריאליסטי">`;
+        go.textContent = 'רנדר שוב'; go.disabled = false;
+        if (!card.querySelector('#rDl')) {
+          const dl = document.createElement('button'); dl.className = 'btn'; dl.id = 'rDl'; dl.textContent = 'הורדה (PNG)';
+          card.querySelector('#rActs').insertBefore(dl, card.querySelector('[data-close]'));
+          dl.onclick = async () => {
+            const img = out.querySelector('img'); const c = document.createElement('canvas');
+            c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0);
+            await saveFile(await toBlob(c), `${fileStem()}-realistic.png`);
+          };
+        }
+      } catch (e) {
+        out.hidden = true; er.textContent = 'הרינדור נכשל: ' + e.message; er.hidden = false;
+        go.textContent = 'נסה שוב'; go.disabled = false;
+      }
+    };
+  });
+};
+
+// ---------- start-up: load presets and open in the active one ----------
+(async () => {
+  await loadStore();
+  renderPresetPicker();
+  if (store.active && store.presets[store.active]) selectPreset(store.active);
+})();
+
+const clock = new THREE.Clock();
+rebuild();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(0.1, clock.getDelta());               // time-based, same speed on any screen
+  stepRods(1 - Math.exp(-dt*6.5));
+  stepWings(1 - Math.exp(-dt*5), dt);
+  const kd = 1 - Math.exp(-dt*7.5);
+  drawers.forEach(d => { const u = d.userData; u.angle += (u.target - u.angle) * kd; d.rotation.x = u.angle; });
+  controls.update();
+  renderer.render(scene, camera);
+});
+window.__ready = true;
+</script>
+</body>
+</html>
