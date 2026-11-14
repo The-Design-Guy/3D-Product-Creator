@@ -206,6 +206,19 @@
   .srow .sname { all:unset; flex:1; padding:6px 8px; font-size:13px; font-weight:500; cursor:pointer; }
   .srow .sb { width:28px; height:28px; border:0; background:transparent; border-radius:6px; cursor:pointer; color:var(--muted); font-size:13px; }
   .panel[hidden] { display:none !important; }
+  .zones { display:grid; gap:6px; margin-bottom:8px; }
+  .zone { border:1px solid var(--line); border-radius:10px; background:rgba(255,255,255,.7); padding:6px; }
+  .zone.bins { background:#f3f6f9; }
+  .zone .zh { display:flex; align-items:center; gap:6px; }
+  .zone .zt { flex:1; font-size:13px; font-weight:600; }
+  .zone .zh .sb { width:28px; height:28px; border:0; background:transparent; border-radius:6px; cursor:pointer; color:var(--muted); font-size:13px; }
+  .zone .zh .sb:hover { background:#eef1f3; color:var(--ink); }
+  .zone .zh .sb:disabled { opacity:.3; cursor:default; }
+  .zone .comp { margin-top:6px; }
+  .zone .seg2 { margin-top:6px; }
+  .zone .seps { display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:6px; font-size:12px; color:var(--muted); }
+  .zone .seps label { display:flex; align-items:center; gap:4px; cursor:pointer; }
+  .zfree { font-size:12px; font-weight:400; color:var(--muted); text-align:center; padding:0; border:1px dashed var(--line); border-radius:8px; }
   .shl { display:grid; gap:4px; margin-bottom:6px; }
   .btn.on { background:#e6ebef; border-color:#9aa7b2; color:var(--acc); font-weight:700; }
   .srow .sb:hover { background:#eef1f3; color:var(--ink); }
@@ -380,17 +393,11 @@
     <div class="body"><div class="inner">
       <div class="lbl">סוג סגירה</div>
       <div class="seg2" id="tbClose"><button data-v="tambour" class="on">תריס · עומק 45</button><button data-v="doors">שתי דלתות · עומק 40</button></div>
-      <div class="lbl">רב תאים (הגב צמוד לגב הארון)</div>
-      <div class="comp" id="tbComp"></div>
+      <div class="lbl">פנים הארון (מלמעלה למטה)</div>
+      <div class="zones" id="tbZones"></div>
+      <div class="pair"><button class="btn" id="tbAddShelf">+ מדף</button><button class="btn" id="tbAddBins">+ אזור רב תאים</button></div>
       <div class="bar"><i id="tbBar"></i></div>
       <div class="use" id="tbUse"></div>
-      <div class="pair">
-        <div><div class="lbl">צד הרב תאים</div>
-          <div class="seg2" id="tbSide"><button data-v="right">צמוד לימין</button><button data-v="left" class="on">צמוד לשמאל</button></div></div>
-        <div><div class="lbl">מדפים בין הקבוצות</div>
-          <div class="seg2" id="tbShelves"><button data-v="none">בלי</button><button data-v="groups" class="on">בין כל גודל</button></div></div>
-      </div>
-      <div class="row"><span>מדפים נוספים מעל הרב תאים</span><span class="ctl cnt" dir="ltr"><button id="tbExtraM" aria-label="פחות">−</button><b id="tbExtraN">1</b><button id="tbExtraP" aria-label="יותר">+</button></span></div>
       <div id="tbTambSec">
         <div class="lbl">תריס</div>
         <div class="pair">
@@ -445,6 +452,13 @@
           <input class="num" type="number" id="tnDepth" min="40" max="120" step="0.5" value="62.5" aria-label="עומק הארון בסנטימטרים"></div>
       </div>
       <div class="use" id="tnDepthNote"></div>
+      <div id="tnSlideSec">
+        <div class="row"><span>דלתות הזזה עם מנעול (אופציה)</span><label class="sw"><input type="checkbox" id="tnSlide"><span></span></label></div>
+        <div id="tnSlideBox" hidden>
+          <div class="seg2" id="tnSlideBtns"></div>
+          <div class="use">לחיצה על דלת במודל מזיזה אותה. בכל צמד הדלת השמאלית רצה מאחור והימנית מלפנים, עם מנעול צילינדר. בפריסת כנפיים הדלתות יורדות.</div>
+        </div>
+      </div>
       <div class="lbl">כנפיים</div>
       <div class="wings" id="tnWings"></div>
       <div class="slot"></div>
@@ -1098,7 +1112,7 @@ const TENA_DEFAULT = {
 const WING_GROUPS = new Map();
 const WING_FRAMES = new Map();                 // aluminium wing frames: slide with the wing but stay in the cabinet when spread                 // wing id → its 3D group (rebuilt with the scene)
 const TN = {
-  delux: { variant:'delux', size:4, depthMode:'std', depth:625, bySize:{} },
+  delux: { variant:'delux', size:4, depthMode:'std', depth:625, bySize:{}, slide:{ on:false, open:[0, 0, 0, 0] } },
   smart: { variant:'smart', size:4, depthMode:'std', depth:680, color:'blue', bySize:{} },
 };
 let tena = TN.delux;                           // the cabinet currently shown
@@ -1107,6 +1121,10 @@ const isCab = () => mode === 'tena' || mode === 'smart' || (mode === 'scene' && 
 const PX = () => (mode === 'smart' || (mode === 'scene' && SCN.editType === 'smart')) ? 'sm' : 'tn';
 const cfg = () => VARIANT[tena.variant];
 const sizeDef = () => cfg().size || TENA_SIZES[tena.size];
+// optional lockable sliding doors on the front of DELUX: 2 doors on the 4-wing size, 2 pairs on the 10-wing size
+const slideAllowed = () => tena.variant === 'delux' && (tena.size === 4 || tena.size === 10);
+const slideOn = () => slideAllowed() && !!(tena.slide && tena.slide.on);
+let SLD = null;                                // sliding doors on screen: { list:[{g, k, x0, travel, idx}], meshes, st }
 
 function tenaState() {                         // per size: wings with their stacks and slide positions
   const k = tena.size;
@@ -1250,6 +1268,33 @@ function buildTena() {
     wg.userData = { wingId:w.id, zBack:(w.layer === 'rear' ? zRear : zBack - P), yTop:Math.max(yEnd, w.layer === 'rear' ? yEnd : top), drawers:wd };
     WING_GROUPS.set(w.id, wg);
   }
+  // sliding doors: two tracks in front of the posts; in each pair the left door runs behind, the right one in front
+  if (slideOn()) {
+    const sl = tena.slide, pairs = tena.size === 10 ? 2 : 1, Wp = W / pairs, ov = 20, dw = Wp/2 + ov;
+    const yb = F + 22, ytp = yTop + P/2 - 6, dh = ytp - yb - 8, zT = D/2 + 24;
+    const tr = (h, y) => { const m = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(W, h, 44), profileMat)); m.position.set(0, y, zT); root.add(m); };
+    tr(26, yTop - 2); tr(16, F + 12);                                            // top and bottom double track
+    const dl = [], meshes = [];
+    const handleMat = new THREE.MeshStandardMaterial({ color:0x3a3f44, roughness:0.5 });
+    for (let p = 0; p < pairs; p++) for (let k = 0; k < 2; k++) {
+      const idx = p*2 + k, cx = -W/2 + Wp*(p + 0.5), sgn = k ? 1 : -1;
+      const x0 = cx + sgn*(Wp/4 - ov/2), z = zT + (k ? 11 : -11);
+      const dg = new THREE.Group(); root.add(dg);
+      const add = (m, x, y, zz) => { m.position.set(x, y, zz); shadowOn(m); dg.add(m); meshes.push(m); return m; };
+      const fw = 26;
+      for (const sx of [-1, 1]) add(new THREE.Mesh(new THREE.BoxGeometry(fw, dh, 20), profileMat), sx*(dw/2 - fw/2), yb + dh/2, 0);
+      for (const y of [yb + fw/2, yb + dh - fw/2]) add(new THREE.Mesh(new THREE.BoxGeometry(dw - 2*fw, fw, 20), profileMat), 0, y, 0);
+      add(new THREE.Mesh(new THREE.BoxGeometry(dw - 2*fw + 2, dh - 2*fw + 2, 6), pvcMat), 0, yb + dh/2, 0);
+      const ex = -sgn*(dw/2 - fw/2);                                                 // meeting edge
+      add(new THREE.Mesh(new THREE.BoxGeometry(10, 260, 4), handleMat), ex - sgn*(-22) , yb + dh*0.5, 11);   // recessed pull
+      if (k) {                                                                      // cylinder lock on the front door of each pair
+        const lk = add(new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 10, 20), zincMat), ex, yb + dh*0.5 + 200, 13); lk.rotation.x = Math.PI/2;
+      }
+      dg.position.set(x0 + -sgn*(sl.open[idx] || 0)*(Wp/2 - ov), 0, z);
+      dl.push({ g:dg, idx, x0, sgn, travel:Wp/2 - ov, cur:sl.open[idx] || 0 });
+    }
+    SLD = { list:dl, meshes, st:sl };
+  }
   CAB = { W, D, H, travel, innerW, zRear, rows:st.wings };
   layoutSpread();
   return { group:g, drawers:list, rods:rodList, totalH:H + 4, W, D, travel };
@@ -1289,6 +1334,24 @@ function stepWings(k, dt) {
     g.position.z = (o ? o.z * t : 0) * 0.001;
     const fw = WING_FRAMES.get(w.id); if (fw) fw.position.x = w.pos * 0.001;   // frame stays on its track
   }
+}
+function stepSlide(k) {
+  if (!SLD) return;
+  for (const d of SLD.list) {
+    const t = SLD.st.open[d.idx] || 0;
+    if (Math.abs(t - d.cur) > 0.001) { d.cur += (t - d.cur) * k; d.g.position.x = d.x0 - d.sgn * d.cur * d.travel; }
+    d.g.visible = spread < 0.02;                // the wings can't come out through the doors: they are taken off while spread
+  }
+}
+function toggleSlide(i) {
+  const o = tena.slide.open; o[i] = o[i] > 0.5 ? 0 : 1;
+  // two doors of a pair share the track width: opening one closes its partner
+  if (o[i]) o[i ^ 1] = 0;
+  syncSlideBtns();
+}
+function syncSlideBtns() {
+  const b = document.getElementById('tnSlideBtns'); if (!b) return;
+  [...b.children].forEach((c, i) => c.classList.toggle('on', tena.slide.open[i] > 0.5));
 }
 function setSpread(on) {
   spreadTarget = on ? 1 : 0;
@@ -1383,6 +1446,17 @@ let suppressClick = false;
 function wingUsed(w) { return stackHeight(w.comp); }
 function renderTena() {
   if (!isCab()) return;
+  if (PX() === 'tn' && document.getElementById('tnSlideSec')) {
+    if (!tena.slide) tena.slide = { on:false, open:[0, 0, 0, 0] };
+    document.getElementById('tnSlideSec').hidden = !slideAllowed();
+    document.getElementById('tnSlide').checked = !!tena.slide.on;
+    document.getElementById('tnSlideBox').hidden = !slideOn();
+    const n = tena.size === 10 ? 4 : 2, bb = document.getElementById('tnSlideBtns');
+    bb.style.gridTemplateColumns = `repeat(${n},1fr)`;
+    bb.innerHTML = Array.from({ length:n }, (_, i) => `<button data-i="${i}">דלת ${i + 1}</button>`).join('');
+    bb.querySelectorAll('button').forEach(b => b.onclick = () => toggleSlide(+b.dataset.i));
+    syncSlideBtns();
+  }
   const st = tenaState(), box = document.getElementById(PX() + 'Wings');
   if (!THUMBS) { try { THUMBS = makeThumbs(); } catch (e) { THUMBS = {}; } }
   box.innerHTML = '';
@@ -1648,7 +1722,7 @@ function applyCfg(t, c) {
   else if (t === 'stand') { Object.assign(stand, c.stand); for (const k in comp) delete comp[k]; Object.assign(comp, deep(c.comp)); }
   else if (t === 'wall') { Object.assign(wall, deep(c.wall)); for (const k in wallComp) delete wallComp[k]; Object.assign(wallComp, deep(c.wallComp)); }
   else if (t === 'excl' || t === 'part') { for (const k in EXS[t]) delete EXS[t][k]; Object.assign(EXS[t], deep(c.exs)); }
-  else if (t === 'tamb') { Object.assign(TB, deep(c.tb)); TB.comp = deep(c.tb.comp); }
+  else if (t === 'tamb') { for (const k of ['comp', 'side', 'shelves', 'extra', 'items']) delete TB[k]; Object.assign(TB, deep(c.tb)); tbMigrate(TB); TB.closure = TB.closure || 'tambour'; TB.doors = TB.doors || [0, 0]; if (TB.acc === undefined) TB.acc = true; }
   else if (t === 'mtamb') Object.assign(MT, deep(c.mt));
   else if (t === 'mdoor') Object.assign(MD, deep(c.md));
   else { const v = t === 'smart' ? 'smart' : 'delux'; for (const k in TN[v]) delete TN[v][k]; Object.assign(TN[v], deep(c.tn)); tena = TN[v]; }
@@ -1666,7 +1740,7 @@ function syncUI(t) {
   setSeg('stType', stand.type); setSeg('stBase', stand.base); setSeg('stHeight', stand.height);
   setSeg('stHandle', stand.handle); setSeg('stBrake', stand.brake); syncWheelOpts();
   setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0');
-  setSeg('tbSide', TB.side); setSeg('tbShelves', TB.shelves); setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; setSeg('mdColor', MD.color);
+  setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; setSeg('mdColor', MD.color);
   $('ptWide').checked = !!EXS.part.wide; setSeg('exSide', EXS.excl.side || 'left'); setSeg('ptSide', EXS.part.side || 'left'); setSeg('ptCols', EXS.part.cols || 2);
   for (const v of ['delux', 'smart']) { const px = v === 'smart' ? 'sm' : 'tn';
     if ($(px + 'Size')) setSeg(px + 'Size', TN[v].size);
@@ -1943,7 +2017,7 @@ const pegTex = (() => {                       // perforated tool panel on the in
 })();
 const TBX = { W:900, D:450, H:1950, BASE:70, TOP:60, SIDE:20, BACK:12, PITCH:25, SHELF:25, MAXO:400 };
 const evenShelves = (n) => Array.from({ length:n }, (_, i) => TBX.BASE + Math.round((TBX.H - TBX.TOP - TBX.BASE) * (i + 1) / (n + 1) / TBX.PITCH) * TBX.PITCH);
-const TB = { comp:{ 4:2, 5:3, 6:3 }, side:'left', shelves:'groups', extra:1, open:0, target:0, closure:'tambour', doors:[0, 0], acc:true };
+const TB = { items:[{ t:'bins', y:TBX.BASE, comp:{ 4:2, 5:3, 6:3 }, side:'left', noSep:[] }, { t:'shelf', y:1595 }], open:0, target:0, closure:'tambour', doors:[0, 0], acc:true };
 const MT = { list:evenShelves(4), open:0, target:0 };
 const MD = { list:evenShelves(4), color:'7035', doors:[0, 0] };
 const METAL = { tamb:TB, mtamb:MT, mdoor:MD };
@@ -1955,7 +2029,7 @@ const tbCeil = () => TBX.H - TBX.TOP;
 const snapUp = (y) => tbFloor() + Math.ceil((y - tbFloor()) / TBX.PITCH) * TBX.PITCH;
 const snapNear = (y) => tbFloor() + Math.round((y - tbFloor()) / TBX.PITCH) * TBX.PITCH;
 // tilt-bin cabinet: plan the inside [{type:'unit', n, y} | {type:'shelf', y}]
-function tbPlan(comp = TB.comp, shelves = TB.shelves, extra = TB.extra) {
+function tbPlan(comp, shelves = 'groups', extra = 1) {
   const out = []; let y = tbFloor();
   const groups = ORDER.filter(n => (comp[n] || 0) > 0);
   groups.forEach((n, gi) => {
@@ -1972,6 +2046,40 @@ function tbPlan(comp = TB.comp, shelves = TB.shelves, extra = TB.extra) {
     if (sy + TBX.SHELF <= tbCeil() - 20) out.push({ type:'shelf', y:sy, extra:true });
   }
   return { items:out, top };
+}
+// ---- inside of the tilt-bin cabinet: free items stacked by height ----
+//   {t:'bins', y, comp, side, noSep:[sizes without a shelf above them]}  – a block of tilt bins hung on the back
+//   {t:'shelf', y}                                                       – a full-width shelf
+const TB_MODELS = [3, 4, 5, 6, 9];
+function binsLayout(it) {
+  const parts = []; let y = it.y;
+  const groups = ORDER.filter(n => TB_MODELS.includes(n) && (it.comp[n] || 0) > 0);
+  groups.forEach((n, gi) => {
+    for (let i = 0; i < it.comp[n]; i++) { if (i > 0) y -= RIM; parts.push({ type:'unit', n, y }); y += MODELS[n].H; }
+    if (gi < groups.length - 1 && !(it.noSep || []).includes(n)) {
+      const sy = it.y + Math.ceil((y + 4 - it.y) / TBX.PITCH) * TBX.PITCH; parts.push({ type:'shelf', y:sy, n }); y = sy + TBX.SHELF;
+    }
+  });
+  return { parts, h:y - it.y, groups };
+}
+const itemH = (it) => it.t === 'shelf' ? TBX.SHELF : Math.max(binsLayout(it).h, 40);
+// the nearest free place for item i (height h) to the wanted y; null if there is none
+function freeSpot(items, i, y, h = itemH(items[i])) {
+  const occ = items.filter((_, j) => j !== i).map(o => [o.y, o.y + itemH(o)]).sort((a, b) => a[0] - b[0]);
+  let lo = tbFloor(), best = null;
+  for (const [a, b] of [...occ, [tbCeil(), tbCeil()]]) {
+    const y0 = snapUp(lo), y1 = tbFloor() + Math.floor((a - h - tbFloor()) / TBX.PITCH) * TBX.PITCH;
+    if (y1 >= y0) { const c = Math.max(y0, Math.min(y1, snapNear(y))); if (best === null || Math.abs(c - y) < Math.abs(best - y)) best = c; }
+    lo = Math.max(lo, b);
+  }
+  return best;
+}
+function tbMigrate(T) {                          // settings saved before the zones existed
+  if (T.items) return T;
+  const comp = T.comp || { 4:2, 5:3, 6:3 }, items = [{ t:'bins', y:TBX.BASE, comp:{ ...comp }, side:T.side || 'left', noSep:T.shelves === 'none' ? [...ORDER] : [] }];
+  const plan = tbPlan(comp, T.shelves || 'groups', T.extra ?? 1);
+  plan.items.filter(p => p.extra).forEach(p => items.push({ t:'shelf', y:p.y }));
+  T.items = items; delete T.comp; delete T.side; delete T.shelves; delete T.extra; return T;
 }
 let TAMB = null, DOORS = null, SHELVES = null;    // movable parts of the cabinet on screen
 function placeSlats(slats, o, zf, hw) {
@@ -1991,7 +2099,7 @@ function buildMetal(k) {
   // body
   for (const sx of [-1, 1]) box(SIDE, H, D, sx*(W/2 - SIDE/2), H/2, 0);
   box(W - 2*SIDE, BACK, D - 2, 0, H - 6, 0);
-  box(W - 2*SIDE, H - BASE - TOP, BACK, 0, (BASE + H - TOP)/2, -D/2 + BACK/2);
+  box(W - 2*SIDE, H - BACK, BACK, 0, (H - BACK)/2, -D/2 + BACK/2);              // back: floor up to the top plate
   box(W - 2*SIDE, BASE, D - 10, 0, BASE/2, closure === 'doors' ? -10 : 0);
   if (closure === 'tambour') { box(W - 2*SIDE, TOP - 6, 40, 0, H - TOP/2 - 6, D/2 - 20); box(W - 2*SIDE, 18, 40, 0, BASE + 9, D/2 - 20); }
   else box(W - 2*SIDE, TOP - 6, 20, 0, H - TOP/2 - 6, D/2 - 32);
@@ -2001,7 +2109,7 @@ function buildMetal(k) {
     strip.position.set(sx*(W/2 - SIDE - 0.5), (BASE + H - TOP)/2, D/2 - (closure === 'doors' ? 60 : 70)); strip.rotation.y = -sx*Math.PI/2; root.add(strip);
   }
   // inside
-  const inW = W - 2*SIDE, zBack = -D/2 + BACK, shelfD = D - BACK - (closure === 'doors' ? (k === 'tamb' ? 130 : 45) : 60);   // tools on the doors need room in front of the shelves
+  const inW = W - 2*SIDE, zBack = -D/2 + BACK, shelfD = D - BACK - (closure === 'doors' ? (k === 'tamb' && TB.acc ? 110 : 28) : 34);   // up to the front; only the tools on the pegboard doors need room
   const list = [], rodList = [], shelfMeshes = [];
   const shelf = (y, idx) => {
     const sm = box(inW - 2, TBX.SHELF, shelfD, 0, y + TBX.SHELF/2, zBack + shelfD/2);
@@ -2009,11 +2117,15 @@ function buildMetal(k) {
     if (idx !== undefined) { sm.userData.shelf = idx; shelfMeshes.push(sm); }
   };
   if (k === 'tamb') {
-    const cx = (TB.side === 'right' ? 1 : -1) * (inW/2 - 300);
-    for (const p of tbPlan().items) {
-      if (p.type === 'shelf') shelf(p.y);
-      else { const u = makeUnit(p.n); u.group.position.set(cx*0.001, p.y*0.001, zBack*0.001); g.add(u.group); list.push(...u.drawers); rodList.push(u.rod); }
-    }
+    tbMigrate(TB);
+    TB.items.forEach((it, i) => {
+      if (it.t === 'shelf') { shelf(it.y, i); return; }
+      const cx = (it.side === 'right' ? 1 : -1) * (inW/2 - 300);
+      for (const p of binsLayout(it).parts) {
+        if (p.type === 'shelf') shelf(p.y);
+        else { const u = makeUnit(p.n); u.group.position.set(cx*0.001, p.y*0.001, zBack*0.001); g.add(u.group); list.push(...u.drawers); rodList.push(u.rod); }
+      }
+    });
   } else S.list.forEach((y, i) => shelf(y, i));
   // front
   let slats = null, doors = null;
@@ -2084,30 +2196,89 @@ function buildTamb() { return buildMetal('tamb'); }
 
 // ---------- panels ----------
 function renderTamb() {
-  const box = $('tbComp');
+  tbMigrate(TB);
+  const box = $('tbZones');
   if (!THUMBS) { try { THUMBS = makeThumbs(); } catch (e) { THUMBS = {}; } }
   box.innerHTML = '';
-  const plan = tbPlan(), lim = tbCeil(), models = [3, 4, 5, 6, 9];
-  for (const n of ORDER) {
-    const ok = models.includes(n), cnt = TB.comp[n] || 0;
-    const row = document.createElement('div'); row.className = 'ci' + (ok ? '' : ' na');
-    row.title = ok ? `רב תא ${n}` : `רב תא ${n} – עמוק מדי לארון`;
-    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="ctl"><button aria-label="פחות">−</button><b>${ok ? cnt : '–'}</b><button aria-label="יותר">+</button></span>`;
-    const [minus, plus] = row.querySelectorAll('button');
-    const fits = tbPlan({ ...TB.comp, [n]:cnt + 1 }, TB.shelves, 0).top <= lim;
-    minus.disabled = !ok || cnt <= 0; plus.disabled = !ok || !fits;
-    minus.onclick = () => { TB.comp[n] = cnt - 1; rebuild(true); };
-    plus.onclick = () => { TB.comp[n] = cnt + 1; rebuild(true); };
-    box.appendChild(row);
-  }
-  const shelvesN = plan.items.filter(p => p.type === 'shelf').length;
-  $('tbBar').style.width = Math.min(100, (plan.top - tbFloor()) / (lim - tbFloor()) * 100) + '%';
-  $('tbUse').innerHTML = `גובה מנוצל: <b>${Math.round(plan.top - tbFloor())}</b> מתוך <b>${lim - tbFloor()}</b> מ"מ · מדפים: <b>${shelvesN}</b> · הגדול תמיד למטה`;
-  $('tbExtraN').textContent = TB.extra;
+  const order = TB.items.map((it, i) => ({ it, i })).sort((a, b) => b.it.y - a.it.y);   // top of the cabinet first
+  const gapRow = (from, to) => { if (to - from >= 60) { const d = document.createElement('div'); d.className = 'zfree'; d.textContent = `פנוי ${Math.round((to - from)/10)} ס"מ`; box.appendChild(d); } };
+  let above = tbCeil();
+  order.forEach(({ it, i }, k) => {
+    gapRow(it.y + itemH(it), above); above = it.y;
+    const el = document.createElement('div'); el.className = 'zone' + (it.t === 'bins' ? ' bins' : '');
+    const nm = it.t === 'shelf' ? 'מדף' : 'רב תאים';
+    el.innerHTML = `<div class="zh"><span class="zt">${nm}</span>
+      <button class="sb" data-a="up" aria-label="למעלה" title="למעלה">▲</button><button class="sb" data-a="down" aria-label="למטה" title="למטה">▼</button>
+      <input class="num" type="number" step="2.5" value="${(it.y/10).toFixed(1)}" aria-label="גובה מהרצפה בס&quot;מ" style="width:74px"><span class="use" style="margin:0 2px">ס"מ</span>
+      <button class="sb" data-a="del" aria-label="הסרה" title="הסרה">✕</button></div>`;
+    const [up, down] = el.querySelectorAll('[data-a=up],[data-a=down]');
+    const move = (y) => { const f = freeSpot(TB.items, i, y); if (f !== null) { it.y = f; rebuild(true); } };
+    // ▲ / ▼ swaps with the neighbour (keeping the gap between them); with no neighbour it goes to the top / bottom
+    const swap = (lo, hi) => {                       // lo is below hi: after the swap hi is below
+      const gap = hi.y - (lo.y + itemH(lo)), y0 = lo.y;
+      hi.y = y0; lo.y = snapUp(y0 + itemH(hi) + gap);
+      const li = TB.items.indexOf(lo), f = freeSpot(TB.items, li, lo.y); if (f !== null) lo.y = f;
+      rebuild(true);
+    };
+    up.onclick = () => { const nb = order[k - 1]; nb ? swap(it, nb.it) : move(tbCeil()); };
+    down.onclick = () => { const nb = order[k + 1]; nb ? swap(nb.it, it) : move(tbFloor()); };
+    up.disabled = k === 0 && it.y + itemH(it) >= tbCeil() - 20; down.disabled = k === order.length - 1 && it.y <= tbFloor();
+    el.querySelector('input').onchange = (e) => move(+e.target.value * 10);
+    el.querySelector('[data-a=del]').onclick = () => { TB.items.splice(i, 1); rebuild(true); };
+    if (it.t === 'bins') {
+      const L = binsLayout(it);
+      const comp = document.createElement('div'); comp.className = 'comp';
+      for (const n of ORDER) {
+        const ok = TB_MODELS.includes(n), cnt = it.comp[n] || 0;
+        const row = document.createElement('div'); row.className = 'ci' + (ok ? '' : ' na');
+        row.title = ok ? `רב תא ${n}` : `רב תא ${n} – עמוק מדי לארון`;
+        row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="ctl"><button aria-label="פחות">−</button><b>${ok ? cnt : '–'}</b><button aria-label="יותר">+</button></span>`;
+        const [minus, plus] = row.querySelectorAll('button');
+        const trial = { ...it, comp:{ ...it.comp, [n]:cnt + 1 } }, spot = ok ? freeSpot(TB.items, i, it.y, Math.max(binsLayout(trial).h, 40)) : null;
+        minus.disabled = !ok || cnt <= 0; plus.disabled = spot === null;
+        plus.title = spot === null ? 'אין מקום – פנו גובה בארון' : '';
+        minus.onclick = () => { it.comp[n] = cnt - 1; rebuild(true); };
+        plus.onclick = () => { it.comp[n] = cnt + 1; it.y = spot; rebuild(true); };
+        comp.appendChild(row);
+      }
+      el.appendChild(comp);
+      const side = document.createElement('div'); side.className = 'seg2';
+      side.innerHTML = `<button data-v="right">צמוד לימין</button><button data-v="left">צמוד לשמאל</button>`;
+      [...side.children].forEach(b => { b.classList.toggle('on', b.dataset.v === it.side); b.onclick = () => { it.side = b.dataset.v; rebuild(true); }; });
+      el.appendChild(side);
+      if (L.groups.length > 1) {
+        const seps = document.createElement('div'); seps.className = 'seps';
+        seps.innerHTML = '<span>מדף מעל:</span>' + L.groups.slice(0, -1).map(n => `<label><input type="checkbox" data-n="${n}" ${(it.noSep || []).includes(n) ? '' : 'checked'}> רב תא ${n}</label>`).join('');
+        seps.querySelectorAll('input').forEach(c => c.onchange = () => {
+          const n = +c.dataset.n; it.noSep = (it.noSep || []).filter(x => x !== n); if (!c.checked) it.noSep.push(n);
+          const f = freeSpot(TB.items, i, it.y); if (f === null) { if (c.checked) it.noSep.push(n); toast('אין מקום למדף נוסף'); renderTamb(); return; }
+          it.y = f; rebuild(true);
+        });
+        el.appendChild(seps);
+      }
+    }
+    box.appendChild(el);
+  });
+  gapRow(tbFloor(), above);
+  const used = TB.items.reduce((a, it) => a + itemH(it), 0), lim = tbCeil() - tbFloor();
+  $('tbBar').style.width = Math.min(100, used / lim * 100) + '%';
+  $('tbUse').innerHTML = `גובה תפוס: <b>${Math.round(used/10)}</b> מתוך <b>${Math.round(lim/10)}</b> ס"מ · גוררים מדף על המודל כדי להזיז אותו`;
   $('tbOpen').value = Math.round(TB.target / TBX.MAXO * 100);
   setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc;
   $('tbTambSec').hidden = TB.closure !== 'tambour'; $('tbDoorSec').hidden = TB.closure !== 'doors';
   syncDoorBtns('tb', TB);
+}
+function tbAdd(t) {
+  tbMigrate(TB);
+  const it = t === 'shelf' ? { t:'shelf', y:0 } : { t:'bins', y:0, comp:{ 5:1 }, side:'left', noSep:[] };
+  // into the middle of the biggest free gap
+  const occ = TB.items.map(o => [o.y, o.y + itemH(o)]).sort((a, b) => a[0] - b[0]);
+  let lo = tbFloor(), best = -1, at = 0;
+  for (const [a, b] of [...occ, [tbCeil(), tbCeil()]]) { if (a - lo > best) { best = a - lo; at = t === 'shelf' ? (lo + a)/2 : lo; } lo = Math.max(lo, b); }
+  TB.items.push(it);
+  const f = freeSpot(TB.items, TB.items.length - 1, at);
+  if (f === null) { TB.items.pop(); toast(t === 'shelf' ? 'אין מקום למדף נוסף' : 'אין מקום לאזור רב תאים'); return; }
+  it.y = f; rebuild(true);
 }
 function syncDoorBtns(px, S) {
   ['L', 'R'].forEach((s, i) => { const b = $(px + 'Door' + s); if (b) b.classList.toggle('on', S.doors[i] > 0.5); });
@@ -2150,6 +2321,7 @@ function stepMetal(k) {
 }
 // ---------- pointer: drag tambour, drag shelves, click doors ----------
 let tdrag = null, shdrag = null;
+const shelfY = (S, i) => S.items ? S.items[i].y : S.list[i];
 canvas.addEventListener('pointerdown', (e) => {
   const S = metalState(); if (!S || e.button !== 0) return;
   dragRay.setFromCamera(pointerNDC(e), camera);
@@ -2165,7 +2337,7 @@ canvas.addEventListener('pointerdown', (e) => {
     const n = new THREE.Vector3(); camera.getWorldDirection(n); n.y = 0; n.normalize().negate();
     dragPlane.setFromNormalAndCoplanarPoint(n, hit.point);
     const i = hit.object.userData.shelf;
-    shdrag = { i, dy: S.list[i] - hit.point.y * 1000, mesh:hit.object, moved:false, sy:e.clientY };
+    shdrag = { i, dy: shelfY(S, i) - hit.point.y * 1000, mesh:hit.object, moved:false, sy:e.clientY };
     controls.enabled = false;
   }
 }, { capture:true });
@@ -2186,8 +2358,9 @@ addEventListener('pointermove', (e) => {
     shdrag.moved = true; canvas.style.cursor = 'ns-resize';
     dragRay.setFromCamera(pointerNDC(e), camera);
     if (dragRay.ray.intersectPlane(dragPlane, dragHit)) {
-      const y = clampShelf(S.list, shdrag.i, snapNear(dragHit.y * 1000 + shdrag.dy));
-      const dy = (y - S.list[shdrag.i]) * 0.001; S.list[shdrag.i] = y;
+      const want = snapNear(dragHit.y * 1000 + shdrag.dy);
+      const y = S.items ? (freeSpot(S.items, shdrag.i, want) ?? S.items[shdrag.i].y) : clampShelf(S.list, shdrag.i, want);
+      const dy = (y - shelfY(S, shdrag.i)) * 0.001; if (S.items) S.items[shdrag.i].y = y; else S.list[shdrag.i] = y;
       // move this shelf (and its lip) live
       const siblings = shdrag.mesh.parent.children.filter(o => Math.abs(o.position.y - shdrag.mesh.position.y) < 20 && o.isMesh && o !== shdrag.mesh && Math.abs(o.position.z - shdrag.mesh.position.z) < 300);
       shdrag.mesh.position.y += dy * 1000; siblings.forEach(o => o.position.y += dy * 1000);
@@ -2215,7 +2388,7 @@ function rebuild(keepCamera = false) {
   document.getElementById('spreadBtn').hidden = !isCab() || mode === 'scene';
   if (world) { scene.remove(world); world.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); }
   world = new THREE.Group();
-  TAMB = DOORS = SHELVES = null;
+  TAMB = DOORS = SHELVES = null; SLD = null;
   if (mode === 'scene') {
     spread = spreadTarget = 0;
     buildScene();
@@ -2263,7 +2436,7 @@ function rebuild(keepCamera = false) {
     if (!keepCamera) { frame(tb.W, tb.totalH, true); if (spreadTarget > 0.5) setSpread(true); }
     const S = sizeDef();
     document.getElementById('dims').innerHTML =
-      `${cfg().name} · <b>${tena.size}</b> כנפיים (${S.F} קדמיות + ${S.M} אמצעיות + ${S.R} אחוריות) · רוחב <b>${tb.W/10}</b> · גובה <b>${cfg().H/10}</b> · עומק <b>${(tb.D/10).toFixed(1)}</b> ס"מ`;
+      `${cfg().name} · <b>${tena.size}</b> כנפיים (${S.F} קדמיות + ${S.M} אמצעיות + ${S.R} אחוריות) · רוחב <b>${tb.W/10}</b> · גובה <b>${cfg().H/10}</b> · עומק <b>${(tb.D/10).toFixed(1)}</b> ס"מ${slideOn() ? ` · <b>${tena.size === 10 ? 4 : 2}</b> דלתות הזזה` : ''}`;
     renderTena(); showSelection();
   } else {
     const st = buildStand();
@@ -2399,6 +2572,7 @@ function makeThumbs() {
 
 for (const px of ['tn', 'sm']) {
   if (document.getElementById(px + 'Size')) segGroup(px + 'Size', (v) => { tena.size = +v; tenaOpenWing = null; rebuild(); });
+  if (px === 'tn') document.getElementById('tnSlide').onchange = (e) => { tena.slide = tena.slide || { on:false, open:[0, 0, 0, 0] }; tena.slide.on = e.target.checked; rebuild(true); };
   if (!document.getElementById(px + 'DepthMode')) continue;   // SMART: fixed depth, no CUSTOM
   segGroup(px + 'DepthMode', (v) => {
     tena.depthMode = v; document.getElementById(px + 'DepthFld').hidden = v !== 'custom';
@@ -2434,10 +2608,8 @@ segGroup('ptCols', (v) => { EXS.part.cols = +v; rebuild(); });
 segGroup('ptSide', (v) => { EXS.part.side = v; rebuild(true); });
 document.getElementById('ptWide').onchange = (e) => { EXS.part.wide = e.target.checked; rebuild(true); };
 
-segGroup('tbSide', (v) => { TB.side = v; rebuild(true); });
-segGroup('tbShelves', (v) => { TB.shelves = v; rebuild(true); });
-document.getElementById('tbExtraM').onclick = () => { TB.extra = Math.max(0, TB.extra - 1); rebuild(true); };
-document.getElementById('tbExtraP').onclick = () => { if (tbPlan(TB.comp, TB.shelves, TB.extra + 1).items.filter(p => p.extra).length > TB.extra) { TB.extra++; rebuild(true); } };
+document.getElementById('tbAddShelf').onclick = () => tbAdd('shelf');
+document.getElementById('tbAddBins').onclick = () => tbAdd('bins');
 document.getElementById('tbToggle').onclick = () => { TB.target = TB.target > TBX.MAXO/2 ? 0 : TBX.MAXO; renderTamb(); };
 document.getElementById('tbOpen').oninput = (e) => { TB.target = +e.target.value / 100 * TBX.MAXO; };
 segGroup('tbClose', (v) => { TB.closure = v; rebuild(true); });
@@ -2534,6 +2706,7 @@ function applyOpenAll(e) {
   const S = METAL[mode];
   // on a rebuild only opening is applied; closing needs the switch itself
   if (S && (on || e)) { if (TAMB) S.target = on ? TBX.MAXO : 0; if (DOORS) { S.doors = on ? [1, 1] : [0, 0]; syncDoorBtns(mode === 'tamb' ? 'tb' : 'md', S); } }   // open the tambour / doors too
+  if (isCab() && mode !== 'scene' && slideOn() && (on || e)) { tena.slide.open = on ? [1, 0, 1, 0] : [0, 0, 0, 0]; if (SLD) SLD.st = tena.slide; syncSlideBtns(); }
   drawers.forEach(d => on ? openDrawer(d) : closeDrawer(d));
   syncCells();
 }
@@ -2563,6 +2736,8 @@ canvas.addEventListener('pointerup', e => {
   const hit = ray.intersectObjects(drawers, true)[0];
   const dh = DOORS ? ray.intersectObjects(DOORS.meshes, true)[0] : null;
   if (dh && (!hit || dh.distance < hit.distance)) { doorClick(ray); return; }   // a door in front: open / close it
+  const sh = SLD && SLD.list.some(d => d.g.visible) ? ray.intersectObjects(SLD.meshes, true)[0] : null;
+  if (sh && (!hit || sh.distance < hit.distance)) { const d = SLD.list.find(x => x.g.children.includes(sh.object)); if (d) toggleSlide(d.idx); return; }
   if (!hit) return;
   if (TAMB) { const th = ray.intersectObjects(TAMB.meshes, true)[0]; if (th && th.distance < hit.distance) return; }   // closed tambour in front
   if (isCab()) {
@@ -2667,7 +2842,7 @@ function applyFamily(f) {
   if (f.stand) Object.assign(stand, f.stand);
   if (f.comp) for (const k in f.comp) comp[k] = { ...f.comp[k] };
   if (f.exs) { for (const k in f.exs) Object.assign(EXS[k], JSON.parse(JSON.stringify(f.exs[k]))); $('ptWide').checked = !!EXS.part.wide; setSeg('exSide', EXS.excl.side || 'left'); setSeg('ptSide', EXS.part.side || 'left'); setSeg('ptCols', EXS.part.cols || 2); }
-  if (f.tb) { Object.assign(TB, JSON.parse(JSON.stringify(f.tb))); TB.closure = TB.closure || 'tambour'; TB.doors = TB.doors || [0, 0]; if (TB.acc === undefined) TB.acc = true; setSeg('tbSide', TB.side); setSeg('tbShelves', TB.shelves); setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; }
+  if (f.tb) { applyCfg('tamb', { tb:f.tb }); setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; }
   if (f.mt) Object.assign(MT, deep(f.mt));
   if (f.md) { Object.assign(MD, deep(f.md)); setSeg('mdColor', MD.color); }
   if (f.wall) { Object.assign(wall, f.wall); setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0'); }
@@ -2675,6 +2850,7 @@ function applyFamily(f) {
   const tn = f.tn || (f.tena ? { delux:f.tena } : null);
   if (tn) for (const v of ['delux', 'smart']) if (tn[v]) {
     Object.assign(TN[v], JSON.parse(JSON.stringify(tn[v])));
+    if (v === 'delux' && !TN.delux.slide) TN.delux.slide = { on:false, open:[0, 0, 0, 0] };
     const px = v === 'smart' ? 'sm' : 'tn';
     if (v === 'smart') { TN.smart.depthMode = 'std'; continue; }   // CUSTOM depth exists only in DELUX
     if ($(px + 'Size')) setSeg(px + 'Size', TN[v].size); setSeg(px + 'DepthMode', TN[v].depthMode);
@@ -2828,7 +3004,7 @@ function fileStem() {
   if (mode === 'excl') return `exclusive-cart-${Math.round(exTotal('excl')/10)}`;
   if (mode === 'part') return `exclusive-partition-${Math.round(exTotal('part')/10)}`;
   if (mode === 'wall') return `wall-rack-${wall.height/10}`;
-  if (isCab()) return `ta-na-${tena.variant}-${tena.size}${spreadTarget > 0.5 ? '-spread' : ''}`;
+  if (isCab()) return `ta-na-${tena.variant}-${tena.size}${slideOn() ? '-doors' : ''}${spreadTarget > 0.5 ? '-spread' : ''}`;
   return `rav-ta-${stand.type === 'double' ? 'double' : 'single'}-${stand.base}-${stand.height / 10}`;
 }
 async function saveFile(blob, filename) {
@@ -2865,9 +3041,11 @@ function describe() {
       : `two full-height hinged steel doors with a black key lock on the right door; ${doorTxt(S.doors)}`;
     const shell = `A steel cabinet, 900 mm wide, ${D} mm deep, 1950 mm high, powder-coated ${col}, plinth at the bottom, with ${front}.`;
     if (mode === 'tamb') {
-      const plan = tbPlan(), sh = plan.items.filter(p => p.type === 'shelf').length;
+      tbMigrate(TB);
+      const zs = [...TB.items].sort((a, b) => a.y - b.y).map(it => it.t === 'shelf' ? `a full-width steel shelf at ${Math.round(it.y/10)} cm`
+        : `from ${Math.round(it.y/10)} cm up, a 600 mm wide column of tilt bins (${ORDER.filter(n => it.comp[n] > 0).map(n => it.comp[n] + ' x ' + n + '-drawer').join(', ')}, largest at the bottom${binsLayout(it).parts.some(p => p.type === 'shelf') ? ', with steel shelves between the sizes' : ''}) hung with their backs on the cabinet back against the ${it.side} side`);
       const peg = cl === 'doors' ? ` The inside of each door is a perforated metal pegboard panel${TB.acc ? ' holding hooks, small blue plastic baskets, a hammer, screwdrivers and pliers' : ' (empty)'}.` : '';
-      return `${shell} Inside: a 600 mm wide column of ${base.toLowerCase()} hung with their backs on the cabinet back against the ${TB.side} side${sh ? `, with ${sh} full-width steel shelves` : ''}.${peg}${flags.length ? ' ' + flags.join('; ') + '.' : ''}`;
+      return `${shell} Every tilt bin unit has an injection-moulded light grey RAL 7035 body with clear transparent tilt-out bins. Inside, from the bottom: ${zs.join('; ') || 'empty'}.${peg}${flags.length ? ' ' + flags.join('; ') + '.' : ''}`;
     }
     const ys = [...S.list].sort((a, b) => a - b).map(y => Math.round(y/10));
     return `${shell} Inside: ${ys.length} adjustable full-width steel shelves at ${ys.join(', ')} cm from the floor, on perforated uprights.${flags.filter(f => !/rod|label/.test(f)).length ? ' ' + flags.filter(f => !/rod|label/.test(f)).join('; ') + '.' : ''}`;
@@ -2880,7 +3058,7 @@ function describe() {
   if (isCab()) { const S = sizeDef();
     const shell = tena.variant === 'smart'
       ? `An open storage rack ("Ta-Na SMART"), ${S.W} mm wide, ${cfg().H} mm high: open frame of rectangular painted steel tube in ${tena.color === 'blue' ? 'deep blue' : 'light grey RAL 7035'}, levelling feet, no panels.`
-      : `A closed storage cabinet ("Ta-Na DELUX"), ${S.W} mm wide, 2200 mm high: frame of 30x30 mm aluminium profiles powder-coated RAL 7035, closed with glossy white PVC panels on top, bottom, back and sides, white framed panels across the top front.`;
+      : `A closed storage cabinet ("Ta-Na DELUX"), ${S.W} mm wide, 2200 mm high: frame of 30x30 mm aluminium profiles powder-coated RAL 7035, closed with glossy white PVC panels on top, bottom, back and sides, white framed panels across the top front${slideOn() ? `. The front is closed by ${tena.size === 10 ? 'two pairs of' : 'two'} lockable sliding doors (white PVC panels in RAL 7035 aluminium frames, recessed pulls, a cylinder lock where the doors of a pair overlap) on a double top and bottom track; ${tena.slide.open.slice(0, tena.size === 10 ? 4 : 2).some(v => v > 0.5) ? 'some doors are slid aside to show the inside' : 'all doors are closed'}` : ''}.`;
     return `${shell} Inside: ${S.R} fixed rear columns and ${S.M}+${S.F} sliding columns on top/bottom tracks, each column a stack of ${base.toLowerCase()} (largest at the bottom)${flags.length ? '; ' + flags.join('; ') : ''}.`; }
   if (mode === 'unit') return `${base}; ${current} bins side by side; 600 mm wide, ${MODELS[current].H} mm high, ${MODELS[current].D} mm deep${flags.length ? '; ' + flags.join('; ') : ''}.`;
   const t = stand.type === 'double' ? 'double-sided (units on front and back)' : 'single-sided';
@@ -3473,7 +3651,10 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
-  'סצנה':'Scene',
+  'סצנה':'Scene', 'צמוד לקיר':'touching the wall', 'פנים הארון (מלמעלה למטה)':'Inside the cabinet (top to bottom)', '+ אזור רב תאים':'+ Tilt bin zone', 'פנוי':'Free', 'למעלה':'Up', 'למטה':'Down', 'הסרה':'Remove',
+  'גובה מהרצפה בס"מ':'Height above the floor in cm', 'מדף מעל:':'Shelf above:', 'אין מקום – פנו גובה בארון':'No room – free some height in the cabinet', 'אין מקום לאזור רב תאים':'No room for a tilt bin zone',
+  'גובה תפוס:':'Height used:', 'גוררים מדף על המודל כדי להזיז אותו':'drag a shelf on the model to move it', 'מתוך':'of', 'דלתות הזזה עם מנעול (אופציה)':'Lockable sliding doors (option)', 'דלתות הזזה':'sliding doors', 'דלת':'Door',
+  'לחיצה על דלת במודל מזיזה אותה. בכל צמד הדלת השמאלית רצה מאחור והימנית מלפנים, עם מנעול צילינדר. בפריסת כנפיים הדלתות יורדות.':'Click a door on the model to slide it. In each pair the left door runs behind and the right one in front, with a cylinder lock. When the wings are spread the doors come off.',
   // metal cabinets
   'ארונות מתכת':'METAL CABINETS', 'ארון מתכת מאובטח לרב תא':'Secured tilt bin metal cabinet', 'ארון תריס':'Tambour metal cabinet', 'ארון 4 מדפים':'4-shelf metal cabinet',
   'סוג סגירה':'Closure type', 'תריס · עומק 45':'Tambour · depth 45', 'שתי דלתות · עומק 40':'Two doors · depth 40',
@@ -3694,6 +3875,7 @@ renderer.setAnimationLoop(() => {
   const dt = Math.min(0.1, clock.getDelta());               // time-based, same speed on any screen
   stepRods(1 - Math.exp(-dt*6.5));
   stepWings(1 - Math.exp(-dt*5), dt);
+  stepSlide(1 - Math.exp(-dt*6));
   stepMetal(1 - Math.exp(-dt*6));
   const kd = 1 - Math.exp(-dt*7.5);
   drawers.forEach(d => { const u = d.userData; u.angle += (u.target - u.angle) * kd; d.rotation.x = u.angle; });
