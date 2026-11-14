@@ -276,11 +276,13 @@
 
   <div class="panel" id="pPart" data-mode="part">
     <button class="head" aria-expanded="false">
-      <span class="ttl"><h1>מחיצת EXCLUSIVE מודולרית</h1><span class="sub">מחיצה ניידת עם אחסון משני הצדדים · 2 טורים · עד 210 ס"מ</span></span>
+      <span class="ttl"><h1>מחיצת EXCLUSIVE מודולרית</h1><span class="sub">מחיצה ניידת עם אחסון משני הצדדים · 2 / 3 / 4 טורים · עד 210 ס"מ</span></span>
       <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <div class="body"><div class="inner">
-      <div class="lbl">הרכב (זהה בשני הטורים ובשני הצדדים)</div>
+      <div class="lbl">טורים בכל צד</div>
+      <div class="seg2 three" id="ptCols"><button data-v="2" class="on">2</button><button data-v="3">3</button><button data-v="4">4</button></div>
+      <div class="lbl">הרכב (זהה בכל הטורים ובשני הצדדים)</div>
       <div class="comp" id="ptComp"></div>
       <div class="bar"><i id="ptBar"></i></div>
       <div class="use" id="ptUse"></div>
@@ -1371,12 +1373,15 @@ const bumperMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#aeb4b
 const handleMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#d9dcdc'), roughness:0.35, clearcoat:0.4 });
 const EXV = {
   excl: { cols:1, models:[4, 5, 6, 9], D:392, minH:1100, maxH:1500, name:'עגלת רב-תא EXCLUSIVE' },
-  part: { cols:2, models:[3, 4, 5, 6, 9], D:446, minH:1100, maxH:2150, name:'מחיצת EXCLUSIVE מודולרית' },
+  part: { get cols() { return EXS.part.cols; }, models:[3, 4, 5, 6, 9], minH:1100, maxH:2150, name:'מחיצת EXCLUSIVE מודולרית',
+          // depth: what the bins need back to back, but at least 50 cm for 3 columns and 60 cm for 4 (stability)
+          get D() { return Math.max({ 2:0, 3:500, 4:600 }[EXS.part.cols] || 0, 2*exMaxD('part') + 50); } },
 };
 const EXS = {
   excl: { comp:{ 5:4, 6:4 }, handleOff:0, side:'left' },                        // handle: offset (mm) from the default, ±100
-  part: { comp:{ 4:5, 5:5 }, handleH:1150, wide:false, side:'left' },   // ≈ 2 m without the castors
+  part: { comp:{ 4:5, 5:5 }, handleH:1150, wide:false, side:'left', cols:2 },   // ≈ 2 m without the castors
 };
+const exMaxD = (k) => Math.max(0, ...ORDER.filter(n => (EXS[k].comp[n] || 0) > 0).map(n => MODELS[n].D), k === 'excl' ? 171 : 171);
 const EX_BOT = 97, EX_ABS = 5;                                       // caster plate height, ABS top thickness
 const exTotal = (k) => EX_BOT + PROF + stackHeight(EXS[k].comp) + PROF + EX_ABS;
 const exHandleY = (k, H) => k === 'excl' ? Math.min(H - 120, Math.max(EX_BOT + 300, H - 200 + EXS.excl.handleOff)) : Math.min(H - 150, EXS.part.handleH);
@@ -1402,7 +1407,7 @@ function buildExcl(k) {
   const wide = k === 'part' && S.wide, zc = wide ? D/2 + 70 : D/2 - 45;
   if (wide) for (const x of [xs[0], xs[xs.length - 1]]) bar(root, 2*zc + 60, 'z', x, y0 - P/2 + 2, 0);   // outrigger feet
   const corners = [[xs[0], zc], [xs[xs.length - 1], zc], [xs[0], -zc], [xs[xs.length - 1], -zc]];
-  if (V.cols > 1 && !wide) corners.push([xs[1], zc], [xs[1], -zc]);
+  if (V.cols > 1 && !wide) for (let i = 1; i < V.cols; i++) corners.push([xs[i], zc], [xs[i], -zc]);
   corners.forEach(([x, z], i) => caster(root, x, z, wide ? y0 - P : y0, k === 'part' || i < 2));
   const bump = new THREE.CylinderGeometry(26, 26, 46, 24);
   for (const x of [xs[0], xs[xs.length - 1]]) for (const z of [zf, zb]) { const b = shadowOn(new THREE.Mesh(bump, bumperMat)); b.position.set(x, y0 + 26, z); root.add(b); }
@@ -1419,7 +1424,7 @@ function buildExcl(k) {
       let y = y0 + P;
       for (const n of ORDER) for (let i = 0; i < (S.comp[n] || 0); i++) {
         const u = makeUnit(n);
-        u.group.position.set(cx*0.001, y*0.001, sd*5*0.001);
+        u.group.position.set(cx*0.001, y*0.001, sd*(D/2 - 20 - exMaxD(k))*0.001);   // fronts in line with the frame
         if (sd < 0) u.group.rotation.y = Math.PI;
         g.add(u.group); list.push(...u.drawers); rodList.push(u.rod);
         y += MODELS[n].H - RIM;
@@ -1651,6 +1656,7 @@ document.getElementById('wlElev').onchange = () => { clearTimeout(syncElev.t); r
 document.getElementById('exHandle').oninput = (e) => { EXS.excl.handleOff = +e.target.value * 10; rebuild(true); };
 document.getElementById('ptHandle').oninput = (e) => { EXS.part.handleH = +e.target.value * 10; rebuild(true); };
 segGroup('exSide', (v) => { EXS.excl.side = v; rebuild(true); });
+segGroup('ptCols', (v) => { EXS.part.cols = +v; rebuild(); });
 segGroup('ptSide', (v) => { EXS.part.side = v; rebuild(true); });
 document.getElementById('ptWide').onchange = (e) => { EXS.part.wide = e.target.checked; rebuild(true); };
 
@@ -1852,7 +1858,7 @@ function applyFamily(f) {
   mode = f.mode || mode; current = f.current || current;
   if (f.stand) Object.assign(stand, f.stand);
   if (f.comp) for (const k in f.comp) comp[k] = { ...f.comp[k] };
-  if (f.exs) { for (const k in f.exs) Object.assign(EXS[k], JSON.parse(JSON.stringify(f.exs[k]))); $('ptWide').checked = !!EXS.part.wide; setSeg('exSide', EXS.excl.side || 'left'); setSeg('ptSide', EXS.part.side || 'left'); }
+  if (f.exs) { for (const k in f.exs) Object.assign(EXS[k], JSON.parse(JSON.stringify(f.exs[k]))); $('ptWide').checked = !!EXS.part.wide; setSeg('exSide', EXS.excl.side || 'left'); setSeg('ptSide', EXS.part.side || 'left'); setSeg('ptCols', EXS.part.cols || 2); }
   if (f.wall) { Object.assign(wall, f.wall); setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0'); }
   if (f.wallComp) for (const k in f.wallComp) wallComp[k] = { ...f.wallComp[k] };
   const tn = f.tn || (f.tena ? { delux:f.tena } : null);
@@ -2033,8 +2039,8 @@ function describe() {
   if ($('rod').checked) flags.push('a thin stainless steel security rod across the front');
   if ($('labelsOn').checked) flags.push('plain white paper labels in the label windows');
   if (mode === 'excl' || mode === 'part') {
-    const k = mode, H = exTotal(k), W = EXV[k].cols*600 + (EXV[k].cols + 1)*30;
-    return `A closed, double-sided mobile ${k === 'excl' ? 'tilt-bin cart' : 'room-divider partition with storage'} (${W} mm wide, ${EXV[k].D} mm deep, ${Math.round(H)} mm high): frame of 30x30 mm aluminium profiles in RAL 7035, white panels on the sides, a dark charcoal ABS worktop, grey castors${k === 'part' ? ' all with brakes' : ''} with round grey corner bumpers, a light grey tubular side handle; ${EXV[k].cols > 1 ? 'two columns of ' : ''}identical stacks of ${base.toLowerCase()} on both faces (largest at the bottom)${flags.length ? '; ' + flags.join('; ') : ''}.`;
+    const k = mode, H = exTotal(k), W = EXV[k].cols*600 + (EXV[k].cols + 1)*30, D = EXV[k].D;
+    return `A closed, double-sided mobile ${k === 'excl' ? 'tilt-bin cart' : 'room-divider partition with storage'} (${W} mm wide, ${D} mm deep, ${Math.round(H)} mm high): frame of 30x30 mm aluminium profiles in RAL 7035, white panels on the sides, a dark charcoal ABS worktop, grey castors${k === 'part' ? ' all with brakes' : ''} with round grey corner bumpers, a light grey tubular side handle; ${EXV[k].cols > 1 ? EXV[k].cols + ' columns of ' : ''}identical stacks of ${base.toLowerCase()} on both faces (largest at the bottom)${flags.length ? '; ' + flags.join('; ') : ''}.`;
   }
   if (mode === 'wall') return `A slim wall-mounted rack (600 mm wide, ${wall.height} mm high, only 8 mm deep: two 30 mm side rails with a slot and top/bottom bands with rounded inner corners, light grey-white) holding stacked ${base.toLowerCase()} (largest at the bottom)${wall.showWall ? ', mounted on a plain wall with its bottom ' + (wallElev()/10) + ' cm above the floor, floor visible' : ''}${flags.length ? '; ' + flags.join('; ') : ''}.`;
   if (isCab()) { const S = sizeDef();
@@ -2541,7 +2547,8 @@ const EN = {
   'תא-נע':'Gondola', 'מתלה קיר':'Wall mount unit', 'רב תא':'Tilt bin', 'רב תא – מודל תלת־ממדי':'Tilt bin – 3D model',
   'מעמד':'Standing unit', 'עגלת רב-תא EXCLUSIVE':'Exclusive Tilt Bin cart', 'מחיצת EXCLUSIVE מודולרית':'Modular Exclusive Partition',
   'עגלה סגורה דו צדדית · רוחב 66 ס"מ · גובה 110–150 לפי ההרכב':'Closed double-sided cart · width 66 cm · height 110–150 by layout',
-  'מחיצה ניידת עם אחסון משני הצדדים · 2 טורים · עד 210 ס"מ':'Mobile partition with storage on both sides · 2 columns · up to 210 cm',
+  'מחיצה ניידת עם אחסון משני הצדדים · 2 / 3 / 4 טורים · עד 210 ס"מ':'Mobile partition with storage on both sides · 2 / 3 / 4 columns · up to 210 cm',
+  'טורים בכל צד':'Columns per side', 'הרכב (זהה בכל הטורים ובשני הצדדים)':'Layout (same in all columns and on both sides)',
   'הרכב (זהה בשני הצדדים)':'Layout (same on both sides)', 'הרכב (זהה בשני הטורים ובשני הצדדים)':'Layout (same in both columns and on both sides)',
   'גובה ידית':'Handle height', 'בסיס מורחב (יציבות)':'Wide base (stability)', 'כל הגלגלים עם מעצורים. בגובה 2 מ\' מומלץ בסיס מורחב.':'All castors with brakes. At 2 m a wide base is recommended.',
   'גובה העגלה:':'Unit height:', 'טווח':'range', 'זהה בשני הצדדים':'same on both sides', 'לא במוצר הזה':'not in this product',
