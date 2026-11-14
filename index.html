@@ -205,6 +205,9 @@
   .srow.off .sname { opacity:.45; }
   .srow .sname { all:unset; flex:1; padding:6px 8px; font-size:13px; font-weight:500; cursor:pointer; }
   .srow .sb { width:28px; height:28px; border:0; background:transparent; border-radius:6px; cursor:pointer; color:var(--muted); font-size:13px; }
+  .panel[hidden] { display:none !important; }
+  .shl { display:grid; gap:4px; margin-bottom:6px; }
+  .btn.on { background:#e6ebef; border-color:#9aa7b2; color:var(--acc); font-weight:700; }
   .srow .sb:hover { background:#eef1f3; color:var(--ink); }
   .rot { display:flex; gap:3px; direction:ltr; }
   .rot button { font:inherit; font-size:12px; padding:0 6px; height:33px; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; white-space:nowrap; color:var(--ink); }
@@ -234,10 +237,11 @@
 <canvas id="c"></canvas>
 <div class="side">
   <div class="tabs" role="tablist" aria-label="משפחות מוצרים">
-    <button class="tab on" role="tab" aria-selected="true">משפחת רב תא</button>
+    <button class="tab on" role="tab" aria-selected="true" data-f="tilt">משפחת רב תא</button>
+    <button class="tab" role="tab" aria-selected="false" data-f="metal">ארונות מתכת</button>
   </div>
 
-  <div class="panel" id="pScene" data-mode="scene">
+  <div class="panel" id="pScene" data-mode="scene" data-family="all">
     <button class="head" aria-expanded="false">
       <span class="ttl"><h1>סצנה</h1><span class="sub">כמה מוצרים בתמונה אחת · מיקום חופשי בחדר</span></span>
       <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -286,7 +290,7 @@
     </div></div>
   </div>
 
-  <div class="panel open" id="pUnit" data-mode="unit">
+  <div class="panel open" id="pUnit" data-mode="unit" data-family="tilt">
     <button class="head" aria-expanded="true">
       <span class="ttl"><h1>רב תא</h1><span class="sub">2 · 3 · 4 · 5 · 6 · 9 תאים · RAL 7035</span></span>
       <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -302,7 +306,7 @@
     </div></div>
   </div>
 
-  <div class="panel" id="pStand" data-mode="stand">
+  <div class="panel" id="pStand" data-mode="stand" data-family="tilt">
     <button class="head" aria-expanded="false">
       <span class="ttl"><h1>עגלה ומעמד לרב תא</h1><span class="sub">חד / דו צדדי · גלגלים או רגליים</span></span>
       <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -330,7 +334,7 @@
     </div></div>
   </div>
 
-  <div class="panel" id="pExcl" data-mode="excl">
+  <div class="panel" id="pExcl" data-mode="excl" data-family="tilt">
     <button class="head" aria-expanded="false">
       <span class="ttl"><h1>עגלת רב-תא EXCLUSIVE</h1><span class="sub">עגלה סגורה דו צדדית · רוחב 66 ס"מ · גובה 110–150 לפי ההרכב</span></span>
       <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -347,7 +351,7 @@
     </div></div>
   </div>
 
-  <div class="panel" id="pPart" data-mode="part">
+  <div class="panel" id="pPart" data-mode="part" data-family="tilt">
     <button class="head" aria-expanded="false">
       <span class="ttl"><h1>מחיצת EXCLUSIVE מודולרית</h1><span class="sub">מחיצה ניידת עם אחסון משני הצדדים · 2 / 3 / 4 טורים · עד 210 ס"מ</span></span>
       <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -368,12 +372,14 @@
     </div></div>
   </div>
 
-  <div class="panel" id="pTamb" data-mode="tamb">
+  <div class="panel" id="pTamb" data-mode="tamb" data-family="tilt">
     <button class="head" aria-expanded="false">
-      <span class="ttl"><h1>ארון תריס לרב תא</h1><span class="sub">90 × 45 × 195 ס"מ · RAL 7035 · תריס עם מנעול</span></span>
+      <span class="ttl"><h1>ארון מתכת מאובטח לרב תא</h1><span class="sub" id="tbSub">90 × 45 × 195 ס"מ · RAL 7035 · תריס עם מנעול</span></span>
       <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <div class="body"><div class="inner">
+      <div class="lbl">סוג סגירה</div>
+      <div class="seg2" id="tbClose"><button data-v="tambour" class="on">תריס · עומק 45</button><button data-v="doors">שתי דלתות · עומק 40</button></div>
       <div class="lbl">רב תאים (הגב צמוד לגב הארון)</div>
       <div class="comp" id="tbComp"></div>
       <div class="bar"><i id="tbBar"></i></div>
@@ -385,17 +391,25 @@
           <div class="seg2" id="tbShelves"><button data-v="none">בלי</button><button data-v="groups" class="on">בין כל גודל</button></div></div>
       </div>
       <div class="row"><span>מדפים נוספים מעל הרב תאים</span><span class="ctl cnt" dir="ltr"><button id="tbExtraM" aria-label="פחות">−</button><b id="tbExtraN">1</b><button id="tbExtraP" aria-label="יותר">+</button></span></div>
-      <div class="lbl">תריס</div>
-      <div class="pair">
-        <button class="btn" id="tbToggle">פתיחה / סגירה</button>
-        <label class="slide"><span>פתוח</span><input type="range" id="tbOpen" min="0" max="100" step="1"></label>
+      <div id="tbTambSec">
+        <div class="lbl">תריס</div>
+        <div class="pair">
+          <button class="btn" id="tbToggle">פתיחה / סגירה</button>
+          <label class="slide"><span>פתוח</span><input type="range" id="tbOpen" min="0" max="100" step="1"></label>
+        </div>
+        <div class="use">אפשר גם לגרור את התריס על המודל – שתי הכנפיים זזות יחד. המדפים על חורים כל 25 מ"מ.</div>
       </div>
-      <div class="use">אפשר גם לגרור את התריס על המודל – שתי הכנפיים זזות יחד. המדפים על חורים כל 25 מ"מ.</div>
+      <div id="tbDoorSec" hidden>
+        <div class="lbl">דלתות (לחיצה על דלת פותחת / סוגרת אותה)</div>
+        <div class="pair"><button class="btn" id="tbDoorR">דלת ימין</button><button class="btn" id="tbDoorL">דלת שמאל</button></div>
+        <div class="row"><span>אביזרים על הלוח המחורר בדלתות</span><label class="sw"><input type="checkbox" id="tbAcc" checked><span></span></label></div>
+        <div class="use">בפנים הדלתות: לוח מתכת מחורר. אביזרים: ווים, סלסלות קטנות, פטיש וכלים קטנים. מנעול מפתח בדלת הימנית.</div>
+      </div>
       <div class="slot"></div>
     </div></div>
   </div>
 
-  <div class="panel" id="pWall" data-mode="wall">
+  <div class="panel" id="pWall" data-mode="wall" data-family="tilt">
     <button class="head" aria-expanded="false">
       <span class="ttl"><h1>מתלה קיר</h1><span class="sub">רוחב 60 ס"מ · גובה 60 / 120 / 200 ס"מ</span></span>
       <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -416,7 +430,7 @@
     </div></div>
   </div>
 
-  <div class="panel" id="pTena" data-mode="tena">
+  <div class="panel" id="pTena" data-mode="tena" data-family="tilt">
     <button class="head" aria-expanded="false">
       <span class="ttl"><h1>תא-נע DELUX</h1><span class="sub">ארון עם כנפיים נעות · 4 / 7 / 10 כנפיים</span></span>
       <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -437,7 +451,7 @@
     </div></div>
   </div>
 
-  <div class="panel" id="pSmart" data-mode="smart">
+  <div class="panel" id="pSmart" data-mode="smart" data-family="tilt">
     <button class="head" aria-expanded="false">
       <span class="ttl"><h1>תא-נע SMART</h1><span class="sub">מסגרת פלדה כחולה · 4 כנפיים · 135 × 68 × 210 ס"מ</span></span>
       <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -447,6 +461,43 @@
       <div class="use" id="smDepthNote"></div>
       <div class="lbl">כנפיים</div>
       <div class="wings" id="smWings"></div>
+      <div class="slot"></div>
+    </div></div>
+  </div>
+
+  <div class="panel" id="pMtamb" data-mode="mtamb" data-family="metal" hidden>
+    <button class="head" aria-expanded="false">
+      <span class="ttl"><h1>ארון תריס</h1><span class="sub">90 × 45 × 195 ס"מ · RAL 7035 · תריס עם מנעול</span></span>
+      <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="body"><div class="inner">
+      <div class="lbl">מדפים מודולריים (גובה בס"מ מהרצפה)</div>
+      <div class="shl" id="mtShelves"></div>
+      <button class="btn" id="mtAdd">+ מדף</button>
+      <div class="lbl">תריס</div>
+      <div class="pair">
+        <button class="btn" id="mtToggle">פתיחה / סגירה</button>
+        <label class="slide"><span>פתוח</span><input type="range" id="mtOpen" min="0" max="100" step="1"></label>
+      </div>
+      <div class="use">גוררים מדף על המודל למעלה או למטה כדי לשנות את גובהו (קפיצות של 2.5 ס"מ). גוררים את התריס כדי לפתוח.</div>
+      <div class="slot"></div>
+    </div></div>
+  </div>
+
+  <div class="panel" id="pMdoor" data-mode="mdoor" data-family="metal" hidden>
+    <button class="head" aria-expanded="false">
+      <span class="ttl"><h1>ארון 4 מדפים</h1><span class="sub" id="mdSub">90 × 40 × 195 ס"מ · דלתות ציר עם מנעול מפתח</span></span>
+      <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="body"><div class="inner">
+      <div class="lbl">צבע</div>
+      <div class="seg2" id="mdColor"><button data-v="7035" class="on">RAL 7035</button><button data-v="blue">כחול</button></div>
+      <div class="lbl">מדפים מודולריים (גובה בס"מ מהרצפה)</div>
+      <div class="shl" id="mdShelves"></div>
+      <button class="btn" id="mdAdd">+ מדף</button>
+      <div class="lbl">דלתות (לחיצה על דלת פותחת / סוגרת אותה)</div>
+      <div class="pair"><button class="btn" id="mdDoorR">דלת ימין</button><button class="btn" id="mdDoorL">דלת שמאל</button></div>
+      <div class="use">גוררים מדף על המודל (כשהדלת פתוחה) כדי לשנות את גובהו. מנעול מפתח בדלת הימנית.</div>
       <div class="slot"></div>
     </div></div>
   </div>
@@ -1578,7 +1629,7 @@ function renderExcl(k) {
 // product's own panel, which is borrowed into the scene panel while it is selected.
 // =====================================================================
 const TYPE_NAME = { unit:'רב תא', stand:'מעמד', excl:'עגלת רב-תא EXCLUSIVE', part:'מחיצת EXCLUSIVE מודולרית',
-  wall:'מתלה קיר', tena:'תא-נע DELUX', smart:'תא-נע SMART', tamb:'ארון תריס לרב תא' };
+  wall:'מתלה קיר', tena:'תא-נע DELUX', smart:'תא-נע SMART', tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים' };
 const SCN = { room:{ W:6000, D:5000, back:true, left:false, right:false }, items:[], sel:null, editType:null, next:1 };
 let SCENE_BUILD = false;
 const deep = (o) => JSON.parse(JSON.stringify(o));
@@ -1588,6 +1639,8 @@ function capCfg(t) {
   if (t === 'wall') return { wall:deep(wall), wallComp:deep(wallComp) };
   if (t === 'excl' || t === 'part') return { exs:deep(EXS[t]) };
   if (t === 'tamb') return { tb:deep(TB) };
+  if (t === 'mtamb') return { mt:deep(MT) };
+  if (t === 'mdoor') return { md:deep(MD) };
   return { tn:deep(TN[t === 'smart' ? 'smart' : 'delux']) };
 }
 function applyCfg(t, c) {
@@ -1596,13 +1649,16 @@ function applyCfg(t, c) {
   else if (t === 'wall') { Object.assign(wall, deep(c.wall)); for (const k in wallComp) delete wallComp[k]; Object.assign(wallComp, deep(c.wallComp)); }
   else if (t === 'excl' || t === 'part') { for (const k in EXS[t]) delete EXS[t][k]; Object.assign(EXS[t], deep(c.exs)); }
   else if (t === 'tamb') { Object.assign(TB, deep(c.tb)); TB.comp = deep(c.tb.comp); }
+  else if (t === 'mtamb') Object.assign(MT, deep(c.mt));
+  else if (t === 'mdoor') Object.assign(MD, deep(c.md));
   else { const v = t === 'smart' ? 'smart' : 'delux'; for (const k in TN[v]) delete TN[v][k]; Object.assign(TN[v], deep(c.tn)); tena = TN[v]; }
 }
-const capAll = () => ({ current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB) });
+const capAll = () => ({ current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD) });
 function restoreAll(a) {
   applyCfg('unit', a); applyCfg('stand', a); applyCfg('wall', a);
   applyCfg('excl', { exs:a.exs.excl }); applyCfg('part', { exs:a.exs.part });
   applyCfg('smart', { tn:a.tn.smart }); applyCfg('tena', { tn:a.tn.delux }); applyCfg('tamb', { tb:a.tb });
+  if (a.mt) applyCfg('mtamb', { mt:a.mt }); if (a.md) applyCfg('mdoor', { md:a.md });
 }
 // the selected item's settings live in the globals while it is being edited
 function syncUI(t) {
@@ -1610,7 +1666,7 @@ function syncUI(t) {
   setSeg('stType', stand.type); setSeg('stBase', stand.base); setSeg('stHeight', stand.height);
   setSeg('stHandle', stand.handle); setSeg('stBrake', stand.brake); syncWheelOpts();
   setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0');
-  setSeg('tbSide', TB.side); setSeg('tbShelves', TB.shelves);
+  setSeg('tbSide', TB.side); setSeg('tbShelves', TB.shelves); setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; setSeg('mdColor', MD.color);
   $('ptWide').checked = !!EXS.part.wide; setSeg('exSide', EXS.excl.side || 'left'); setSeg('ptSide', EXS.part.side || 'left'); setSeg('ptCols', EXS.part.cols || 2);
   for (const v of ['delux', 'smart']) { const px = v === 'smart' ? 'sm' : 'tn';
     if ($(px + 'Size')) setSeg(px + 'Size', TN[v].size);
@@ -1624,6 +1680,7 @@ function refreshEditor(t) {
     if (t === 'excl') $('exHandle').value = EXS.excl.handleOff/10; else $('ptHandle').value = EXS.part.handleH/10;
   } else if (t === 'tena' || t === 'smart') renderTena();
   else if (t === 'tamb') renderTamb();
+  else if (t === 'mtamb' || t === 'mdoor') renderMetal(t);
 }
 const panelOf = (t) => panels.find(p => p.dataset.mode === t);
 let borrowed = null;                              // { body, panel }
@@ -1693,7 +1750,7 @@ function buildScene() {
     else if (it.type === 'stand') b = buildStand();
     else if (it.type === 'wall') { b = buildWall(); b.group.position.z = 0; }
     else if (it.type === 'excl' || it.type === 'part') b = buildExcl(it.type);
-    else if (it.type === 'tamb') b = buildTamb();
+    else if (METAL[it.type]) b = buildMetal(it.type);
     else { WING_GROUPS.clear(); b = buildTena(); }
     const inner = b.group, wrap = new THREE.Group();
     wrap.add(inner);
@@ -1861,31 +1918,50 @@ function describeScene() {
   return lines.join('\n');
 }
 
-// ---------- ארון תריס לרב תא: steel cabinet 900 × 450 × 1950, RAL 7035, two-part tambour with lock ----------
-// Tilt bins hang with their backs on the cabinet back, against the left or right side.
-// Optional full-width shelves (always full depth) between the size groups, plus extra shelves above,
-// all on the 25 mm hole pitch.
+// ---------- Metal cabinets (shared builder) ----------
+//   tamb  : ארון מתכת מאובטח לרב תא (tilt-bin family) – tilt bins + optional shelves; tambour OR hinged doors with a pegboard inside
+//   mtamb : ארון תריס (metal-cabinets family) – modular shelves, tambour with lock
+//   mdoor : ארון 4 מדפים (metal-cabinets family) – modular shelves, two hinged doors with key lock, blue or RAL 7035
 const steel7035 = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#cbd0cc'), roughness:0.42, metalness:0.18, clearcoat:0.35, clearcoatRoughness:0.35 });
+const steelBlueCab = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#1f3f8f'), roughness:0.4, metalness:0.2, clearcoat:0.35, clearcoatRoughness:0.35 });
 const slatMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#d3d7d4'), roughness:0.38, metalness:0.05, clearcoat:0.25 });
+const lockBlack = new THREE.MeshStandardMaterial({ color:0x17181a, roughness:0.5 });
+const toolRed = new THREE.MeshStandardMaterial({ color:new THREE.Color('#c0392b'), roughness:0.5 });
+const toolYellow = new THREE.MeshStandardMaterial({ color:new THREE.Color('#e3b21b'), roughness:0.5 });
+const woodMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#b9885a'), roughness:0.7 });
 const holeTex = (() => {
   const c = document.createElement('canvas'); c.width = 16; c.height = 32;
   const x = c.getContext('2d'); x.fillStyle = '#c3c8c5'; x.fillRect(0, 0, 16, 32);
   x.fillStyle = '#4a4f53'; x.beginPath(); x.roundRect(5, 8, 6, 14, 3); x.fill();
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t;
 })();
+const pegTex = (() => {                       // perforated tool panel on the inside of the doors
+  const c = document.createElement('canvas'); c.width = 32; c.height = 32;
+  const x = c.getContext('2d'); x.fillStyle = '#c9cecb'; x.fillRect(0, 0, 32, 32);
+  x.fillStyle = '#3e4347'; x.beginPath(); x.roundRect(12, 9, 8, 14, 2); x.fill();
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
 const TBX = { W:900, D:450, H:1950, BASE:70, TOP:60, SIDE:20, BACK:12, PITCH:25, SHELF:25, MAXO:400 };
-const TB = { comp:{ 4:2, 5:3, 6:3 }, side:'left', shelves:'groups', extra:1, open:0, target:0 };
+const evenShelves = (n) => Array.from({ length:n }, (_, i) => TBX.BASE + Math.round((TBX.H - TBX.TOP - TBX.BASE) * (i + 1) / (n + 1) / TBX.PITCH) * TBX.PITCH);
+const TB = { comp:{ 4:2, 5:3, 6:3 }, side:'left', shelves:'groups', extra:1, open:0, target:0, closure:'tambour', doors:[0, 0], acc:true };
+const MT = { list:evenShelves(4), open:0, target:0 };
+const MD = { list:evenShelves(4), color:'7035', doors:[0, 0] };
+const METAL = { tamb:TB, mtamb:MT, mdoor:MD };
+const metalState = () => METAL[mode];
+const closureOf = (k) => k === 'mtamb' ? 'tambour' : k === 'mdoor' ? 'doors' : TB.closure;
+const depthOf = (k) => closureOf(k) === 'doors' ? 400 : 450;
 const tbFloor = () => TBX.BASE;
 const tbCeil = () => TBX.H - TBX.TOP;
 const snapUp = (y) => tbFloor() + Math.ceil((y - tbFloor()) / TBX.PITCH) * TBX.PITCH;
-// plan the inside: returns [{type:'unit', n, y} | {type:'shelf', y}] and the top used
+const snapNear = (y) => tbFloor() + Math.round((y - tbFloor()) / TBX.PITCH) * TBX.PITCH;
+// tilt-bin cabinet: plan the inside [{type:'unit', n, y} | {type:'shelf', y}]
 function tbPlan(comp = TB.comp, shelves = TB.shelves, extra = TB.extra) {
   const out = []; let y = tbFloor();
   const groups = ORDER.filter(n => (comp[n] || 0) > 0);
   groups.forEach((n, gi) => {
     for (let i = 0; i < comp[n]; i++) {
       const sameRun = i > 0 || (shelves === 'none' && out.length && out[out.length - 1].type === 'unit');
-      if (sameRun) y -= RIM;                      // nested on the unit below
+      if (sameRun) y -= RIM;
       out.push({ type:'unit', n, y }); y += MODELS[n].H;
     }
     if (shelves === 'groups' && gi < groups.length - 1) { const sy = snapUp(y + 4); out.push({ type:'shelf', y:sy }); y = sy + TBX.SHELF; }
@@ -1897,69 +1973,121 @@ function tbPlan(comp = TB.comp, shelves = TB.shelves, extra = TB.extra) {
   }
   return { items:out, top };
 }
-let TAMB = null;                                  // the tambour slats of the cabinet on screen
+let TAMB = null, DOORS = null, SHELVES = null;    // movable parts of the cabinet on screen
 function placeSlats(slats, o, zf, hw) {
   for (const s of slats) {
-    const t = s.i * s.w + s.w/2 + o;              // distance along the track from the centre
-    const sgn = s.half;                           // -1 left half, +1 right half
+    const t = s.i * s.w + s.w/2 + o, sgn = s.half;
     if (t <= hw) { s.m.position.set(sgn * t, s.y, zf); s.m.rotation.y = 0; }
-    else { s.m.position.set(sgn * (hw + 8), s.y, zf - (t - hw)); s.m.rotation.y = Math.PI/2; }   // rolls back along the side
+    else { s.m.position.set(sgn * (hw + 8), s.y, zf - (t - hw)); s.m.rotation.y = Math.PI/2; }
   }
 }
-function buildTamb() {
+const DOOR_OPEN = THREE.MathUtils.degToRad(105);
+function buildMetal(k) {
+  const S = METAL[k], closure = closureOf(k);
   const g = new THREE.Group(); const root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
-  const { W, D, H, BASE, TOP, SIDE, BACK } = TBX;
-  const box = (w, h, d, x, y, z, m = steel7035) => { const o = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)); o.position.set(x, y, z); root.add(o); return o; };
+  const { W, H, BASE, TOP, SIDE, BACK } = TBX, D = depthOf(k);
+  const mat = k === 'mdoor' && S.color === 'blue' ? steelBlueCab : steel7035;
+  const box = (w, h, d, x, y, z, m = mat, par = root) => { const o = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)); o.position.set(x, y, z); par.add(o); return o; };
   // body
   for (const sx of [-1, 1]) box(SIDE, H, D, sx*(W/2 - SIDE/2), H/2, 0);
-  box(W - 2*SIDE, BACK, D - 2, 0, H - 6, 0);                                   // top
-  box(W - 2*SIDE, H - BASE - TOP, BACK, 0, (BASE + H - TOP)/2, -D/2 + BACK/2);  // back
-  box(W - 2*SIDE, BASE, D - 10, 0, BASE/2, 0);                                  // plinth
-  box(W - 2*SIDE, TOP - 6, 40, 0, H - TOP/2 - 6, D/2 - 20);                     // tambour head
-  box(W - 2*SIDE, 18, 40, 0, BASE + 9, D/2 - 20);                               // bottom track
-  // perforated uprights at the front of each side (shelf supports)
+  box(W - 2*SIDE, BACK, D - 2, 0, H - 6, 0);
+  box(W - 2*SIDE, H - BASE - TOP, BACK, 0, (BASE + H - TOP)/2, -D/2 + BACK/2);
+  box(W - 2*SIDE, BASE, D - 10, 0, BASE/2, closure === 'doors' ? -10 : 0);
+  if (closure === 'tambour') { box(W - 2*SIDE, TOP - 6, 40, 0, H - TOP/2 - 6, D/2 - 20); box(W - 2*SIDE, 18, 40, 0, BASE + 9, D/2 - 20); }
+  else box(W - 2*SIDE, TOP - 6, 20, 0, H - TOP/2 - 6, D/2 - 32);
   for (const sx of [-1, 1]) {
     const tex = holeTex.clone(); tex.needsUpdate = true; tex.repeat.set(1, (H - BASE - TOP) / 32);
     const strip = new THREE.Mesh(new THREE.PlaneGeometry(16, H - BASE - TOP), new THREE.MeshStandardMaterial({ map:tex, roughness:0.5 }));
-    strip.position.set(sx*(W/2 - SIDE - 0.5), (BASE + H - TOP)/2, D/2 - 70); strip.rotation.y = -sx*Math.PI/2; root.add(strip);
+    strip.position.set(sx*(W/2 - SIDE - 0.5), (BASE + H - TOP)/2, D/2 - (closure === 'doors' ? 60 : 70)); strip.rotation.y = -sx*Math.PI/2; root.add(strip);
   }
   // inside
-  const inW = W - 2*SIDE, zBack = -D/2 + BACK, shelfD = D - BACK - 60;
-  const plan = tbPlan();
-  const list = [], rodList = [];
-  const cx = (TB.side === 'right' ? 1 : -1) * (inW/2 - 300);                  // the 60 cm column against one side
-  for (const p of plan.items) {
-    if (p.type === 'shelf') {
-      box(inW - 2, TBX.SHELF, shelfD, 0, p.y + TBX.SHELF/2, zBack + shelfD/2);
-      box(inW - 2, TBX.SHELF + 12, 2, 0, p.y + TBX.SHELF/2 - 6, zBack + shelfD - 1);   // folded front lip
-    } else {
-      const u = makeUnit(p.n);
-      u.group.position.set(cx*0.001, p.y*0.001, zBack*0.001);                  // back of the bin on the cabinet back
-      g.add(u.group); list.push(...u.drawers); rodList.push(u.rod);
+  const inW = W - 2*SIDE, zBack = -D/2 + BACK, shelfD = D - BACK - (closure === 'doors' ? (k === 'tamb' ? 130 : 45) : 60);   // tools on the doors need room in front of the shelves
+  const list = [], rodList = [], shelfMeshes = [];
+  const shelf = (y, idx) => {
+    const sm = box(inW - 2, TBX.SHELF, shelfD, 0, y + TBX.SHELF/2, zBack + shelfD/2);
+    box(inW - 2, TBX.SHELF + 12, 2, 0, y + TBX.SHELF/2 - 6, zBack + shelfD - 1);
+    if (idx !== undefined) { sm.userData.shelf = idx; shelfMeshes.push(sm); }
+  };
+  if (k === 'tamb') {
+    const cx = (TB.side === 'right' ? 1 : -1) * (inW/2 - 300);
+    for (const p of tbPlan().items) {
+      if (p.type === 'shelf') shelf(p.y);
+      else { const u = makeUnit(p.n); u.group.position.set(cx*0.001, p.y*0.001, zBack*0.001); g.add(u.group); list.push(...u.drawers); rodList.push(u.rod); }
     }
-  }
-  // tambour: two halves of vertical slats meeting in the middle; they roll back along the sides
-  const hw = inW/2, zf = D/2 - 22, sh = H - BASE - TOP - 24, sw = 25, n = Math.ceil(hw / sw);
-  const slatGeo = new THREE.BoxGeometry(sw - 1.2, sh, 9);
-  const slats = [];
-  for (const half of [-1, 1]) for (let i = 0; i < n; i++) {
-    const m = shadowOn(new THREE.Mesh(slatGeo, slatMat)); root.add(m);
-    if (i === 0) {                                                             // meeting slat: recessed handle (+ lock on the right)
-      const hdl = new THREE.Mesh(new THREE.BoxGeometry(10, 150, 6), new THREE.MeshStandardMaterial({ color:0xb8bdb9, roughness:0.4 }));
-      hdl.position.set(-half*2, 40, 6); m.add(hdl);
-      if (half > 0) { const lk = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 8, 20), zincMat); lk.rotation.x = Math.PI/2; lk.position.set(-2, -90, 7); m.add(lk); }
+  } else S.list.forEach((y, i) => shelf(y, i));
+  // front
+  let slats = null, doors = null;
+  if (closure === 'tambour') {
+    const hw = inW/2, zf = D/2 - 22, sh = H - BASE - TOP - 24, sw = 25, n = Math.ceil(hw / sw);
+    const slatGeo = new THREE.BoxGeometry(sw - 1.2, sh, 9);
+    const sl = [];
+    for (const half of [-1, 1]) for (let i = 0; i < n; i++) {
+      const m = shadowOn(new THREE.Mesh(slatGeo, slatMat)); root.add(m);
+      if (i === 0) {
+        const hdl = new THREE.Mesh(new THREE.BoxGeometry(10, 150, 6), new THREE.MeshStandardMaterial({ color:0xb8bdb9, roughness:0.4 }));
+        hdl.position.set(-half*2, 40, 6); m.add(hdl);
+        if (half > 0) { const lk = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 8, 20), zincMat); lk.rotation.x = Math.PI/2; lk.position.set(-2, -90, 7); m.add(lk); }
+      }
+      sl.push({ m, half, i, w:sw, y:BASE + 12 + sh/2 });
     }
-    slats.push({ m, half, i, w:sw, y:BASE + 12 + sh/2 });
+    placeSlats(sl, S.open, zf, hw);
+    slats = { list:sl, zf, hw, meshes:sl.map(s => s.m) };
+  } else {
+    // two hinged doors, each opens on its own; key lock (black) on the right door
+    const dw = W/2 - 2, dh = H - BASE - 8, y0 = BASE + 4, zP = D/2 - 10, dl = [];
+    const pegboard = k === 'tamb';
+    [-1, 1].forEach((sd, idx) => {
+      const pivot = new THREE.Group(); pivot.position.set(sd * W/2, 0, zP); root.add(pivot);
+      const door = new THREE.Group(); pivot.add(door);
+      const panel = box(dw, dh, 20, -sd * dw/2, y0 + dh/2, 0, mat, door);
+      box(dw - 60, dh - 60, 4, -sd * dw/2, y0 + dh/2, -12, mat, door);                // inner stiffener
+      if (pegboard) {
+        const t = pegTex.clone(); t.needsUpdate = true; t.repeat.set((dw - 90) / 32, (dh - 120) / 32);
+        const pb = new THREE.Mesh(new THREE.PlaneGeometry(dw - 90, dh - 120), new THREE.MeshStandardMaterial({ map:t, roughness:0.55, side:THREE.DoubleSide }));
+        pb.position.set(-sd * dw/2, y0 + dh/2, -14.5); pb.rotation.y = Math.PI; door.add(pb);
+        if (TB.acc) {
+          const cx = -sd * dw/2, z = -24, A = (o) => { o.castShadow = true; door.add(o); return o; };
+          // hooks
+          for (const [hx, hy] of [[-110, 1500], [-40, 1500], [30, 1500], [100, 1500]]) {
+            const hk = A(new THREE.Mesh(new THREE.TorusGeometry(12, 2.2, 6, 14, Math.PI), zincMat)); hk.position.set(cx + hx, hy, z - 8); hk.rotation.set(Math.PI/2, 0, Math.PI);
+          }
+          // small baskets
+          for (const by of sd < 0 ? [1180, 820] : [1250]) {
+            const b = A(new THREE.Mesh(new THREE.BoxGeometry(230, 90, 60), new THREE.MeshStandardMaterial({ color:0x2f6fd6, roughness:0.5 })));
+            b.position.set(cx, by, z - 20);
+          }
+          if (sd < 0) {                                                           // hammer
+            const h = A(new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 280, 12), woodMat)); h.position.set(cx + 60, 1450 - 140, z - 18);
+            const hd = A(new THREE.Mesh(new THREE.BoxGeometry(110, 28, 28), zincMat)); hd.position.set(cx + 60, 1450 + 8, z - 18);
+          } else {                                                                // screwdrivers + pliers
+            for (const [dx, m] of [[-90, toolRed], [-45, toolYellow], [0, toolRed]]) {
+              const hdl = A(new THREE.Mesh(new THREE.CylinderGeometry(11, 11, 100, 12), m)); hdl.position.set(cx + dx, 1420, z - 14);
+              const sh = A(new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 150, 8), zincMat)); sh.position.set(cx + dx, 1420 - 125, z - 14);
+            }
+            for (const s2 of [-1, 1]) { const pl = A(new THREE.Mesh(new THREE.BoxGeometry(14, 190, 10), toolRed)); pl.position.set(cx + 70 + s2*12, 1380, z - 14); pl.rotation.z = s2*0.08; }
+          }
+        }
+      }
+      if (sd > 0) {                                                               // key lock on the right door, at the meeting edge
+        box(34, 70, 10, -sd * (dw - 40), y0 + dh*0.55, 14, lockBlack, door);
+        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 8, 18), zincMat); cyl.rotation.x = Math.PI/2; cyl.position.set(-sd * (dw - 40), y0 + dh*0.55 - 15, 20); door.add(cyl);
+      }
+      pivot.rotation.y = (sd < 0 ? -1 : 1) * S.doors[idx] * DOOR_OPEN;
+      dl.push({ pivot, sd, idx, meshes:[] });
+      door.traverse(o => { if (o.isMesh) dl[dl.length - 1].meshes.push(o); });
+    });
+    doors = { list:dl, meshes:dl.flatMap(d => d.meshes) };
   }
-  placeSlats(slats, TB.open, zf, hw);
-  return { group:g, drawers:list, rods:rodList, slats:{ list:slats, zf, hw, meshes:slats.map(s => s.m) }, plan };
+  return { group:g, drawers:list, rods:rodList, slats, doors, shelves:{ meshes:shelfMeshes }, D };
 }
+function buildTamb() { return buildMetal('tamb'); }
+
+// ---------- panels ----------
 function renderTamb() {
   const box = $('tbComp');
   if (!THUMBS) { try { THUMBS = makeThumbs(); } catch (e) { THUMBS = {}; } }
   box.innerHTML = '';
-  const plan = tbPlan(), lim = tbCeil();
-  const models = [3, 4, 5, 6, 9];
+  const plan = tbPlan(), lim = tbCeil(), models = [3, 4, 5, 6, 9];
   for (const n of ORDER) {
     const ok = models.includes(n), cnt = TB.comp[n] || 0;
     const row = document.createElement('div'); row.className = 'ci' + (ok ? '' : ' na');
@@ -1977,37 +2105,109 @@ function renderTamb() {
   $('tbUse').innerHTML = `גובה מנוצל: <b>${Math.round(plan.top - tbFloor())}</b> מתוך <b>${lim - tbFloor()}</b> מ"מ · מדפים: <b>${shelvesN}</b> · הגדול תמיד למטה`;
   $('tbExtraN').textContent = TB.extra;
   $('tbOpen').value = Math.round(TB.target / TBX.MAXO * 100);
+  setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc;
+  $('tbTambSec').hidden = TB.closure !== 'tambour'; $('tbDoorSec').hidden = TB.closure !== 'doors';
+  syncDoorBtns('tb', TB);
 }
-function stepTamb(k) {
-  if (mode !== 'tamb' || !TAMB) return;
-  if (Math.abs(TB.target - TB.open) < 0.5) return;
-  TB.open += (TB.target - TB.open) * k;
-  placeSlats(TAMB.list, TB.open, TAMB.zf, TAMB.hw);
+function syncDoorBtns(px, S) {
+  ['L', 'R'].forEach((s, i) => { const b = $(px + 'Door' + s); if (b) b.classList.toggle('on', S.doors[i] > 0.5); });
 }
-// drag either half of the tambour: both halves move together
-let tdrag = null;
+function renderMetal(k) {
+  const S = METAL[k], px = k === 'mtamb' ? 'mt' : 'md', box = $(px + 'Shelves');
+  box.innerHTML = '';
+  const sorted = S.list.map((y, i) => ({ y, i })).sort((a, b) => a.y - b.y);
+  sorted.forEach(({ y, i }, k2) => {
+    const row = document.createElement('div'); row.className = 'srow';
+    row.innerHTML = `<span class="sname" style="cursor:default">מדף ${k2 + 1}</span><input class="num" type="number" step="2.5" min="10" max="185" value="${(y/10).toFixed(1)}" aria-label="גובה המדף בס&quot;מ" style="width:80px"><span class="use" style="margin:0 4px">ס"מ</span><button class="sb" aria-label="הסרת מדף">✕</button>`;
+    row.querySelector('input').onchange = (e) => { S.list[i] = clampShelf(S.list, i, snapNear(+e.target.value * 10)); rebuild(true); };
+    row.querySelector('.sb').onclick = () => { S.list.splice(i, 1); rebuild(true); };
+    box.appendChild(row);
+  });
+  if (k === 'mtamb') { $('mtOpen').value = Math.round(S.target / TBX.MAXO * 100); }
+  else { setSeg('mdColor', S.color); syncDoorBtns('md', S); }
+}
+function clampShelf(list, i, y) {
+  y = Math.max(tbFloor() + 100, Math.min(tbCeil() - 60, y));
+  for (const [j, o] of list.entries()) if (j !== i && Math.abs(o - y) < 80) y = o + (y >= o ? 80 : -80);
+  return snapNear(Math.max(tbFloor() + 100, Math.min(tbCeil() - 60, y)));
+}
+function addShelf(S) {
+  // in the middle of the biggest free gap
+  const ys = [tbFloor(), ...[...S.list].sort((a, b) => a - b), tbCeil()];
+  let best = 0, at = 0; for (let i = 0; i < ys.length - 1; i++) if (ys[i + 1] - ys[i] > best) { best = ys[i + 1] - ys[i]; at = (ys[i] + ys[i + 1]) / 2; }
+  if (best < 200) { toast('אין מקום למדף נוסף'); return; }
+  S.list.push(snapNear(at)); rebuild(true);
+}
+
+// ---------- animation ----------
+function stepMetal(k) {
+  const S = metalState(); if (!S) return;
+  if (TAMB && S.target !== undefined && Math.abs(S.target - S.open) > 0.5) { S.open += (S.target - S.open) * k; placeSlats(TAMB.list, S.open, TAMB.zf, TAMB.hw); }
+  if (DOORS) for (const d of DOORS.list) {
+    const tgt = (d.sd < 0 ? -1 : 1) * S.doors[d.idx] * DOOR_OPEN;
+    d.pivot.rotation.y += (tgt - d.pivot.rotation.y) * k;
+  }
+}
+// ---------- pointer: drag tambour, drag shelves, click doors ----------
+let tdrag = null, shdrag = null;
 canvas.addEventListener('pointerdown', (e) => {
-  if (mode !== 'tamb' || !TAMB || e.button !== 0) return;
+  const S = metalState(); if (!S || e.button !== 0) return;
   dragRay.setFromCamera(pointerNDC(e), camera);
-  const hit = dragRay.intersectObjects(TAMB.meshes, true)[0]; if (!hit) return;
-  let m = hit.object; while (m && !TAMB.meshes.includes(m)) m = m.parent;
-  const s = TAMB.list.find(x => x.m === m);
-  dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 0, 1), hit.point);
-  tdrag = { half:s.half, x0:hit.point.x, o0:TB.open, moved:false, sx:e.clientX };
-  controls.enabled = false;
+  const blockers = [...(TAMB ? TAMB.meshes : []), ...(DOORS ? DOORS.meshes : [])];
+  const shelfM = SHELVES ? SHELVES.meshes : [];
+  const hit = dragRay.intersectObjects([...blockers, ...shelfM], true)[0]; if (!hit) return;
+  if (TAMB && TAMB.meshes.includes(hit.object)) {
+    const s = TAMB.list.find(x => x.m === hit.object || x.m === hit.object.parent);
+    dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 0, 1), hit.point);
+    tdrag = { half:s ? s.half : 1, x0:hit.point.x, o0:S.open, moved:false, sx:e.clientX };
+    controls.enabled = false;
+  } else if (shelfM.includes(hit.object)) {
+    const n = new THREE.Vector3(); camera.getWorldDirection(n); n.y = 0; n.normalize().negate();
+    dragPlane.setFromNormalAndCoplanarPoint(n, hit.point);
+    const i = hit.object.userData.shelf;
+    shdrag = { i, dy: S.list[i] - hit.point.y * 1000, mesh:hit.object, moved:false, sy:e.clientY };
+    controls.enabled = false;
+  }
 }, { capture:true });
 addEventListener('pointermove', (e) => {
-  if (!tdrag) return;
-  if (!tdrag.moved && Math.abs(e.clientX - tdrag.sx) < 4) return;
-  tdrag.moved = true;
-  dragRay.setFromCamera(pointerNDC(e), camera);
-  if (dragRay.ray.intersectPlane(dragPlane, dragHit)) {
-    TB.open = TB.target = Math.max(0, Math.min(TBX.MAXO, tdrag.o0 + tdrag.half * (dragHit.x - tdrag.x0) * 1000));
-    placeSlats(TAMB.list, TB.open, TAMB.zf, TAMB.hw);
-    $('tbOpen').value = Math.round(TB.open / TBX.MAXO * 100);
+  const S = metalState();
+  if (tdrag && S) {
+    if (!tdrag.moved && Math.abs(e.clientX - tdrag.sx) < 4) return;
+    tdrag.moved = true;
+    dragRay.setFromCamera(pointerNDC(e), camera);
+    if (dragRay.ray.intersectPlane(dragPlane, dragHit)) {
+      S.open = S.target = Math.max(0, Math.min(TBX.MAXO, tdrag.o0 + tdrag.half * (dragHit.x - tdrag.x0) * 1000));
+      placeSlats(TAMB.list, S.open, TAMB.zf, TAMB.hw);
+      const sl = $(mode === 'tamb' ? 'tbOpen' : 'mtOpen'); if (sl) sl.value = Math.round(S.open / TBX.MAXO * 100);
+    }
+  }
+  if (shdrag && S) {
+    if (!shdrag.moved && Math.abs(e.clientY - shdrag.sy) < 4) return;
+    shdrag.moved = true; canvas.style.cursor = 'ns-resize';
+    dragRay.setFromCamera(pointerNDC(e), camera);
+    if (dragRay.ray.intersectPlane(dragPlane, dragHit)) {
+      const y = clampShelf(S.list, shdrag.i, snapNear(dragHit.y * 1000 + shdrag.dy));
+      const dy = (y - S.list[shdrag.i]) * 0.001; S.list[shdrag.i] = y;
+      // move this shelf (and its lip) live
+      const siblings = shdrag.mesh.parent.children.filter(o => Math.abs(o.position.y - shdrag.mesh.position.y) < 20 && o.isMesh && o !== shdrag.mesh && Math.abs(o.position.z - shdrag.mesh.position.z) < 300);
+      shdrag.mesh.position.y += dy * 1000; siblings.forEach(o => o.position.y += dy * 1000);
+    }
   }
 });
-addEventListener('pointerup', () => { if (!tdrag) return; if (tdrag.moved) suppressClick = true; tdrag = null; controls.enabled = true; });
+addEventListener('pointerup', () => {
+  if (tdrag) { tdrag = null; controls.enabled = true; }
+  if (shdrag) { const moved = shdrag.moved; shdrag = null; controls.enabled = true; canvas.style.cursor = ''; if (moved) rebuild(true); }
+});
+// a click on a hinged door opens or closes that door only
+function doorClick(ray) {
+  if (!DOORS) return false;
+  const S = metalState(); if (!S) return false;
+  const hit = ray.intersectObjects(DOORS.meshes, true)[0]; if (!hit) return false;
+  const d = DOORS.list.find(x => x.meshes.includes(hit.object)); if (!d) return false;
+  S.doors[d.idx] = S.doors[d.idx] > 0.5 ? 0 : 1;
+  syncDoorBtns(mode === 'tamb' ? 'tb' : 'md', S);
+  return true;
+}
 
 // ---------- (re)build the scene ----------
 function rebuild(keepCamera = false) {
@@ -2015,6 +2215,7 @@ function rebuild(keepCamera = false) {
   document.getElementById('spreadBtn').hidden = !isCab() || mode === 'scene';
   if (world) { scene.remove(world); world.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); }
   world = new THREE.Group();
+  TAMB = DOORS = SHELVES = null;
   if (mode === 'scene') {
     spread = spreadTarget = 0;
     buildScene();
@@ -2030,12 +2231,15 @@ function rebuild(keepCamera = false) {
     document.getElementById('dims').innerHTML =
       `מק"ט <b>${MODELS[current].sku}</b> · רוחב <b>${MODELS[current].W}</b> · גובה <b>${MODELS[current].H}</b> · עומק <b>${D}</b> מ"מ`;
     makeCellButtons(current);
-  } else if (mode === 'tamb') {
-    const tb = buildTamb();
-    world.add(tb.group); drawers = tb.drawers; rods = tb.rods; TAMB = tb.slats;
+  } else if (METAL[mode]) {
+    const tb = buildMetal(mode);
+    world.add(tb.group); drawers = tb.drawers; rods = tb.rods; TAMB = tb.slats; DOORS = tb.doors; SHELVES = tb.shelves;
     if (!keepCamera) frame(TBX.W + 200, TBX.H, true);
-    document.getElementById('dims').innerHTML = `ארון תריס לרב תא · רוחב <b>90</b> · עומק <b>45</b> · גובה <b>195</b> ס"מ · RAL 7035`;
-    renderTamb();
+    const D = tb.D / 10, nm = { tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים' }[mode];
+    const col = mode === 'mdoor' && MD.color === 'blue' ? 'כחול' : 'RAL 7035';
+    document.getElementById('dims').innerHTML = `${nm} · רוחב <b>90</b> · עומק <b>${D}</b> · גובה <b>195</b> ס"מ · ${col}`;
+    if (mode === 'tamb') { renderTamb(); $('tbSub').textContent = TB.closure === 'doors' ? '90 × 40 × 195 ס"מ · RAL 7035 · שתי דלתות עם מנעול' : '90 × 45 × 195 ס"מ · RAL 7035 · תריס עם מנעול'; }
+    else renderMetal(mode);
   } else if (mode === 'excl' || mode === 'part') {
     const eb = buildExcl(mode);
     world.add(eb.group); drawers = eb.drawers; rods = eb.rods;
@@ -2073,6 +2277,7 @@ function rebuild(keepCamera = false) {
   // optional wall behind the product + floor (the wall rack has its own, with height above the floor)
   const wallAllowed = !['wall', 'excl', 'scene'].includes(mode) && !(mode === 'stand' && stand.type === 'double');
   document.getElementById('backWallRow').hidden = !wallAllowed;
+  for (const id of ['rod', 'labelsOn']) document.getElementById(id).closest('.row').hidden = mode === 'mtamb' || mode === 'mdoor';
   if (wallAllowed && document.getElementById('backWall').checked) {
     const box = new THREE.Box3().setFromObject(world), sz = box.getSize(new THREE.Vector3());
     const ww = Math.max(4, sz.x + 3), wh = Math.max(2.7, box.max.y + 0.6);
@@ -2235,6 +2440,24 @@ document.getElementById('tbExtraM').onclick = () => { TB.extra = Math.max(0, TB.
 document.getElementById('tbExtraP').onclick = () => { if (tbPlan(TB.comp, TB.shelves, TB.extra + 1).items.filter(p => p.extra).length > TB.extra) { TB.extra++; rebuild(true); } };
 document.getElementById('tbToggle').onclick = () => { TB.target = TB.target > TBX.MAXO/2 ? 0 : TBX.MAXO; renderTamb(); };
 document.getElementById('tbOpen').oninput = (e) => { TB.target = +e.target.value / 100 * TBX.MAXO; };
+segGroup('tbClose', (v) => { TB.closure = v; rebuild(true); });
+document.getElementById('tbAcc').onchange = (e) => { TB.acc = e.target.checked; rebuild(true); };
+[['tbDoorR', TB, 1, 'tb'], ['tbDoorL', TB, 0, 'tb'], ['mdDoorR', MD, 1, 'md'], ['mdDoorL', MD, 0, 'md']].forEach(([id, S, i, px]) =>
+  document.getElementById(id).onclick = () => { S.doors[i] = S.doors[i] > 0.5 ? 0 : 1; syncDoorBtns(px, S); });
+document.getElementById('mtToggle').onclick = () => { MT.target = MT.target > TBX.MAXO/2 ? 0 : TBX.MAXO; document.getElementById('mtOpen').value = Math.round(MT.target / TBX.MAXO * 100); };
+document.getElementById('mtOpen').oninput = (e) => { MT.target = +e.target.value / 100 * TBX.MAXO; };
+document.getElementById('mtAdd').onclick = () => addShelf(MT);
+document.getElementById('mdAdd').onclick = () => addShelf(MD);
+segGroup('mdColor', (v) => { MD.color = v; rebuild(true); });
+// family tabs: each tab shows its own products; the scene works across both
+function setFamily(f, open = true) {
+  document.querySelectorAll('.tab[data-f]').forEach(t => { const on = t.dataset.f === f; t.classList.toggle('on', on); t.setAttribute('aria-selected', on); });
+  panels.forEach(p => p.hidden = !(p.dataset.family === 'all' || p.dataset.family === f));
+  const cur = panels.find(p => p.dataset.mode === mode);
+  if (open && cur && cur.hidden) panels.find(p => p.dataset.family === f).querySelector('.head').click();
+}
+document.querySelectorAll('.tab[data-f]').forEach(t => t.onclick = () => setFamily(t.dataset.f));
+const familyOf = (m) => (panels.find(p => p.dataset.mode === m) || {}).dataset?.family;
 
 function renderComp() {
   if (!THUMBS) { try { THUMBS = makeThumbs(); } catch (e) { THUMBS = {}; } }
@@ -2306,9 +2529,11 @@ function makeCellButtons(n) {
   }
   syncCells();
 }
-function applyOpenAll() {
+function applyOpenAll(e) {
   const on = document.getElementById('openAll').checked;
-  if (on && mode === 'tamb') TB.target = TBX.MAXO;   // open the tambour too
+  const S = METAL[mode];
+  // on a rebuild only opening is applied; closing needs the switch itself
+  if (S && (on || e)) { if (TAMB) S.target = on ? TBX.MAXO : 0; if (DOORS) { S.doors = on ? [1, 1] : [0, 0]; syncDoorBtns(mode === 'tamb' ? 'tb' : 'md', S); } }   // open the tambour / doors too
   drawers.forEach(d => on ? openDrawer(d) : closeDrawer(d));
   syncCells();
 }
@@ -2336,8 +2561,10 @@ canvas.addEventListener('pointerup', e => {
   mouse.set((e.clientX - r.left)/r.width*2 - 1, -(e.clientY - r.top)/r.height*2 + 1);
   ray.setFromCamera(mouse, camera);
   const hit = ray.intersectObjects(drawers, true)[0];
+  const dh = DOORS ? ray.intersectObjects(DOORS.meshes, true)[0] : null;
+  if (dh && (!hit || dh.distance < hit.distance)) { doorClick(ray); return; }   // a door in front: open / close it
   if (!hit) return;
-  if (mode === 'tamb' && TAMB) { const th = ray.intersectObjects(TAMB.meshes, true)[0]; if (th && th.distance < hit.distance) return; }   // closed tambour in front
+  if (TAMB) { const th = ray.intersectObjects(TAMB.meshes, true)[0]; if (th && th.distance < hit.distance) return; }   // closed tambour in front
   if (isCab()) {
     const g = wingOf(hit.object);
     if (g && spread > 0.5 && tenaOpenWing !== g.userData.wingId) { selectWing(g.userData.wingId); return; }
@@ -2424,7 +2651,7 @@ function captureFamily() {
     mode, current,
     stand: { ...stand },
     comp: JSON.parse(JSON.stringify(comp)),
-    exs: JSON.parse(JSON.stringify(EXS)), tb: JSON.parse(JSON.stringify(TB)),
+    exs: JSON.parse(JSON.stringify(EXS)), tb: JSON.parse(JSON.stringify(TB)), mt: deep(MT), md: deep(MD),
     wall: { ...wall }, wallComp: JSON.parse(JSON.stringify(wallComp)),
     tn: JSON.parse(JSON.stringify(TN)), spread: spreadTarget > 0.5, wing: tenaOpenWing,
     scene: (() => { const s = SCN.items.find(i => i.id === SCN.sel); if (s) s.cfg = capCfg(s.type);
@@ -2440,7 +2667,9 @@ function applyFamily(f) {
   if (f.stand) Object.assign(stand, f.stand);
   if (f.comp) for (const k in f.comp) comp[k] = { ...f.comp[k] };
   if (f.exs) { for (const k in f.exs) Object.assign(EXS[k], JSON.parse(JSON.stringify(f.exs[k]))); $('ptWide').checked = !!EXS.part.wide; setSeg('exSide', EXS.excl.side || 'left'); setSeg('ptSide', EXS.part.side || 'left'); setSeg('ptCols', EXS.part.cols || 2); }
-  if (f.tb) { Object.assign(TB, JSON.parse(JSON.stringify(f.tb))); setSeg('tbSide', TB.side); setSeg('tbShelves', TB.shelves); }
+  if (f.tb) { Object.assign(TB, JSON.parse(JSON.stringify(f.tb))); TB.closure = TB.closure || 'tambour'; TB.doors = TB.doors || [0, 0]; if (TB.acc === undefined) TB.acc = true; setSeg('tbSide', TB.side); setSeg('tbShelves', TB.shelves); setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; }
+  if (f.mt) Object.assign(MT, deep(f.mt));
+  if (f.md) { Object.assign(MD, deep(f.md)); setSeg('mdColor', MD.color); }
   if (f.wall) { Object.assign(wall, f.wall); setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0'); }
   if (f.wallComp) for (const k in f.wallComp) wallComp[k] = { ...f.wallComp[k] };
   const tn = f.tn || (f.tena ? { delux:f.tena } : null);
@@ -2459,6 +2688,7 @@ function applyFamily(f) {
   setSeg('stType', stand.type); setSeg('stBase', stand.base); setSeg('stHeight', stand.height);
   setSeg('stHandle', stand.handle); setSeg('stBrake', stand.brake); syncWheelOpts();
   panels.forEach(x => { const on = x.dataset.mode === mode; x.classList.toggle('open', on); x.querySelector('.head').setAttribute('aria-expanded', on); });
+  if (mode !== 'scene') setFamily(familyOf(mode) || 'tilt', false);
   placeShared();
   rebuild();
   if (!f.openAll && f.open) f.open.forEach(i => drawers[i] && openDrawer(drawers[i]));
@@ -2592,7 +2822,9 @@ const toBlob = (cv, type = 'image/png', q) => new Promise(r => cv.toBlob(r, type
 function fileStem() {
   if (mode === 'unit') return `rav-ta-${current}`;
   if (mode === 'scene') return `scene-${SCN.items.length}-products`;
-  if (mode === 'tamb') return `tambour-cabinet`;
+  if (mode === 'tamb') return `secured-tilt-bin-cabinet-${TB.closure}`;
+  if (mode === 'mtamb') return `tambour-metal-cabinet`;
+  if (mode === 'mdoor') return `4-shelf-metal-cabinet-${MD.color}`;
   if (mode === 'excl') return `exclusive-cart-${Math.round(exTotal('excl')/10)}`;
   if (mode === 'part') return `exclusive-partition-${Math.round(exTotal('part')/10)}`;
   if (mode === 'wall') return `wall-rack-${wall.height/10}`;
@@ -2624,9 +2856,21 @@ function describe() {
   else if ($('backWall').checked && !['wall', 'excl'].includes(mode) && !(mode === 'stand' && stand.type === 'double')) flags.push('standing against a plain light wall on a smooth floor');
   if ($('rod').checked) flags.push('a thin stainless steel security rod across the front');
   if ($('labelsOn').checked) flags.push('plain white paper labels in the label windows');
-  if (mode === 'tamb') {
-    const plan = tbPlan(), sh = plan.items.filter(p => p.type === 'shelf').length;
-    return `A steel office cabinet with a two-part vertical-slat tambour (roller) front that slides open to the sides, with recessed handles and a lock in the middle; 900 mm wide, 450 mm deep, 1950 mm high, powder-coated light grey RAL 7035, plinth at the bottom. The tambour is ${TB.open > TBX.MAXO*0.6 ? 'open' : TB.open > 40 ? 'partly open' : 'closed'}. Inside: a 600 mm wide column of ${base.toLowerCase()} hung with their backs on the cabinet back against the ${TB.side} side${sh ? `, with ${sh} full-width, full-depth steel shelves` : ''}${flags.length ? '; ' + flags.join('; ') : ''}.`;
+  if (METAL[mode]) {
+    const S = METAL[mode], cl = closureOf(mode), D = depthOf(mode);
+    const col = mode === 'mdoor' && MD.color === 'blue' ? 'deep blue' : 'light grey RAL 7035';
+    const doorTxt = (st) => st[0] > 0.5 && st[1] > 0.5 ? 'both doors open' : st[0] > 0.5 ? 'the left door open, the right door closed' : st[1] > 0.5 ? 'the right door open, the left door closed' : 'both doors closed';
+    const front = cl === 'tambour'
+      ? `a two-part vertical-slat tambour (roller) front that slides open to the sides, with recessed handles and a lock in the middle; the tambour is ${S.open > TBX.MAXO*0.6 ? 'open' : S.open > 40 ? 'partly open' : 'closed'}`
+      : `two full-height hinged steel doors with a black key lock on the right door; ${doorTxt(S.doors)}`;
+    const shell = `A steel cabinet, 900 mm wide, ${D} mm deep, 1950 mm high, powder-coated ${col}, plinth at the bottom, with ${front}.`;
+    if (mode === 'tamb') {
+      const plan = tbPlan(), sh = plan.items.filter(p => p.type === 'shelf').length;
+      const peg = cl === 'doors' ? ` The inside of each door is a perforated metal pegboard panel${TB.acc ? ' holding hooks, small blue plastic baskets, a hammer, screwdrivers and pliers' : ' (empty)'}.` : '';
+      return `${shell} Inside: a 600 mm wide column of ${base.toLowerCase()} hung with their backs on the cabinet back against the ${TB.side} side${sh ? `, with ${sh} full-width steel shelves` : ''}.${peg}${flags.length ? ' ' + flags.join('; ') + '.' : ''}`;
+    }
+    const ys = [...S.list].sort((a, b) => a - b).map(y => Math.round(y/10));
+    return `${shell} Inside: ${ys.length} adjustable full-width steel shelves at ${ys.join(', ')} cm from the floor, on perforated uprights.${flags.filter(f => !/rod|label/.test(f)).length ? ' ' + flags.filter(f => !/rod|label/.test(f)).join('; ') + '.' : ''}`;
   }
   if (mode === 'excl' || mode === 'part') {
     const k = mode, H = exTotal(k), W = EXV[k].cols*600 + (EXV[k].cols + 1)*30, D = EXV[k].D;
@@ -3229,6 +3473,19 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
+  'סצנה':'Scene',
+  // metal cabinets
+  'ארונות מתכת':'METAL CABINETS', 'ארון מתכת מאובטח לרב תא':'Secured tilt bin metal cabinet', 'ארון תריס':'Tambour metal cabinet', 'ארון 4 מדפים':'4-shelf metal cabinet',
+  'סוג סגירה':'Closure type', 'תריס · עומק 45':'Tambour · depth 45', 'שתי דלתות · עומק 40':'Two doors · depth 40',
+  '90 × 40 × 195 ס"מ · RAL 7035 · שתי דלתות עם מנעול':'90 × 40 × 195 cm · RAL 7035 · two lockable doors',
+  '90 × 40 × 195 ס"מ · דלתות ציר עם מנעול מפתח':'90 × 40 × 195 cm · hinged doors with key lock',
+  'דלתות (לחיצה על דלת פותחת / סוגרת אותה)':'Doors (click a door to open / close it)', 'דלת ימין':'Right door', 'דלת שמאל':'Left door',
+  'אביזרים על הלוח המחורר בדלתות':'Accessories on the door pegboards',
+  'בפנים הדלתות: לוח מתכת מחורר. אביזרים: ווים, סלסלות קטנות, פטיש וכלים קטנים. מנעול מפתח בדלת הימנית.':'Inside the doors: a perforated metal pegboard. Accessories: hooks, small baskets, a hammer and small tools. Key lock on the right door.',
+  'מדפים מודולריים (גובה בס"מ מהרצפה)':'Modular shelves (height in cm from the floor)', 'מדף':'Shelf', 'הסרת מדף':'Remove shelf', 'גובה המדף בס"מ':'Shelf height in cm',
+  'גוררים מדף על המודל למעלה או למטה כדי לשנות את גובהו (קפיצות של 2.5 ס"מ). גוררים את התריס כדי לפתוח.':'Drag a shelf on the model up or down to change its height (2.5 cm steps). Drag the tambour to open it.',
+  'גוררים מדף על המודל (כשהדלת פתוחה) כדי לשנות את גובהו. מנעול מפתח בדלת הימנית.':'Drag a shelf on the model (with the door open) to change its height. Key lock on the right door.',
+  'צבע':'Colour', 'כחול':'Blue', 'אין מקום למדף נוסף':'No room for another shelf',
   // server messages
   'נדרש מצב ניהול':'Admin mode required', 'סיסמת ניהול שגויה':'Wrong admin password', 'גודל תמונה לא חוקי':'Invalid image size',
   'קובץ ייחוס לא תקין (רק JPG, PNG, WebP)':'Invalid reference file (JPG, PNG, WebP only)',
@@ -3237,7 +3494,9 @@ const EN = {
 const EN_EL = [
   ['#stBase button[data-v="wheels"]', 'With wheels'], ['#stBase button[data-v="legs"]', 'Without wheels'],
   ['#pUnit h1', 'TILT BIN'], ['#pStand h1', 'STANDING UNIT'], ['#pWall h1', 'WALL MOUNT UNIT'],
-  ['#pTena h1', 'GONDOLA DELUX'], ['#pExcl h1', 'EXCLUSIVE TILT BIN CART'], ['#pPart h1', 'MODULAR EXCLUSIVE PARTITION'], ['#pTamb h1', 'TILT BIN TAMBOUR CABINET'], ['#pSmart h1', 'GONDOLA SMART'], ['.tab', 'TILT BIN FAMILY'],
+  ['#pTena h1', 'GONDOLA DELUX'], ['#pExcl h1', 'EXCLUSIVE TILT BIN CART'], ['#pPart h1', 'MODULAR EXCLUSIVE PARTITION'], ['#pTamb h1', 'SECURED TILT BIN METAL CABINET'], ['#pSmart h1', 'GONDOLA SMART'], ['.tab[data-f="tilt"]', 'TILT BIN FAMILY'],
+  ['#pMtamb h1', 'TAMBOUR METAL CABINET'], ['#pMdoor h1', '4-SHELF METAL CABINET'], ['.tab[data-f="metal"]', 'METAL CABINETS'],
+  ['#mdColor button[data-v="blue"]', 'Blue'],
 ];
 let LANG = 'he';
 try { LANG = location.hash === '#en' ? 'en' : location.hash === '#he' ? 'he' : (localStorage.getItem('rbt-lang') || 'he'); } catch {}
@@ -3435,7 +3694,7 @@ renderer.setAnimationLoop(() => {
   const dt = Math.min(0.1, clock.getDelta());               // time-based, same speed on any screen
   stepRods(1 - Math.exp(-dt*6.5));
   stepWings(1 - Math.exp(-dt*5), dt);
-  stepTamb(1 - Math.exp(-dt*6));
+  stepMetal(1 - Math.exp(-dt*6));
   const kd = 1 - Math.exp(-dt*7.5);
   drawers.forEach(d => { const u = d.userData; u.angle += (u.target - u.angle) * kd; d.rotation.x = u.angle; });
   stepFree(dt);
