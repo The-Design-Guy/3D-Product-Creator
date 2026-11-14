@@ -257,6 +257,38 @@
     </div></div>
   </div>
 
+  <div class="panel" id="pExcl" data-mode="excl">
+    <button class="head" aria-expanded="false">
+      <span class="ttl"><h1>עגלת רב-תא EXCLUSIVE</h1><span class="sub">עגלה סגורה דו צדדית · רוחב 66 ס"מ · גובה 110–150 לפי ההרכב</span></span>
+      <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="body"><div class="inner">
+      <div class="lbl">הרכב (זהה בשני הצדדים)</div>
+      <div class="comp" id="exComp"></div>
+      <div class="bar"><i id="exBar"></i></div>
+      <div class="use" id="exUse"></div>
+      <label class="slide"><span>גובה ידית</span><input type="range" id="exHandle" min="-10" max="10" step="1"><b id="exHandleVal"></b></label>
+      <div class="slot"></div>
+    </div></div>
+  </div>
+
+  <div class="panel" id="pPart" data-mode="part">
+    <button class="head" aria-expanded="false">
+      <span class="ttl"><h1>מחיצת EXCLUSIVE מודולרית</h1><span class="sub">מחיצה ניידת עם אחסון משני הצדדים · 2 טורים · עד 210 ס"מ</span></span>
+      <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="body"><div class="inner">
+      <div class="lbl">הרכב (זהה בשני הטורים ובשני הצדדים)</div>
+      <div class="comp" id="ptComp"></div>
+      <div class="bar"><i id="ptBar"></i></div>
+      <div class="use" id="ptUse"></div>
+      <label class="slide"><span>גובה ידית</span><input type="range" id="ptHandle" min="100" max="130" step="1"><b id="ptHandleVal"></b></label>
+      <div class="row"><span>בסיס מורחב (יציבות)</span><label class="sw"><input type="checkbox" id="ptWide"><span></span></label></div>
+      <div class="use">כל הגלגלים עם מעצורים. בגובה 2 מ' מומלץ בסיס מורחב.</div>
+      <div class="slot"></div>
+    </div></div>
+  </div>
+
   <div class="panel" id="pWall" data-mode="wall">
     <button class="head" aria-expanded="false">
       <span class="ttl"><h1>מתלה קיר</h1><span class="sub">רוחב 60 ס"מ · גובה 60 / 120 / 200 ס"מ</span></span>
@@ -1327,6 +1359,95 @@ function renderWallComp() {
   document.getElementById('wlUse').innerHTML = `גובה מנוצל: <b>${used}</b> מתוך <b>${lim}</b> מ"מ · הגדול תמיד למטה`;
 }
 
+// ---------- עגלת רב-תא EXCLUSIVE + מחיצת EXCLUSIVE מודולרית ----------
+// Closed double-sided cart: 30×30 profiles, white side panels, dark ABS top, casters with corner bumpers,
+// identical tilt-bin stacks back to back. The frame height follows the stack.
+const absMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#3a3d40'), roughness:0.55, clearcoat:0.25 });
+const bumperMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#aeb4b9'), roughness:0.7 });
+const handleMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#d9dcdc'), roughness:0.35, clearcoat:0.4 });
+const EXV = {
+  excl: { cols:1, models:[4, 5, 6, 9], D:392, minH:1100, maxH:1500, name:'עגלת רב-תא EXCLUSIVE' },
+  part: { cols:2, models:[3, 4, 5, 6, 9], D:446, minH:1100, maxH:2150, name:'מחיצת EXCLUSIVE מודולרית' },
+};
+const EXS = {
+  excl: { comp:{ 5:4, 6:4 }, handleOff:0 },                        // handle: offset (mm) from the default, ±100
+  part: { comp:{ 3:2, 4:2, 5:2, 6:3, 9:4 }, handleH:1150, wide:false },
+};
+const EX_BOT = 97, EX_ABS = 5;                                       // caster plate height, ABS top thickness
+const exTotal = (k) => EX_BOT + PROF + stackHeight(EXS[k].comp) + PROF + EX_ABS;
+const exHandleY = (k, H) => k === 'excl' ? Math.min(H - 120, Math.max(EX_BOT + 300, H - 200 + EXS.excl.handleOff)) : Math.min(H - 150, EXS.part.handleH);
+
+function buildExcl(k) {
+  const V = EXV[k], S = EXS[k], P = PROF;
+  const g = new THREE.Group(); const root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
+  const W = V.cols*600 + (V.cols + 1)*P, D = V.D, stack = stackHeight(S.comp);
+  const y0 = EX_BOT, yTopF = EX_BOT + P + stack + P, H = yTopF + EX_ABS;
+  const xs = []; for (let i = 0; i <= V.cols; i++) xs.push(-W/2 + P/2 + i*(600 + P));
+  const zf = D/2 - P/2, zb = -D/2 + P/2;
+  // frame
+  for (const x of xs) for (const z of [zf, zb]) bar(root, yTopF - y0, 'y', x, (y0 + yTopF)/2, z);
+  for (const z of [zf, zb]) for (const y of [y0 + P/2, yTopF - P/2]) bar(root, W - 2*P, 'x', 0, y, z);
+  for (const x of [xs[0], xs[xs.length - 1]]) for (const y of [y0 + P/2, yTopF - P/2]) bar(root, D - 2*P, 'z', x, y, 0);
+  // white side panels, centre back panel, bottom plate, dark ABS top
+  const pvc = (w, h, d, x, y, z, m = pvcMat) => { const o = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)); o.position.set(x, y, z); root.add(o); };
+  for (const x of [xs[0], xs[xs.length - 1]]) pvc(4, yTopF - y0 - 2*P, D - 2*P, x + Math.sign(x)*(P/2 - 3), (y0 + yTopF)/2, 0);
+  pvc(W - 2*P, yTopF - y0 - 2*P, 6, 0, (y0 + yTopF)/2, 0);
+  pvc(W - 2*P, 4, D - 2*P, 0, y0 + P - 2, 0);
+  pvc(W + 8, EX_ABS, D + 8, 0, yTopF + EX_ABS/2, 0, absMat);
+  // casters (all braked on the partition) + corner bumpers
+  const wide = k === 'part' && S.wide, zc = wide ? D/2 + 70 : D/2 - 45;
+  if (wide) for (const x of [xs[0], xs[xs.length - 1]]) bar(root, 2*zc + 60, 'z', x, y0 - P/2 + 2, 0);   // outrigger feet
+  const corners = [[xs[0], zc], [xs[xs.length - 1], zc], [xs[0], -zc], [xs[xs.length - 1], -zc]];
+  if (V.cols > 1 && !wide) corners.push([xs[1], zc], [xs[1], -zc]);
+  corners.forEach(([x, z], i) => caster(root, x, z, wide ? y0 - P : y0, k === 'part' || i < 2));
+  const bump = new THREE.CylinderGeometry(26, 26, 46, 24);
+  for (const x of [xs[0], xs[xs.length - 1]]) for (const z of [zf, zb]) { const b = shadowOn(new THREE.Mesh(bump, bumperMat)); b.position.set(x, y0 + 26, z); root.add(b); }
+  // side handle (one side): U tube along the depth
+  const hy = exHandleY(k, H), hx = W/2 + 4, out = 105, hz = D/2 - 55;
+  const hp = [new THREE.Vector3(hx, hy, hz), new THREE.Vector3(hx + out, hy, hz), new THREE.Vector3(hx + out, hy, -hz), new THREE.Vector3(hx, hy, -hz)];
+  root.add(shadowOn(new THREE.Mesh(new THREE.TubeGeometry(roundedPolyline(hp, 45), 60, 16, 14, false), handleMat)));
+  for (const z of [hz, -hz]) { const c = shadowOn(new THREE.Mesh(new THREE.CylinderGeometry(22, 22, 18, 18), handleMat)); c.rotation.z = Math.PI/2; c.position.set(hx + 5, hy, z); root.add(c); }
+  // units: same stack on both faces of every column, backs against the centre panel
+  const list = [], rodList = [];
+  for (let c = 0; c < V.cols; c++) {
+    const cx = (xs[c] + xs[c + 1]) / 2;
+    for (const sd of [1, -1]) {
+      let y = y0 + P;
+      for (const n of ORDER) for (let i = 0; i < (S.comp[n] || 0); i++) {
+        const u = makeUnit(n);
+        u.group.position.set(cx*0.001, y*0.001, sd*5*0.001);
+        if (sd < 0) u.group.rotation.y = Math.PI;
+        g.add(u.group); list.push(...u.drawers); rodList.push(u.rod);
+        y += MODELS[n].H - RIM;
+      }
+    }
+  }
+  return { group:g, drawers:list, rods:rodList, W, D, H, hy };
+}
+
+function renderExcl(k) {
+  const V = EXV[k], S = EXS[k], px = k === 'excl' ? 'ex' : 'pt', box = document.getElementById(px + 'Comp');
+  if (!THUMBS) { try { THUMBS = makeThumbs(); } catch (e) { THUMBS = {}; } }
+  box.innerHTML = '';
+  const used = stackHeight(S.comp), H = exTotal(k);
+  for (const n of ORDER) {
+    const ok = V.models.includes(n), cnt = S.comp[n] || 0;
+    const add = used === 0 ? MODELS[n].H : MODELS[n].H - RIM;
+    const less = cnt > 0 ? used - stackHeight({ ...S.comp, [n]:cnt - 1 }) : 0;
+    const row = document.createElement('div'); row.className = 'ci' + (ok ? '' : ' na');
+    row.title = ok ? `רב תא ${n}` : `רב תא ${n} – לא במוצר הזה`;
+    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="ctl"><button aria-label="פחות">−</button><b>${ok ? cnt : '–'}</b><button aria-label="יותר">+</button></span>`;
+    const [minus, plus] = row.querySelectorAll('button');
+    minus.disabled = !ok || !(cnt > 0) || H - less < V.minH;
+    plus.disabled = !ok || H + add > V.maxH;
+    minus.onclick = () => { S.comp[n] = cnt - 1; rebuild(true); };
+    plus.onclick = () => { S.comp[n] = cnt + 1; rebuild(true); };
+    box.appendChild(row);
+  }
+  document.getElementById(px + 'Bar').style.width = Math.min(100, (H - 900) / (V.maxH - 900) * 100) + '%';
+  document.getElementById(px + 'Use').innerHTML = `גובה העגלה: <b>${(H/10).toFixed(1)}</b> ס"מ (טווח ${V.minH/10}–${V.maxH/10}) · זהה בשני הצדדים · הגדול תמיד למטה`;
+}
+
 // ---------- (re)build the scene ----------
 function rebuild(keepCamera = false) {
   if (!isCab()) { spread = spreadTarget = 0; CAB = null; }
@@ -1341,6 +1462,14 @@ function rebuild(keepCamera = false) {
     document.getElementById('dims').innerHTML =
       `מק"ט <b>${MODELS[current].sku}</b> · רוחב <b>${MODELS[current].W}</b> · גובה <b>${MODELS[current].H}</b> · עומק <b>${D}</b> מ"מ`;
     makeCellButtons(current);
+  } else if (mode === 'excl' || mode === 'part') {
+    const eb = buildExcl(mode);
+    world.add(eb.group); drawers = eb.drawers; rods = eb.rods;
+    if (!keepCamera) frame(eb.W + 300, eb.H, true);
+    document.getElementById('dims').innerHTML = `${EXV[mode].name} · רוחב <b>${eb.W/10}</b> (עם הידית <b>${Math.round((eb.W + 130)/10)}</b>) · עומק <b>${(eb.D/10).toFixed(1)}</b> · גובה <b>${(eb.H/10).toFixed(1)}</b> ס"מ · ידית בגובה <b>${Math.round(eb.hy/10)}</b> ס"מ`;
+    renderExcl(mode);
+    if (mode === 'excl') { const i = document.getElementById('exHandle'); i.value = EXS.excl.handleOff/10; document.getElementById('exHandleVal').textContent = `${Math.round(eb.hy/10)} ס"מ`; }
+    else { const i = document.getElementById('ptHandle'); i.value = EXS.part.handleH/10; document.getElementById('ptHandleVal').textContent = `${Math.round(eb.hy/10)} ס"מ`; }
   } else if (mode === 'wall') {
     const wb = buildWall();
     world.add(wb.group); drawers = wb.drawers; rods = wb.rods;
@@ -1368,7 +1497,7 @@ function rebuild(keepCamera = false) {
     renderComp();
   }
   // optional wall behind the product + floor (the wall rack has its own, with height above the floor)
-  const wallAllowed = mode !== 'wall' && !(mode === 'stand' && stand.type === 'double');
+  const wallAllowed = !['wall', 'excl', 'part'].includes(mode) && !(mode === 'stand' && stand.type === 'double');
   document.getElementById('backWallRow').hidden = !wallAllowed;
   if (wallAllowed && document.getElementById('backWall').checked) {
     const box = new THREE.Box3().setFromObject(world), sz = box.getSize(new THREE.Vector3());
@@ -1504,6 +1633,10 @@ document.getElementById('wlElev').oninput = (e) => {
   clearTimeout(syncElev.t); syncElev.t = setTimeout(() => rebuild(true), 60);
 };
 document.getElementById('wlElev').onchange = () => { clearTimeout(syncElev.t); rebuild(); };   // re-frame when the slider is released
+
+document.getElementById('exHandle').oninput = (e) => { EXS.excl.handleOff = +e.target.value * 10; rebuild(true); };
+document.getElementById('ptHandle').oninput = (e) => { EXS.part.handleH = +e.target.value * 10; rebuild(true); };
+document.getElementById('ptWide').onchange = (e) => { EXS.part.wide = e.target.checked; rebuild(true); };
 
 function renderComp() {
   if (!THUMBS) { try { THUMBS = makeThumbs(); } catch (e) { THUMBS = {}; } }
@@ -1690,6 +1823,7 @@ function captureFamily() {
     mode, current,
     stand: { ...stand },
     comp: JSON.parse(JSON.stringify(comp)),
+    exs: JSON.parse(JSON.stringify(EXS)),
     wall: { ...wall }, wallComp: JSON.parse(JSON.stringify(wallComp)),
     tn: JSON.parse(JSON.stringify(TN)), spread: spreadTarget > 0.5, wing: tenaOpenWing,
     backWall: $('backWall').checked,
@@ -1702,6 +1836,7 @@ function applyFamily(f) {
   mode = f.mode || mode; current = f.current || current;
   if (f.stand) Object.assign(stand, f.stand);
   if (f.comp) for (const k in f.comp) comp[k] = { ...f.comp[k] };
+  if (f.exs) { for (const k in f.exs) Object.assign(EXS[k], JSON.parse(JSON.stringify(f.exs[k]))); $('ptWide').checked = !!EXS.part.wide; }
   if (f.wall) { Object.assign(wall, f.wall); setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0'); }
   if (f.wallComp) for (const k in f.wallComp) wallComp[k] = { ...f.wallComp[k] };
   const tn = f.tn || (f.tena ? { delux:f.tena } : null);
@@ -1851,6 +1986,8 @@ function captureCanvas(maxSide = 2400) {
 const toBlob = (cv, type = 'image/png', q) => new Promise(r => cv.toBlob(r, type, q));
 function fileStem() {
   if (mode === 'unit') return `rav-ta-${current}`;
+  if (mode === 'excl') return `exclusive-cart-${Math.round(exTotal('excl')/10)}`;
+  if (mode === 'part') return `exclusive-partition-${Math.round(exTotal('part')/10)}`;
   if (mode === 'wall') return `wall-rack-${wall.height/10}`;
   if (isCab()) return `ta-na-${tena.variant}-${tena.size}${spreadTarget > 0.5 ? '-spread' : ''}`;
   return `rav-ta-${stand.type === 'double' ? 'double' : 'single'}-${stand.base}-${stand.height / 10}`;
@@ -1878,6 +2015,10 @@ function describe() {
   if ($('backWall').checked && mode !== 'wall' && !(mode === 'stand' && stand.type === 'double')) flags.push('standing against a plain light wall on a smooth floor');
   if ($('rod').checked) flags.push('a thin stainless steel security rod across the front');
   if ($('labelsOn').checked) flags.push('plain white paper labels in the label windows');
+  if (mode === 'excl' || mode === 'part') {
+    const k = mode, H = exTotal(k), W = EXV[k].cols*600 + (EXV[k].cols + 1)*30;
+    return `A closed, double-sided mobile ${k === 'excl' ? 'tilt-bin cart' : 'room-divider partition with storage'} (${W} mm wide, ${EXV[k].D} mm deep, ${Math.round(H)} mm high): frame of 30x30 mm aluminium profiles in RAL 7035, white panels on the sides, a dark charcoal ABS worktop, grey castors${k === 'part' ? ' all with brakes' : ''} with round grey corner bumpers, a light grey tubular side handle; ${EXV[k].cols > 1 ? 'two columns of ' : ''}identical stacks of ${base.toLowerCase()} on both faces (largest at the bottom)${flags.length ? '; ' + flags.join('; ') : ''}.`;
+  }
   if (mode === 'wall') return `A slim wall-mounted rack (600 mm wide, ${wall.height} mm high, only 8 mm deep: two 30 mm side rails with a slot and top/bottom bands with rounded inner corners, light grey-white) holding stacked ${base.toLowerCase()} (largest at the bottom)${wall.showWall ? ', mounted on a plain wall with its bottom ' + (wallElev()/10) + ' cm above the floor, floor visible' : ''}${flags.length ? '; ' + flags.join('; ') : ''}.`;
   if (isCab()) { const S = sizeDef();
     const shell = tena.variant === 'smart'
@@ -2381,7 +2522,13 @@ const EN = {
   'משפחת רב תא':'TILT BIN FAMILY', 'משפחות מוצרים':'Product families',
   'עגלה ומעמד לרב תא':'STANDING UNIT', 'תא-נע DELUX':'GONDOLA DELUX', 'תא-נע SMART':'GONDOLA SMART',
   'תא-נע':'Gondola', 'מתלה קיר':'Wall mount unit', 'רב תא':'Tilt bin', 'רב תא – מודל תלת־ממדי':'Tilt bin – 3D model',
-  'מעמד':'Standing unit',
+  'מעמד':'Standing unit', 'עגלת רב-תא EXCLUSIVE':'Exclusive Tilt Bin cart', 'מחיצת EXCLUSIVE מודולרית':'Modular Exclusive Partition',
+  'עגלה סגורה דו צדדית · רוחב 66 ס"מ · גובה 110–150 לפי ההרכב':'Closed double-sided cart · width 66 cm · height 110–150 by layout',
+  'מחיצה ניידת עם אחסון משני הצדדים · 2 טורים · עד 210 ס"מ':'Mobile partition with storage on both sides · 2 columns · up to 210 cm',
+  'הרכב (זהה בשני הצדדים)':'Layout (same on both sides)', 'הרכב (זהה בשני הטורים ובשני הצדדים)':'Layout (same in both columns and on both sides)',
+  'גובה ידית':'Handle height', 'בסיס מורחב (יציבות)':'Wide base (stability)', 'כל הגלגלים עם מעצורים. בגובה 2 מ\' מומלץ בסיס מורחב.':'All castors with brakes. At 2 m a wide base is recommended.',
+  'גובה העגלה:':'Unit height:', 'טווח':'range', 'זהה בשני הצדדים':'same on both sides', 'לא במוצר הזה':'not in this product',
+  'עם הידית':'with handle', 'ידית בגובה':'handle at',
   // panel subtitles
   '2 · 3 · 4 · 5 · 6 · 9 תאים · RAL 7035':'2 · 3 · 4 · 5 · 6 · 9 bins · RAL 7035',
   'חד / דו צדדי · גלגלים או רגליים':'Single / double sided · with or without wheels',
@@ -2459,7 +2606,7 @@ const EN = {
 const EN_EL = [
   ['#stBase button[data-v="wheels"]', 'With wheels'], ['#stBase button[data-v="legs"]', 'Without wheels'],
   ['#pUnit h1', 'TILT BIN'], ['#pStand h1', 'STANDING UNIT'], ['#pWall h1', 'WALL MOUNT UNIT'],
-  ['#pTena h1', 'GONDOLA DELUX'], ['#pSmart h1', 'GONDOLA SMART'], ['.tab', 'TILT BIN FAMILY'],
+  ['#pTena h1', 'GONDOLA DELUX'], ['#pExcl h1', 'EXCLUSIVE TILT BIN CART'], ['#pPart h1', 'MODULAR EXCLUSIVE PARTITION'], ['#pSmart h1', 'GONDOLA SMART'], ['.tab', 'TILT BIN FAMILY'],
 ];
 let LANG = 'he';
 try { LANG = location.hash === '#en' ? 'en' : location.hash === '#he' ? 'he' : (localStorage.getItem('rbt-lang') || 'he'); } catch {}
