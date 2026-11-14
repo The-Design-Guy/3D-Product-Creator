@@ -267,6 +267,8 @@
       <div class="comp" id="exComp"></div>
       <div class="bar"><i id="exBar"></i></div>
       <div class="use" id="exUse"></div>
+      <div class="lbl">ידית</div>
+      <div class="seg2" id="exSide"><button data-v="right">ידית מימין</button><button data-v="left" class="on">ידית משמאל</button></div>
       <label class="slide"><span>גובה ידית</span><input type="range" id="exHandle" min="-10" max="10" step="1"><b id="exHandleVal"></b></label>
       <div class="slot"></div>
     </div></div>
@@ -282,6 +284,8 @@
       <div class="comp" id="ptComp"></div>
       <div class="bar"><i id="ptBar"></i></div>
       <div class="use" id="ptUse"></div>
+      <div class="lbl">ידית</div>
+      <div class="seg2" id="ptSide"><button data-v="right">ידית מימין</button><button data-v="left" class="on">ידית משמאל</button></div>
       <label class="slide"><span>גובה ידית</span><input type="range" id="ptHandle" min="100" max="130" step="1"><b id="ptHandleVal"></b></label>
       <div class="row"><span>בסיס מורחב (יציבות)</span><label class="sw"><input type="checkbox" id="ptWide"><span></span></label></div>
       <div class="use">כל הגלגלים עם מעצורים. בגובה 2 מ' מומלץ בסיס מורחב.</div>
@@ -1370,8 +1374,8 @@ const EXV = {
   part: { cols:2, models:[3, 4, 5, 6, 9], D:446, minH:1100, maxH:2150, name:'מחיצת EXCLUSIVE מודולרית' },
 };
 const EXS = {
-  excl: { comp:{ 5:4, 6:4 }, handleOff:0 },                        // handle: offset (mm) from the default, ±100
-  part: { comp:{ 3:2, 4:2, 5:2, 6:3, 9:4 }, handleH:1150, wide:false },
+  excl: { comp:{ 5:4, 6:4 }, handleOff:0, side:'left' },                        // handle: offset (mm) from the default, ±100
+  part: { comp:{ 4:5, 5:5 }, handleH:1150, wide:false, side:'left' },   // ≈ 2 m without the castors
 };
 const EX_BOT = 97, EX_ABS = 5;                                       // caster plate height, ABS top thickness
 const exTotal = (k) => EX_BOT + PROF + stackHeight(EXS[k].comp) + PROF + EX_ABS;
@@ -1403,10 +1407,10 @@ function buildExcl(k) {
   const bump = new THREE.CylinderGeometry(26, 26, 46, 24);
   for (const x of [xs[0], xs[xs.length - 1]]) for (const z of [zf, zb]) { const b = shadowOn(new THREE.Mesh(bump, bumperMat)); b.position.set(x, y0 + 26, z); root.add(b); }
   // side handle (one side): U tube along the depth
-  const hy = exHandleY(k, H), hx = W/2 + 4, out = 105, hz = D/2 - 55;
+  const hs = S.side === 'right' ? 1 : -1, hy = exHandleY(k, H), hx = hs*(W/2 + 4), out = hs*105, hz = D/2 - 55;   // right / left as seen from the front
   const hp = [new THREE.Vector3(hx, hy, hz), new THREE.Vector3(hx + out, hy, hz), new THREE.Vector3(hx + out, hy, -hz), new THREE.Vector3(hx, hy, -hz)];
   root.add(shadowOn(new THREE.Mesh(new THREE.TubeGeometry(roundedPolyline(hp, 45), 60, 16, 14, false), handleMat)));
-  for (const z of [hz, -hz]) { const c = shadowOn(new THREE.Mesh(new THREE.CylinderGeometry(22, 22, 18, 18), handleMat)); c.rotation.z = Math.PI/2; c.position.set(hx + 5, hy, z); root.add(c); }
+  for (const z of [hz, -hz]) { const c = shadowOn(new THREE.Mesh(new THREE.CylinderGeometry(22, 22, 18, 18), handleMat)); c.rotation.z = Math.PI/2; c.position.set(hx + hs*5, hy, z); root.add(c); }
   // units: same stack on both faces of every column, backs against the centre panel
   const list = [], rodList = [];
   for (let c = 0; c < V.cols; c++) {
@@ -1497,15 +1501,25 @@ function rebuild(keepCamera = false) {
     renderComp();
   }
   // optional wall behind the product + floor (the wall rack has its own, with height above the floor)
-  const wallAllowed = !['wall', 'excl', 'part'].includes(mode) && !(mode === 'stand' && stand.type === 'double');
+  const wallAllowed = !['wall', 'excl'].includes(mode) && !(mode === 'stand' && stand.type === 'double');
   document.getElementById('backWallRow').hidden = !wallAllowed;
   if (wallAllowed && document.getElementById('backWall').checked) {
     const box = new THREE.Box3().setFromObject(world), sz = box.getSize(new THREE.Vector3());
     const ww = Math.max(4, sz.x + 3), wh = Math.max(2.7, box.max.y + 0.6);
+    if (mode === 'part') {
+      // a partition stands out from the wall: its end WITHOUT the handle touches the wall
+      const hs = EXS.part.side === 'right' ? 1 : -1, W = EXV.part.cols*600 + (EXV.part.cols + 1)*PROF;
+      const xw = -hs * (W/2 + 6) * 0.001, wd = 5;
+      const wl = new THREE.Mesh(new THREE.PlaneGeometry(wd, wh), wallMat);
+      wl.rotation.y = hs * Math.PI/2; wl.position.set(xw, wh/2, 0); wl.receiveShadow = true; world.add(wl);
+      const fl = new THREE.Mesh(new THREE.PlaneGeometry(4, wd), floorMat);
+      fl.rotation.x = -Math.PI/2; fl.position.set(xw + hs*2, 0, 0); fl.receiveShadow = true; world.add(fl);
+    } else {
     const wl = new THREE.Mesh(new THREE.PlaneGeometry(ww, wh), wallMat);
     wl.position.set((box.min.x + box.max.x)/2, wh/2, box.min.z - 0.003); wl.receiveShadow = true; world.add(wl);
     const fl = new THREE.Mesh(new THREE.PlaneGeometry(ww, 3), floorMat);
     fl.rotation.x = -Math.PI/2; fl.position.set(wl.position.x, 0, box.min.z + 1.5); fl.receiveShadow = true; world.add(fl);
+    }
   }
   scene.add(world);
   rods.forEach(r => r.visible = rodOn());
@@ -1636,6 +1650,8 @@ document.getElementById('wlElev').onchange = () => { clearTimeout(syncElev.t); r
 
 document.getElementById('exHandle').oninput = (e) => { EXS.excl.handleOff = +e.target.value * 10; rebuild(true); };
 document.getElementById('ptHandle').oninput = (e) => { EXS.part.handleH = +e.target.value * 10; rebuild(true); };
+segGroup('exSide', (v) => { EXS.excl.side = v; rebuild(true); });
+segGroup('ptSide', (v) => { EXS.part.side = v; rebuild(true); });
 document.getElementById('ptWide').onchange = (e) => { EXS.part.wide = e.target.checked; rebuild(true); };
 
 function renderComp() {
@@ -1836,7 +1852,7 @@ function applyFamily(f) {
   mode = f.mode || mode; current = f.current || current;
   if (f.stand) Object.assign(stand, f.stand);
   if (f.comp) for (const k in f.comp) comp[k] = { ...f.comp[k] };
-  if (f.exs) { for (const k in f.exs) Object.assign(EXS[k], JSON.parse(JSON.stringify(f.exs[k]))); $('ptWide').checked = !!EXS.part.wide; }
+  if (f.exs) { for (const k in f.exs) Object.assign(EXS[k], JSON.parse(JSON.stringify(f.exs[k]))); $('ptWide').checked = !!EXS.part.wide; setSeg('exSide', EXS.excl.side || 'left'); setSeg('ptSide', EXS.part.side || 'left'); }
   if (f.wall) { Object.assign(wall, f.wall); setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0'); }
   if (f.wallComp) for (const k in f.wallComp) wallComp[k] = { ...f.wallComp[k] };
   const tn = f.tn || (f.tena ? { delux:f.tena } : null);
@@ -2012,7 +2028,8 @@ $('shotBtn').onclick = async () => {
 function describe() {
   const base = 'Wall-mounted tilt-bin storage unit: injection-moulded body in light grey RAL 7035 (matte, slightly satin), with clear transparent polystyrene tilt-out bins';
   const flags = [];
-  if ($('backWall').checked && mode !== 'wall' && !(mode === 'stand' && stand.type === 'double')) flags.push('standing against a plain light wall on a smooth floor');
+  if ($('backWall').checked && mode === 'part') flags.push('the end without the handle touches a plain light wall at a right angle, so the partition juts out from the wall into the room, smooth floor');
+  else if ($('backWall').checked && !['wall', 'excl'].includes(mode) && !(mode === 'stand' && stand.type === 'double')) flags.push('standing against a plain light wall on a smooth floor');
   if ($('rod').checked) flags.push('a thin stainless steel security rod across the front');
   if ($('labelsOn').checked) flags.push('plain white paper labels in the label windows');
   if (mode === 'excl' || mode === 'part') {
