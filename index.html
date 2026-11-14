@@ -119,6 +119,23 @@
   .ratios button.on { background:var(--acc); color:#fff; border-color:var(--acc); }
   .r-out { margin-top:12px; border:1px solid var(--line); border-radius:10px; min-height:160px; display:flex; align-items:center; justify-content:center;
     background:repeating-conic-gradient(#f3f5f6 0 25%, #fff 0 50%) 0 0/16px 16px; }
+  .r-out { position:relative; }
+  .r-fs { position:absolute; top:8px; right:8px; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center;
+    border:0; border-radius:8px; background:rgba(20,26,32,.62); color:#fff; cursor:pointer; backdrop-filter:blur(4px); }
+  .r-fs:hover { background:rgba(20,26,32,.82); }
+  .r-fs:focus-visible { outline:2px solid #fff; outline-offset:-4px; }
+  .r-out img { cursor:zoom-in; }
+  .lb { position:fixed; inset:0; z-index:50; background:rgba(12,16,20,.86); display:flex; align-items:center; justify-content:center; overflow:hidden;
+    background-image:repeating-conic-gradient(rgba(255,255,255,.04) 0 25%, transparent 0 50%); background-size:24px 24px; }
+  .lb-img { max-width:92vw; max-height:86vh; user-select:none; -webkit-user-select:none; touch-action:none; transform-origin:center center; will-change:transform; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+  .lb-x { position:absolute; top:16px; right:16px; width:40px; height:40px; border-radius:50%; border:0; background:rgba(255,255,255,.14); color:#fff; font-size:18px; cursor:pointer; }
+  .lb-x:hover { background:rgba(255,255,255,.26); }
+  .lb-x:focus-visible, .lb-tools button:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+  .lb-tools { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:6px; padding:6px; border-radius:12px; background:rgba(255,255,255,.12); backdrop-filter:blur(8px); color:#fff; }
+  .lb-tools button { font:inherit; min-width:34px; height:32px; padding:0 10px; border:0; border-radius:8px; background:rgba(255,255,255,.14); color:#fff; cursor:pointer; font-size:15px; }
+  .lb-tools button:hover { background:rgba(255,255,255,.26); }
+  .lb-pct { min-width:52px; text-align:center; font-size:13px; font-variant-numeric:tabular-nums; }
+  @media (prefers-reduced-motion: reduce) { .lb-img { transition:none !important; } }
   .r-out img { display:block; max-width:100%; max-height:52vh; border-radius:9px; }
   .spin { width:28px; height:28px; border:3px solid #d5dbe0; border-top-color:var(--acc); border-radius:50%; animation:sp 0.9s linear infinite; }
   @keyframes sp { to { transform:rotate(360deg); } }
@@ -293,6 +310,7 @@
     <div class="row"><span>פתיחת כל המגירות</span><label class="sw"><input type="checkbox" id="openAll"><span></span></label></div>
     <div class="row"><span>תוויות</span><label class="sw"><input type="checkbox" id="labelsOn"><span></span></label></div>
     <div class="row"><span>סיבוב אוטומטי</span><label class="sw"><input type="checkbox" id="spin"><span></span></label></div>
+    <div class="row" id="backWallRow"><span>קיר ורצפה מאחור</span><label class="sw"><input type="checkbox" id="backWall"><span></span></label></div>
     </div>
     <div class="dims" id="dims"></div>
     <div class="note">הערכה: הציר והמסילות הפנימיות, ומיקום חורי המוט.</div>
@@ -1338,6 +1356,17 @@ function rebuild(keepCamera = false) {
       `מעמד <b>${t}</b> ${b} · רוחב <b>599</b> · עומק בסיס <b>424</b> · גובה כולל <b>${st.totalH}</b> מ"מ`;
     renderComp();
   }
+  // optional wall behind the product + floor (the wall rack has its own, with height above the floor)
+  const wallAllowed = mode !== 'wall' && !(mode === 'stand' && stand.type === 'double');
+  document.getElementById('backWallRow').hidden = !wallAllowed;
+  if (wallAllowed && document.getElementById('backWall').checked) {
+    const box = new THREE.Box3().setFromObject(world), sz = box.getSize(new THREE.Vector3());
+    const ww = Math.max(4, sz.x + 3), wh = Math.max(2.7, box.max.y + 0.6);
+    const wl = new THREE.Mesh(new THREE.PlaneGeometry(ww, wh), wallMat);
+    wl.position.set((box.min.x + box.max.x)/2, wh/2, box.min.z - 0.003); wl.receiveShadow = true; world.add(wl);
+    const fl = new THREE.Mesh(new THREE.PlaneGeometry(ww, 3), floorMat);
+    fl.rotation.x = -Math.PI/2; fl.position.set(wl.position.x, 0, box.min.z + 1.5); fl.receiveShadow = true; world.add(fl);
+  }
   scene.add(world);
   rods.forEach(r => r.visible = rodOn());
   applyOpenAll();
@@ -1550,6 +1579,7 @@ document.getElementById('rod').onchange = (e) => {
     r.rotation.x = r.userData.angle;
   });
 };
+document.getElementById('backWall').onchange = () => rebuild(true);
 document.getElementById('spin').onchange = (e) => controls.autoRotate = e.target.checked;
 
 // click a drawer to toggle it (the rod lifts out of the way first)
@@ -1651,6 +1681,7 @@ function captureFamily() {
     comp: JSON.parse(JSON.stringify(comp)),
     wall: { ...wall }, wallComp: JSON.parse(JSON.stringify(wallComp)),
     tn: JSON.parse(JSON.stringify(TN)), spread: spreadTarget > 0.5, wing: tenaOpenWing,
+    backWall: $('backWall').checked,
     rod: $('rod').checked, labels: $('labelsOn').checked, openAll: $('openAll').checked,
     open: drawers.map((d, i) => (d.userData.target > 0.1 || d.userData.pending) ? i : -1).filter(i => i >= 0),
   };
@@ -1671,6 +1702,7 @@ function applyFamily(f) {
     $(px + 'DepthFld').hidden = TN[v].depthMode !== 'custom'; $(px + 'Depth').value = TN[v].depth / 10;
   }
   tenaOpenWing = f.wing || null; spreadTarget = spread = f.spread ? 1 : 0;
+  $('backWall').checked = !!f.backWall;
   $('rod').checked = !!f.rod; $('labelsOn').checked = !!f.labels; $('openAll').checked = !!f.openAll;
   [...seg.children].forEach(c => c.classList.toggle('on', +c.dataset.n === current));
   setSeg('stType', stand.type); setSeg('stBase', stand.base); setSeg('stHeight', stand.height);
@@ -1832,6 +1864,7 @@ $('shotBtn').onclick = async () => {
 function describe() {
   const base = 'Wall-mounted tilt-bin storage unit: injection-moulded body in light grey RAL 7035 (matte, slightly satin), with clear transparent polystyrene tilt-out bins';
   const flags = [];
+  if ($('backWall').checked && mode !== 'wall' && !(mode === 'stand' && stand.type === 'double')) flags.push('standing against a plain light wall on a smooth floor');
   if ($('rod').checked) flags.push('a thin stainless steel security rod across the front');
   if ($('labelsOn').checked) flags.push('plain white paper labels in the label windows');
   if (mode === 'wall') return `A slim wall-mounted rack (600 mm wide, ${wall.height} mm high, only 8 mm deep: two 30 mm side rails with a slot and top/bottom bands with rounded inner corners, light grey-white) holding stacked ${base.toLowerCase()} (largest at the bottom)${wall.showWall ? ', mounted on a plain wall with its bottom ' + (wallElev()/10) + ' cm above the floor, floor visible' : ''}${flags.length ? '; ' + flags.join('; ') : ''}.`;
@@ -1927,7 +1960,9 @@ $('renderBtn').onclick = () => {
         let image = cv.toDataURL('image/webp', 0.95);
         if (!image.startsWith('data:image/webp')) image = cv.toDataURL('image/png');
         const r = await api('/api/render', { image, background: st.bg, description: describe(), size: `${z.w}x${z.h}`, lighting: lightingText(), notes: renderNotes.trim(), refs: renderFiles.map(f => f.data) });
-        out.innerHTML = `<img src="${r.image}" alt="רינדור ריאליסטי">`;
+        out.innerHTML = `<img src="${r.image}" alt="רינדור ריאליסטי"><button class="r-fs" title="מסך מלא" aria-label="פתיחה במסך מלא"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>`;
+        out.querySelector('.r-fs').onclick = () => openLightbox(r.image);
+        out.querySelector('img').ondblclick = () => openLightbox(r.image);
         go.textContent = 'רנדר שוב'; go.disabled = false;
         if (!q('#rDl')) {
           const dl = document.createElement('button'); dl.className = 'btn'; dl.id = 'rDl'; dl.textContent = 'הורדה (PNG)';
@@ -1946,6 +1981,65 @@ $('renderBtn').onclick = () => {
     };
   });
 };
+
+// ---------- full-screen viewer: zoom (wheel / buttons / pinch / double-click) and pan by dragging ----------
+function openLightbox(src) {
+  const lb = document.createElement('div'); lb.className = 'lb'; lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-label', 'תצוגה מלאה');
+  lb.innerHTML = `<img class="lb-img" src="${src}" alt="רינדור ריאליסטי – תצוגה מלאה" draggable="false">
+    <button class="lb-x" aria-label="סגירה">✕</button>
+    <div class="lb-tools" dir="ltr"><button data-z="-" aria-label="הקטנה">−</button><span class="lb-pct">100%</span><button data-z="+" aria-label="הגדלה">+</button><button data-z="fit" aria-label="התאמה למסך">התאמה</button></div>`;
+  document.body.appendChild(lb);
+  const img = lb.querySelector('.lb-img'), pct = lb.querySelector('.lb-pct');
+  let s = 1, tx = 0, ty = 0, moved = false;
+  const pointers = new Map(); let pinch = null, drag = null;
+  const apply = (anim) => {
+    img.style.transition = anim ? 'transform .18s ease' : 'none';
+    img.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
+    pct.textContent = Math.round(s * 100) + '%';
+    img.style.cursor = s > 1 ? (drag ? 'grabbing' : 'grab') : 'zoom-in';
+  };
+  // zoom keeping the point under (cx, cy) in place (cx, cy relative to the screen centre)
+  const zoomAt = (ns, cx = 0, cy = 0, anim) => {
+    ns = Math.max(1, Math.min(8, ns));
+    tx = cx - (cx - tx) * (ns / s); ty = cy - (cy - ty) * (ns / s); s = ns;
+    if (s === 1) tx = ty = 0;
+    apply(anim);
+  };
+  const centre = (e) => [e.clientX - innerWidth / 2, e.clientY - innerHeight / 2];
+  const close = () => { lb.remove(); removeEventListener('keydown', onKey, true); };
+  const onKey = (e) => {
+    if (e.key === 'Escape') { e.stopPropagation(); close(); }
+    if (e.key === '+' || e.key === '=') zoomAt(s * 1.25, 0, 0, true);
+    if (e.key === '-') zoomAt(s / 1.25, 0, 0, true);
+  };
+  addEventListener('keydown', onKey, true);
+  lb.querySelector('.lb-x').onclick = close;
+  lb.querySelectorAll('.lb-tools button').forEach(b => b.onclick = () =>
+    b.dataset.z === 'fit' ? zoomAt(1, 0, 0, true) : zoomAt(s * (b.dataset.z === '+' ? 1.4 : 1 / 1.4), 0, 0, true));
+  lb.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(s * Math.exp(-Math.max(-120, Math.min(120, e.deltaY)) * 0.0012), ...centre(e)); }, { passive:false });
+  img.ondblclick = (e) => zoomAt(s > 1 ? 1 : 2.5, ...centre(e), true);
+  img.onpointerdown = (e) => {
+    img.setPointerCapture(e.pointerId); pointers.set(e.pointerId, e); moved = false;
+    if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), s }; drag = null; }
+    else drag = { x: e.clientX - tx, y: e.clientY - ty };
+    apply();
+  };
+  img.onpointermove = (e) => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, e);
+    if (pinch && pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      zoomAt(pinch.s * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d, (a.clientX + b.clientX) / 2 - innerWidth / 2, (a.clientY + b.clientY) / 2 - innerHeight / 2);
+      moved = true;
+    } else if (drag && s > 1) { tx = e.clientX - drag.x; ty = e.clientY - drag.y; moved = true; apply(); }
+  };
+  img.onpointerup = img.onpointercancel = (e) => { pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; if (!pointers.size) drag = null; apply(); };
+  img.onclick = (e) => { e.stopPropagation(); if (!moved && s === 1) zoomAt(2.5, ...centre(e), true); };
+  // a click outside the picture (on the dark backdrop) closes
+  lb.onclick = (e) => { if (e.target === lb) close(); };
+  apply();
+  lb.querySelector('.lb-x').focus();
+}
 
 // ---------- output size rules (GPT Image 2.5): edges multiple of 16, ≤ 3840, ratio ≤ 3:1, 655,360–8,294,400 px ----------
 const IMG_MIN_PX = 655360, IMG_MAX_PX = 8294400, IMG_EXPERIMENTAL_PX = 3686400;
