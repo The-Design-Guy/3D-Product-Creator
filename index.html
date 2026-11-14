@@ -184,6 +184,16 @@
   @keyframes pulse { to { box-shadow:0 0 0 10px rgba(217,48,37,0); } }
   @media (prefers-reduced-motion: reduce) { .mic.rec { animation:none; } }
   @media (max-width:640px){ .lightpop{ left:8px; right:8px; width:auto; top:60px; } }
+  .tb.lang { font-size:12px; font-weight:700; letter-spacing:.04em; min-width:34px; border:1px solid var(--line); }
+  /* English: mirror the layout – panel left, toolbar right */
+  html[dir=ltr] .side { right:auto; left:16px; }
+  html[dir=ltr] .toolbar { left:auto; right:16px; direction:ltr; }
+  html[dir=ltr] .lightpop { left:auto; right:16px; direction:ltr; }
+  html[dir=ltr] .toast { left:auto; right:16px; }
+  html[dir=ltr] .tabs, html[dir=ltr] .dlg-card, html[dir=ltr] .head { direction:ltr; text-align:left; }
+  html[dir=ltr] .comp, html[dir=ltr] .ratios { direction:ltr; }
+  html[dir=ltr] .dims, html[dir=ltr] .use, html[dir=ltr] .note { direction:ltr; text-align:left; }
+  html[dir=ltr] .dlg-card h3 { text-align:left !important; }
   .hint { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); font-size:12px; color:var(--muted);
     background:rgba(255,255,255,.75); padding:6px 12px; border-radius:20px; border:1px solid var(--line); white-space:nowrap; }
   .note { font-size:11px; color:#8a6d3b; margin-top:10px; line-height:1.5; }
@@ -322,6 +332,7 @@
     <select id="presetSel" aria-label="הגדרת קטלוג"></select>
   </label>
   <button class="tb" id="resetBtn" title="פוזיציית ברירת מחדל" aria-label="פוזיציית ברירת מחדל"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+  <button class="tb lang" id="langBtn" title="English" aria-label="Language / שפה">EN</button>
   <button class="tb" id="lightBtn" title="תאורה" aria-label="תאורה" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
   <button class="tb admin-only" id="saveBtn" title="קבע פוזיציה והגדרות כהגדרת קטלוג" aria-label="קבע פוזיציה כברירת מחדל"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
   <button class="tb" id="spreadBtn" hidden aria-pressed="false" title="פריסה – הכנפיים יוצאות מהארון" aria-label="פריסת כנפיים"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="5" height="14" rx="1"/><rect x="10" y="5" width="5" height="14" rx="1"/><rect x="17" y="5" width="4" height="14" rx="1"/><path d="M12 2v2M5.5 2v2M19 2v2"/></svg><span>פריסה</span></button>
@@ -1089,7 +1100,7 @@ function setSpread(on) {
     frame(w, CAB.H + 4, true);
     if (on && !activeCamera()) {
       // look between the cabinet and the row, nudged left so the side panel doesn't hide the last wing
-      const off = new THREE.Vector3(innerWidth < 640 ? 0 : CAB.rowW * s * 0.12, 0, CAB.zRow * s * 0.5);
+      const off = new THREE.Vector3(innerWidth < 640 ? 0 : CAB.rowW * s * 0.12 * dirSign(), 0, CAB.zRow * s * 0.5);
       controls.target.add(off); camera.position.add(off); controls.update();
     }
   }
@@ -1102,7 +1113,7 @@ function makeTag(text) {
   const c = document.createElement('canvas'); c.width = 512; c.height = 128;
   const x = c.getContext('2d');
   x.fillStyle = '#1f6feb'; x.beginPath(); x.roundRect(8, 16, 496, 96, 48); x.fill();
-  x.fillStyle = '#fff'; x.font = '700 56px Heebo, Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = 'rtl';
+  x.fillStyle = '#fff'; x.font = '700 56px Heebo, Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = LANG === 'en' ? 'ltr' : 'rtl';
   x.fillText(text, 256, 66);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:t, depthTest:false, transparent:true }));
@@ -1121,7 +1132,7 @@ function showSelection() {
   selHelper = new THREE.Group();
   const lines = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(size.x, size.y, size.z)), selMat);
   lines.position.copy(c); lines.renderOrder = 9; selHelper.add(lines);
-  const tag = makeTag(`${LAYER_NAME[w.layer]} ${w.i + 1}`); tag.position.set(c.x, box.max.y + 0.13, c.z); selHelper.add(tag);
+  const tag = makeTag(tr(`${LAYER_NAME[w.layer]} ${w.i + 1}`)); tag.position.set(c.x, box.max.y + 0.13, c.z); selHelper.add(tag);
   g.add(selHelper);
 }
 function selectWing(id) {
@@ -1376,7 +1387,7 @@ function rebuild(keepCamera = false) {
 function frame(W, H, tall) {
   const s = 0.001, size = (tall ? Math.max(W, H) * 1.05 : Math.max(W, H*1.8)) * s;
   const dist = size / (2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))) * (innerWidth < 640 ? 1.9 : 1.25);
-  controls.target.set(innerWidth < 640 ? 0 : (tall ? 0.3 : 0.12), H*s*(tall ? 0.5 : 0.45), 0);
+  controls.target.set(innerWidth < 640 ? 0 : (tall ? 0.3 : 0.12) * dirSign(), H*s*(tall ? 0.5 : 0.45), 0);
   const dir = tall ? new THREE.Vector3(-0.75, 0.22, 1).normalize() : new THREE.Vector3(-0.5, 0.3, 1).normalize();
   camera.position.copy(controls.target).addScaledVector(dir, dist);
   lastAuto = { target: controls.target.clone(), dist };
@@ -2204,14 +2215,14 @@ const Mic = {
   on(h) { this.handlers = h; },
   start() {                                     // must run straight from the click
     if (this.kind === 'claude') {
-      return this.d.start({ language:'he' }).catch(e => {
+      return this.d.start({ language: LANG === 'en' ? 'en' : 'he' }).catch(e => {
         if (e && e.code === 'unavailable') return this.d.start();
         throw e;
       });
     }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = this.rec = new SR();
-    rec.lang = 'he-IL'; rec.continuous = true; rec.interimResults = true;
+    rec.lang = LANG === 'en' ? 'en-US' : 'he-IL'; rec.continuous = true; rec.interimResults = true;
     rec.onresult = (e) => {
       let interim = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -2360,8 +2371,149 @@ function mountNotes(card) {
 applyLight();
 $('lightBtn').onclick = () => toggleLightPop();
 
+// =====================================================================
+// Language: Hebrew (default, RTL) / English (LTR).
+// The page is written in Hebrew; in English every Hebrew phrase on screen is swapped
+// for its English text (static and dynamic content alike), and the layout mirrors.
+// =====================================================================
+const EN = {
+  // product names
+  'משפחת רב תא':'TILT BIN FAMILY', 'משפחות מוצרים':'Product families',
+  'עגלה ומעמד לרב תא':'STANDING UNIT', 'תא-נע DELUX':'GONDOLA DELUX', 'תא-נע SMART':'GONDOLA SMART',
+  'תא-נע':'Gondola', 'מתלה קיר':'Wall mount unit', 'רב תא':'Tilt bin', 'רב תא – מודל תלת־ממדי':'Tilt bin – 3D model',
+  'מעמד':'Standing unit',
+  // panel subtitles
+  '2 · 3 · 4 · 5 · 6 · 9 תאים · RAL 7035':'2 · 3 · 4 · 5 · 6 · 9 bins · RAL 7035',
+  'חד / דו צדדי · גלגלים או רגליים':'Single / double sided · with or without wheels',
+  'רוחב 60 ס"מ · גובה 60 / 120 / 200 ס"מ':'Width 60 cm · height 60 / 120 / 200 cm',
+  'ארון עם כנפיים נעות · 4 / 7 / 10 כנפיים':'Cabinet with sliding wings · 4 / 7 / 10 wings',
+  'מסגרת פלדה כחולה · 4 כנפיים · 135 × 68 × 210 ס"מ':'Blue steel frame · 4 wings · 135 × 68 × 210 cm',
+  // labels
+  'מספר תאים':'Number of bins', 'פתיחת תא':'Open a bin', 'תצוגה':'Display', 'סוג':'Type', 'בסיס':'Base',
+  'ידית':'Handle', 'גלגלים':'Casters', 'גובה עמודים (ללא בסיס)':'Upright height (excl. base)', 'הרכב':'Layout',
+  'הרכב (זהה בשני הצדדים)':'Layout (same on both sides)', 'גובה':'Height', 'רקע':'Background', 'גודל':'Size',
+  'עומק':'Depth', 'עומק בס"מ':'Depth (cm)', 'כנפיים':'Wings', 'גובה מהרצפה':'Height above floor',
+  'מוט אבטוח':'Security rod', 'פתיחת כל המגירות':'Open all bins', 'תוויות':'Labels', 'סיבוב אוטומטי':'Auto-rotate',
+  'קיר ורצפה מאחור':'Wall & floor behind', 'הערכה: הציר והמסילות הפנימיות, ומיקום חורי המוט.':'Estimated: the hinge, inner rails and rod-hole position.',
+  // options
+  'חד צדדי':'Single sided', 'דו צדדי':'Double sided', 'רגליים':'Without wheels', 'ידית מימין':'Handle right', 'ידית משמאל':'Handle left',
+  'עם מעצור':'With brakes', 'רגילים':'Standard', 'בלי קיר':'No wall', 'עם קיר':'With wall', 'סטנדרטי':'Standard',
+  '4 כנפיים':'4 wings', '7 כנפיים':'7 wings', '10 כנפיים':'10 wings',
+  'קדמית':'Front', 'אמצעית':'Middle', 'אחורית':'Rear', 'קדמיות':'front', 'אמצעיות':'middle', 'אחוריות':'rear',
+  'קבועה':'fixed', 'נעה':'sliding', 'מיקום על המסילה':'Position on the track',
+  'הגדול תמיד למטה':'largest always at the bottom', 'גובה מנוצל:':'Height used:', 'גובה מנוצל בכנף:':'Height used in wing:', 'מתוך':'of',
+  'בדו צדדי אין רב תא 2 – הבסיס לא עמוק מספיק':'Double sided: no 2-bin units – the base is not deep enough',
+  'לא אפשרי בדו צדדי: הבסיס לא עמוק מספיק':'Not possible double sided: the base is not deep enough',
+  'לא בעומק הסטנדרטי':'not in the standard depth', 'בכנף אמצעית/קדמית: רק רב תא 5, 6, 9 בעומק הסטנדרטי':'middle/front wing: only 5, 6, 9-bin units in the standard depth',
+  'לא נכנס בעומק הארון':'does not fit the cabinet depth', 'עומק סטנדרטי':'Standard depth',
+  'ס"מ: אחורית 4/5/6/9 · אמצעית וקדמית 5/6/9':'cm: rear 4/5/6/9 · middle and front 5/6/9',
+  'עומק נדרש להרכב הנוכחי:':'Depth needed for this layout:', 'גודל אחד: רוחב':'One size: width',
+  'ס"מ · 1 קדמית + 1 אמצעית + 2 אחוריות':'cm · 1 front + 1 middle + 2 rear',
+  // dimension line
+  'מק"ט':'SKU', 'רוחב':'width', 'עומק בסיס':'base depth', 'גובה כולל':'total height', 'על גלגלים':'with wheels', 'על רגליים':'without wheels',
+  'עומק המתלה':'rack depth', 'תחתית המתלה':'rack bottom', 'ס"מ מהרצפה':'cm above the floor', 'אחוריות) · רוחב':'rear) · width',
+  'מתלה קיר · רוחב':'Wall mount unit · width', 'ס"מ':'cm', 'מ"מ':'mm', 'תאים':'bins', 'כנפיים (':'wings (', 'קדמיות +':'front +', 'אמצעיות +':'middle +',
+  'ס"מ מתוך':'cm of',
+  // toolbar
+  'כלי תצוגה':'View tools', 'הגדרת קטלוג':'Catalog setting', 'זווית אוטומטית':'Automatic angle', 'פוזיציית ברירת מחדל':'Default position',
+  'קבע פוזיציה והגדרות כהגדרת קטלוג':'Save position & settings as a catalog setting', 'קבע פוזיציה כברירת מחדל':'Save position as default',
+  'צילום המודל (PNG שקוף)':'Snapshot of the model (transparent PNG)', 'צילום המודל':'Snapshot of the model',
+  'פריסה':'Spread', 'פריסה – הכנפיים יוצאות מהארון':'Spread – the wings come out of the cabinet', 'פריסת כנפיים':'Spread wings',
+  'רינדור ריאליסטי':'Realistic render', 'מצב ניהול':'Admin mode', 'כניסה למצב ניהול':'Enter admin mode', 'מצב ניהול פעיל – לחיצה ליציאה':'Admin mode on – click to leave',
+  'תאורה':'Lighting', 'גרירה לסיבוב · גלגלת לזום · לחיצה על מגירה פותחת אותה':'Drag to rotate · scroll to zoom · click a bin to open it',
+  // lighting
+  'שמש':'Sun', 'מעונן / חלון':'Cloudy / window', 'פלורסנט':'Fluorescent', 'סטודיו':'Studio', 'נורה חמה':'Warm bulb',
+  'כיוון האור':'Light direction', 'מאחור':'Back', 'מקדימה':'Front', 'שמאל':'Left', 'ימין':'Right', 'עוצמה':'Intensity', 'סגירה':'Close',
+  // dialogs
+  'שמירת הגדרת קטלוג':'Save catalog setting',
+  'נשמרים: זווית המצלמה (יחסית לגודל המוצר, לכל המשפחות), התאורה, הערות הרינדור וכל ההגדרות של "משפחת רב תא".':'Saved: the camera angle (relative to product size, for all families), the lighting, the render notes and all "Tilt bin family" settings.',
+  'שם ההגדרה':'Setting name', 'למשל: קטלוג חוליות':'e.g. Huliot catalog', 'הגדרה פעילה – כולם נפתחים בה':'Active setting – everyone opens in it',
+  'שמור':'Save', 'מחק הגדרה':'Delete setting', 'ביטול':'Cancel', 'צריך לתת שם להגדרה.':'Give the setting a name.',
+  'השמירה נכשלה:':'Saving failed:', 'המחיקה נכשלה:':'Deleting failed:', 'ההגדרה נמחקה':'Setting deleted', 'נשמר:':'Saved:',
+  'סיסמה':'Password', 'כניסה':'Sign in', 'סיסמה שגויה':'Wrong password', 'יצאת ממצב ניהול':'Left admin mode', 'מצב ניהול פעיל':'Admin mode on',
+  'הרינדור זמין במצב ניהול':'Rendering is available in admin mode',
+  'הרינדור הריאליסטי זמין רק בגרסה שעולה ל־':'The realistic render is only available in the version deployed to ',
+  'כי הוא עובר דרך השרת והמפתח של':'because it goes through the server and the key of', 'הבנתי':'Got it',
+  'התצוגה הנוכחית תהפוך לצילום מוצר ריאליסטי. זה לוקח בערך חצי דקה עד דקה.':'The current view becomes a realistic product photo. It takes about 30–60 seconds.',
+  'שקוף':'Transparent', 'יחס תמונה':'Aspect ratio', 'רזולוציה':'Resolution', 'רגילה':'Standard', 'גבוהה':'High',
+  'רוחב (':'Width (', 'גובה (':'Height (', 'תצא תמונה בגודל':'Output size', 'בהדפסה ב־':'printed at ',
+  'עוגל לכפולה של 16':'rounded to a multiple of 16', 'מעל 2560×1440 – ניסיוני אצל':'above 2560×1440 – experimental at',
+  'כל צלע עד 3840':'each edge up to 3840', 'היחס בין הצלעות עד 3:1':'edge ratio up to 3:1', 'צריך רוחב וגובה':'Width and height needed',
+  'קטן מדי: לפחות':'Too small: at least', 'גדול מדי: עד':'Too large: up to', 'פיקסלים (למשל 1024 × 640)':'pixels (e.g. 1024 × 640)', 'פיקסלים (למשל 3840 × 2160)':'pixels (e.g. 3840 × 2160)',
+  'הערות לתמונה':'Notes for the image', 'למשל: רקע של מחסן מסודר, בתאים ברגים ואומים, במגירה העליונה כפפות':'e.g. a tidy warehouse background, screws and nuts in the bins, gloves in the top drawer…',
+  'הקלטת הערה':'Record a note', 'עצירת הקלטה':'Stop recording', 'אין הרשאה למיקרופון – אפשר להקליד.':'No microphone permission – you can type.',
+  'צירוף תמונות (או גרירה לכאן)':'Attach images (or drop them here)', 'צירוף תמונות':'Attach images',
+  'אפשר לצרף עד 4 תמונות ייחוס (כפתור האטב או גרירה) ולהפנות אליהן בהערות – למשל "רקע כמו בקובץ 1". הקבצים לא נשמרים בהגדרת הקטלוג. התאורה מהלוח "תאורה" נשלחת גם היא. ההערות והתאורה נשמרות בהגדרת הקטלוג. עם רקע שקוף, בקשות לגבי רקע לא יבוצעו – רק תוכן התאים.':
+    'You can attach up to 4 reference images (paperclip or drag) and refer to them in the notes – e.g. "background like File 1". Files are not saved in the catalog setting. The lighting is sent too. Notes and lighting are saved in the catalog setting. With a transparent background, background requests are ignored – only bin contents.',
+  'קובץ':'File', 'הוספת \'קובץ':'Add \'File', 'להערות':'to the notes', 'הסרת קובץ':'Remove file', 'אפשר עד':'Up to', 'קבצים':'files',
+  'רק תמונות':'images only', 'לא הצלחתי לקרוא את "':'Could not read "',
+  'רנדר':'Render', 'מרנדר':'Rendering', 'מרנדר…':'Rendering…', 'רנדר שוב':'Render again', 'נסה שוב':'Try again', 'הרינדור נכשל:':'Render failed:',
+  'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
+  'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
+  'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
+  // server messages
+  'נדרש מצב ניהול':'Admin mode required', 'סיסמת ניהול שגויה':'Wrong admin password', 'גודל תמונה לא חוקי':'Invalid image size',
+  'קובץ ייחוס לא תקין (רק JPG, PNG, WebP)':'Invalid reference file (JPG, PNG, WebP only)',
+};
+// per-element wording where one Hebrew word means different things
+const EN_EL = [
+  ['#stBase button[data-v="wheels"]', 'With wheels'], ['#stBase button[data-v="legs"]', 'Without wheels'],
+  ['#pUnit h1', 'TILT BIN'], ['#pStand h1', 'STANDING UNIT'], ['#pWall h1', 'WALL MOUNT UNIT'],
+  ['#pTena h1', 'GONDOLA DELUX'], ['#pSmart h1', 'GONDOLA SMART'], ['.tab', 'TILT BIN FAMILY'],
+];
+let LANG = 'he';
+try { LANG = location.hash === '#en' ? 'en' : location.hash === '#he' ? 'he' : (localStorage.getItem('rbt-lang') || 'he'); } catch {}
+const HEB = /[֐-׿]/;
+const phraseRe = (() => {
+  const keys = Object.keys(EN).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`(?<![\\u0590-\\u05FF])(?:${keys.join('|')})(?![\\u0590-\\u05FF])`, 'g');
+})();
+const trText = (t) => (LANG === 'en' && HEB.test(t)) ? t.replace(phraseRe, (m) => EN[m]).replace(/ ב־/g, ' at ') : t;
+const tr = trText;                                       // for text drawn on canvas (wing tags)
+const ORIG = new WeakMap(), ORIG_ATTR = new WeakMap();
+const ATTRS = ['title', 'aria-label', 'placeholder'];
+function trNode(root) {
+  if (LANG !== 'en') return;
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = walk.currentNode.nodeType === 3 ? walk.currentNode : walk.nextNode(); n; n = walk.nextNode()) {
+    if (!HEB.test(n.nodeValue) || (n.parentElement && /^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentElement.tagName))) continue;
+    ORIG.set(n, n.nodeValue); n.nodeValue = trText(n.nodeValue);
+  }
+  const els = root.nodeType === 1 ? [root, ...root.querySelectorAll('*')] : [];
+  for (const el of els) for (const a of ATTRS) {
+    const v = el.getAttribute(a); if (!v || !HEB.test(v)) continue;
+    const m = ORIG_ATTR.get(el) || {}; m[a] = v; ORIG_ATTR.set(el, m); el.setAttribute(a, trText(v));
+  }
+  for (const [sel, txt] of EN_EL) document.querySelectorAll(sel).forEach(el => { if (el.textContent !== txt) { if (!el.dataset.he) el.dataset.he = el.textContent; el.textContent = txt; } });
+}
+const mo = new MutationObserver((list) => {
+  if (LANG !== 'en') return;
+  mo.disconnect();
+  for (const r of list) {
+    if (r.type === 'characterData') trNode(r.target);
+    else if (r.type === 'attributes') trNode(r.target);
+    else r.addedNodes.forEach(n => trNode(n));
+  }
+  observe();
+});
+const observe = () => mo.observe(document.body, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:ATTRS });
+function setLang(l) {
+  LANG = l; try { localStorage.setItem('rbt-lang', l); } catch {}
+  document.documentElement.lang = l; document.documentElement.dir = l === 'en' ? 'ltr' : 'rtl';
+  document.title = l === 'en' ? 'Tilt bin – 3D model' : 'רב תא – מודל תלת־ממדי';
+  $('langBtn').textContent = l === 'en' ? 'עב' : 'EN';
+  $('langBtn').title = l === 'en' ? 'עברית' : 'English';
+  if (l === 'en') { mo.disconnect(); trNode(document.body); observe(); }
+  else { mo.disconnect(); location.hash === '#en' ? (location.hash = '') : 0; location.reload(); return; }   // back to Hebrew: reload the original page
+  rebuild(true);                                          // redraw generated parts (wing tags, panels, framing side)
+  if (spreadTarget > 0.5) setSpread(true);
+}
+const dirSign = () => (LANG === 'en' ? -1 : 1);           // the side panel sits left in English: push the model right
+
 const clock = new THREE.Clock();
 rebuild();
+if (LANG === 'en') setLang('en');
+$('langBtn').onclick = () => setLang(LANG === 'en' ? 'he' : 'en');
 renderer.setAnimationLoop(() => {
   const dt = Math.min(0.1, clock.getDelta());               // time-based, same speed on any screen
   stepRods(1 - Math.exp(-dt*6.5));
