@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>רב תא – מודל תלת־ממדי</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20500%20500%22%3E%3Cstyle%3Epath%7Bfill%3A%2314181c%7D%40media%20%28prefers-color-scheme%3Adark%29%7Bpath%7Bfill%3A%23fff%7D%7D%3C/style%3E%20%3Cpath%20d%3D%22M405.31%2C77.59h0c-19.04%2C0-34.48%2C15.44-34.48%2C34.48h0c0%2C19.04%2C15.44%2C34.48%2C34.48%2C34.48h0c19.04%2C0%2C34.48-15.44%2C34.48-34.48h0c0-19.04-15.44-34.48-34.48-34.48Z%22/%3E%20%3Cpath%20d%3D%22M336.07%2C43.11h0c-37.96.15-68.69%2C30.97-68.69%2C68.96v68.96h-.14v68.96h-136.83s-1.24%2C0-1.24%2C0V112.07H60.21v68.96h0v38.96s0%2C.02%2C0%2C.04v128.9s0%2C.02%2C0%2C.04v38.96h0v68.96h68.96v-68.96h0s0%2C0%2C0%2C0v-68.96h5.79s0%2C0%2C0%2C0h126.34s0%2C0%2C0%2C0h5.93v68.96h0s-.14%2C0-.14%2C0v68.96h68.96v-68.96h.14v-181.64h.14v-100.38c3.12-35.2%2C32.68-62.8%2C68.69-62.8h-68.96Z%22/%3E%20%3Cpath%20d%3D%22M439.79%2C181.04v-9.23c-10.11%2C5.85-21.84%2C9.21-34.35%2C9.23h-.27c-12.51-.02-24.24-3.38-34.35-9.23v9.23h0v275.85h68.96V181.04h0Z%22/%3E%20%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -11,8 +12,14 @@
   * { box-sizing: border-box; }
   html, body { margin:0; height:100%; overflow:hidden; font-family:'Heebo',system-ui,sans-serif; color:var(--ink);
     background: radial-gradient(120% 90% at 50% 35%, #ffffff 0%, #eef0f2 55%, #dfe3e6 100%); }
-  #c { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; }
-  .side { position:fixed; top:16px; right:16px; width:450px; max-height:calc(100vh - 32px); overflow:auto;
+  :root { --hh:64px; }
+  .apphead { position:fixed; top:0; left:0; right:0; height:var(--hh); z-index:10; display:flex; align-items:center; gap:16px; padding:0 24px;
+    background:#14181c; border-bottom:1px solid #000; }
+  .apphead { direction:ltr; justify-content:flex-start; }   /* logo on the left in both languages */
+  .apphead .logo { height:30px; width:auto; display:block; fill:#fff; }
+  #c { position:fixed; top:var(--hh); left:0; width:100%; height:calc(100% - var(--hh)); display:block; touch-action:none; }
+  @media (max-width:640px){ :root { --hh:52px; } .apphead { padding:0 14px; } .apphead .logo { height:26px; } }
+  .side { position:fixed; top:calc(var(--hh) + 16px); right:16px; width:450px; max-height:calc(100vh - var(--hh) - 32px); overflow:auto;
     display:flex; flex-direction:column; gap:8px; padding-bottom:2px; }
   .tabs { display:flex; gap:4px; direction:rtl; border-bottom:1px solid var(--line); padding:0 2px; }
   .tab { font:inherit; font-size:13px; font-weight:500; padding:8px 14px; border:1px solid transparent; border-bottom:none;
@@ -88,7 +95,7 @@
   .slide input { flex:1; accent-color:var(--acc); direction:ltr; }   /* left on screen = left in the cabinet */
   .dims { font-size:12px; color:var(--muted); margin-top:12px; line-height:1.6; direction:rtl; }
   .dims b { color:var(--ink); font-weight:500; }
-  .toolbar { position:fixed; top:16px; left:16px; display:flex; align-items:center; gap:6px; direction:rtl;
+  .toolbar { position:fixed; top:calc(var(--hh) + 16px); left:16px; display:flex; align-items:center; gap:6px; direction:rtl;
     background:rgba(255,255,255,.82); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
     border:1px solid var(--line); border-radius:12px; padding:6px; box-shadow:0 8px 30px rgba(30,40,50,.08); }
   .tb { font:inherit; display:inline-flex; align-items:center; justify-content:center; gap:6px; height:34px; min-width:34px; padding:0 8px;
@@ -140,9 +147,9 @@
   .spin { width:28px; height:28px; border:3px solid #d5dbe0; border-top-color:var(--acc); border-radius:50%; animation:sp 0.9s linear infinite; }
   @keyframes sp { to { transform:rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .spin { animation-duration:3s; } }
-  .toast { position:fixed; top:64px; left:16px; background:var(--acc); color:#fff; font-size:13px; padding:8px 12px; border-radius:8px; z-index:30; }
-  @media (max-width:640px){ .toolbar{ top:8px; left:8px; right:8px; } .preset select{ max-width:110px; } .tb.big span{ display:none; } }
-  .lightpop { position:fixed; top:70px; left:16px; width:340px; background:rgba(255,255,255,.95); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  .toast { position:fixed; top:calc(var(--hh) + 64px); left:16px; background:var(--acc); color:#fff; font-size:13px; padding:8px 12px; border-radius:8px; z-index:30; }
+  @media (max-width:640px){ .toolbar{ top:calc(var(--hh) + 8px); left:8px; right:8px; } .preset select{ max-width:110px; } .tb.big span{ display:none; } }
+  .lightpop { position:fixed; top:calc(var(--hh) + 70px); left:16px; width:340px; background:rgba(255,255,255,.95); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
     border:1px solid var(--line); border-radius:12px; padding:12px; box-shadow:0 12px 36px rgba(30,40,50,.14); z-index:15; direction:rtl; }
   .lp-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; font-size:15px; }
   .lp-head .tb { height:28px; min-width:28px; }
@@ -183,7 +190,7 @@
   .mic.rec { background:#d93025; border-color:#d93025; color:#fff; box-shadow:0 0 0 0 rgba(217,48,37,.5); animation:pulse 1.4s ease-out infinite; }
   @keyframes pulse { to { box-shadow:0 0 0 10px rgba(217,48,37,0); } }
   @media (prefers-reduced-motion: reduce) { .mic.rec { animation:none; } }
-  @media (max-width:640px){ .lightpop{ left:8px; right:8px; width:auto; top:60px; } }
+  @media (max-width:640px){ .lightpop{ left:8px; right:8px; width:auto; top:calc(var(--hh) + 60px); } }
   .tb.lang { font-size:12px; font-weight:700; letter-spacing:.04em; min-width:34px; border:1px solid var(--line); }
   /* English: mirror the layout – panel left, toolbar right */
   html[dir=ltr] .side { right:auto; left:16px; }
@@ -247,6 +254,28 @@
 </script>
 </head>
 <body>
+<header class="apphead"><svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="385 465 3430 655" role="img" aria-label="HISTORGIC">
+  <path d="M3350.4,605.38c-55.23,0-100,44.77-100,100h0v400h100v-500h0Z"/>
+  <path d="M3226.1,476.78c0,51.28-41.57,92.85-92.85,92.85,51.28,0,92.85,41.57,92.85,92.85,0-51.28,41.57-92.85,92.85-92.85-51.28,0-92.85-41.57-92.85-92.85"/>
+  <path d="M3500,805.38v-100h300c0-55.23-44.77-100-100-100h-200c-55.23,0-100,44.77-100,100h0v300h0c0,55.23,44.77,100,100,100h200c55.23,0,100-44.77,100-100h-300v-200Z"/>
+  <path d="M1798.21,605.38h-388.21c23.76,26.54,38.21,61.58,38.21,100h0s50,0,50,0h100.8v400h100v-400h149.2c0-38.42,14.45-73.46,38.21-100h-88.21Z"/>
+  <path d="M900.4,555.38h0c-27.61,0-50,22.39-50,50h0c0,27.61,22.39,50,50,50h0c27.61,0,50-22.39,50-50h0c0-27.61-22.39-50-50-50Z"/>
+  <path d="M2098.21,705.38h0c27.61,0,50-22.39,50-50h0c0-27.61-22.39-50-50-50h0c-27.61,0-50,22.39-50,50h0c0,27.61,22.39,50,50,50Z"/>
+  <path d="M800,505.38h0c-55.04.22-99.6,44.91-99.6,100v100h-.2v100h-198.41s-1.79,0-1.79,0v-200h-100v100h0v56.49s0,.04,0,.05v186.91s0,.04,0,.05v56.49h0v100h100v-100h0s0,0,0,0v-100h8.4s0,0,0,0h183.2s0,0,0,0h8.6v100h0s-.2,0-.2,0v100h100v-100h.2v-263.38h.2v-145.55c4.52-51.04,47.38-91.07,99.6-91.07h-100Z"/>
+  <path d="M950.4,705.38v-13.39c-14.66,8.49-31.67,13.35-49.81,13.39h-.39c-18.14-.03-35.15-4.9-49.81-13.39v13.39h0v400h100v-400h0Z"/>
+  <g>
+    <path d="M1300,805.38h-200v-100h300c0-55.23-44.77-100-100-100h-200c-54.86.44-99.2,45.04-99.2,100h-.8v100c0,55.23,44.77,100,100,100h200v100h-100c54.04,0,98.06,42.86,99.93,96.45.03,1.07.05,1.92.06,2.52,0,.35.01.69.01,1.04h0c55.23,0,100-44.77,100-100v-100c0-55.23-44.77-100-100-100Z"/>
+    <path d="M1100,1005.38h0v-100c-55.23,0-100,44.77-100,100s44.77,100,100,100h0c0-55.23,44.77-100,100-100h-100Z"/>
+  </g>
+  <path d="M2708.8,904.82c17.8-19.88,30.37-44.54,35.56-71.81,2.64-8.97,4.07-18.47,4.07-28.3h-.23v-99.33c0-55.23-44.77-100-100-100h-338.21c23.76,26.54,38.21,61.58,38.21,100h0v400h100v-100c0-55.23,44.77-100,100-100h-100v-200h200v100h.23v40.81c-.08.3-.15.59-.23.89v-41.7c0,55.23-44.77,100-100,100,55.23,0,99.99,44.77,100,99.99h0v100.01h100v-100c0-8.73-1.12-17.19-3.22-25.27-4.75-28.66-17.63-54.57-36.18-75.29Z"/>
+  <g>
+    <path d="M2900,905.38v-200h300c0-55.23-44.77-100-100-100h-200c-55.23,0-100,44.77-100,100v300c0,55.23,44.77,100,100,100h0c0-55.23,44.77-100,100-100h-100v-100Z"/>
+    <path d="M3100,805.38c-55.23,0-100,44.77-100,100h100v100h0s0,0,0,0h-100c55.23,0,100,44.77,100,100v-11.77s0,0,0,0v11.76s0,0,0,0h0s0,0,0,0c55.23,0,100-44.77,100-100v-200h-100Z"/>
+  </g>
+  <path d="M2198.21,605.38h-200c-55.23,0-100,44.77-100,100v300c0,55.23,44.77,100,100,100h200c55.23,0,100-44.77,100-100v-300c0-55.23-44.77-100-100-100ZM2198.21,805.38v200h-200v-300h200v100Z"/>
+  <rect x="2900" y="1005.38" width="200" height="100"/>
+  <rect x="1100" y="1005.38" width="200" height="100"/>
+</svg></header>
 <canvas id="c"></canvas>
 <div class="side">
   <div class="tabs" role="tablist" aria-label="משפחות מוצרים">
@@ -2750,8 +2779,9 @@ canvas.addEventListener('pointerup', e => {
 });
 
 function resize() {
-  renderer.setSize(innerWidth, innerHeight, false);
-  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize); resize();
 
