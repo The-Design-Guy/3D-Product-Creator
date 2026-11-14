@@ -125,6 +125,48 @@
   @media (prefers-reduced-motion: reduce) { .spin { animation-duration:3s; } }
   .toast { position:fixed; top:64px; left:16px; background:var(--acc); color:#fff; font-size:13px; padding:8px 12px; border-radius:8px; z-index:30; }
   @media (max-width:640px){ .toolbar{ top:8px; left:8px; right:8px; } .preset select{ max-width:110px; } .tb.big span{ display:none; } }
+  .lightpop { position:fixed; top:70px; left:16px; width:340px; background:rgba(255,255,255,.95); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border:1px solid var(--line); border-radius:12px; padding:12px; box-shadow:0 12px 36px rgba(30,40,50,.14); z-index:15; direction:rtl; }
+  .lp-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; font-size:15px; }
+  .lp-head .tb { height:28px; min-width:28px; }
+  .lp-types { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; }
+  .lp-types button { font:inherit; font-size:12px; padding:7px 2px; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; color:var(--ink); }
+  .lp-types button.on { background:var(--acc); color:#fff; border-color:var(--acc); }
+  .lp-row { display:flex; gap:14px; align-items:center; margin-top:12px; }
+  .compass { user-select:none; -webkit-user-select:none; position:relative; flex:none; width:128px; height:128px; border-radius:50%; cursor:crosshair; touch-action:none;
+    background:radial-gradient(circle, #fff 0 30%, #f1f4f6 31% 100%); border:1px solid var(--line); }
+  .compass:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+  .c-lbl { position:absolute; font-size:10px; color:var(--muted); pointer-events:none; }
+  .c-back { top:4px; left:50%; transform:translateX(-50%); } .c-front { bottom:4px; left:50%; transform:translateX(-50%); }
+  .c-left { left:5px; top:50%; transform:translateY(-50%); } .c-right { right:5px; top:50%; transform:translateY(-50%); }
+  .c-prod { position:absolute; left:50%; top:50%; width:26px; height:12px; margin:-6px 0 0 -13px; background:#cbd0cc; border-radius:2px; box-shadow:0 2px 0 #9aa3aa; }
+  .c-dot { position:absolute; left:50%; top:50%; width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%;
+    background:radial-gradient(circle at 40% 40%, #fff6c8, #f4b63a); box-shadow:0 0 0 3px rgba(244,182,58,.25), 0 2px 6px rgba(0,0,0,.2); pointer-events:none; }
+  .lp-sliders { flex:1; display:flex; flex-direction:column; gap:8px; font-size:12px; color:var(--muted); }
+  .lp-sliders label { display:flex; flex-direction:column; gap:3px; }
+  .lp-sliders input { accent-color:var(--acc); direction:ltr; }
+  .notes { border:1px solid var(--line); border-radius:10px; background:#fff; overflow:hidden; }
+  .notes textarea { display:block; width:100%; border:0; resize:vertical; font:inherit; font-size:14px; padding:9px 10px 4px; color:var(--ink); background:transparent; min-height:64px; }
+  .notes textarea:focus { outline:none; }
+  .notes:focus-within { border-color:var(--acc); }
+  .notes.drop { border-color:#1f6feb; box-shadow:0 0 0 3px rgba(31,111,235,.18); background:#f5f9ff; }
+  .files { display:flex; flex-wrap:wrap; gap:6px; padding:2px 10px 8px; }
+  .fchip { display:flex; align-items:center; border:1px solid var(--line); border-radius:8px; background:#fff; overflow:hidden; }
+  .fchip .fref { all:unset; display:flex; align-items:center; gap:6px; padding:3px 6px 3px 3px; cursor:pointer; font-size:12px; }
+  .fchip .fref:focus-visible, .fchip .fx:focus-visible { outline:2px solid var(--acc); }
+  .fchip img { width:34px; height:34px; object-fit:cover; border-radius:5px; display:block; }
+  .fchip .fx { border:0; background:transparent; color:var(--muted); cursor:pointer; padding:0 7px; height:40px; font-size:12px; }
+  .fchip .fx:hover { color:#b3261e; }
+  .partial { min-height:18px; padding:0 10px 4px; font-size:13px; color:#7d8a96; font-style:italic; }
+  .micbar { display:flex; align-items:center; gap:8px; padding:6px 8px; border-top:1px solid #eef0f2; background:#fafbfc; }
+  .micbar canvas { flex:1; height:30px; display:block; }
+  .micbar.on { background:#f3f7ff; }
+  .notes .nomic { display:none; }
+  .mic { flex:none; width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:#fff; color:var(--ink); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+  .mic.rec { background:#d93025; border-color:#d93025; color:#fff; box-shadow:0 0 0 0 rgba(217,48,37,.5); animation:pulse 1.4s ease-out infinite; }
+  @keyframes pulse { to { box-shadow:0 0 0 10px rgba(217,48,37,0); } }
+  @media (prefers-reduced-motion: reduce) { .mic.rec { animation:none; } }
+  @media (max-width:640px){ .lightpop{ left:8px; right:8px; width:auto; top:60px; } }
   .hint { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); font-size:12px; color:var(--muted);
     background:rgba(255,255,255,.75); padding:6px 12px; border-radius:20px; border:1px solid var(--line); white-space:nowrap; }
   .note { font-size:11px; color:#8a6d3b; margin-top:10px; line-height:1.5; }
@@ -188,6 +230,27 @@
     </div></div>
   </div>
 
+  <div class="panel" id="pWall" data-mode="wall">
+    <button class="head" aria-expanded="false">
+      <span class="ttl"><h1>מתלה קיר</h1><span class="sub">רוחב 60 ס"מ · גובה 60 / 120 / 200 ס"מ</span></span>
+      <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="body"><div class="inner">
+      <div class="pair">
+        <div><div class="lbl">גובה</div>
+          <div class="seg2 three" id="wlHeight"><button data-v="600">60</button><button data-v="1200" class="on">120</button><button data-v="2000">200</button></div></div>
+        <div><div class="lbl">רקע</div>
+          <div class="seg2" id="wlWall"><button data-v="0" class="on">בלי קיר</button><button data-v="1">עם קיר</button></div></div>
+      </div>
+      <label class="slide" id="wlElevRow" hidden><span>גובה מהרצפה</span><input type="range" id="wlElev" min="0" max="200" step="1"><b id="wlElevVal"></b></label>
+      <div class="lbl">הרכב</div>
+      <div class="comp" id="wlComp"></div>
+      <div class="bar"><i id="wlBar"></i></div>
+      <div class="use" id="wlUse"></div>
+      <div class="slot"></div>
+    </div></div>
+  </div>
+
   <div class="panel" id="pTena" data-mode="tena">
     <button class="head" aria-expanded="false">
       <span class="ttl"><h1>תא-נע DELUX</h1><span class="sub">ארון עם כנפיים נעות · 4 / 7 / 10 כנפיים</span></span>
@@ -241,12 +304,14 @@
     <select id="presetSel" aria-label="הגדרת קטלוג"></select>
   </label>
   <button class="tb" id="resetBtn" title="פוזיציית ברירת מחדל" aria-label="פוזיציית ברירת מחדל"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+  <button class="tb" id="lightBtn" title="תאורה" aria-label="תאורה" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
   <button class="tb admin-only" id="saveBtn" title="קבע פוזיציה והגדרות כהגדרת קטלוג" aria-label="קבע פוזיציה כברירת מחדל"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
   <button class="tb" id="spreadBtn" hidden aria-pressed="false" title="פריסה – הכנפיים יוצאות מהארון" aria-label="פריסת כנפיים"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="5" height="14" rx="1"/><rect x="10" y="5" width="5" height="14" rx="1"/><rect x="17" y="5" width="4" height="14" rx="1"/><path d="M12 2v2M5.5 2v2M19 2v2"/></svg><span>פריסה</span></button>
   <button class="tb" id="shotBtn" title="צילום המודל (PNG שקוף)" aria-label="צילום המודל"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
   <button class="tb big" id="renderBtn" title="RENDER REALISTIC PHOTO?" aria-label="רינדור ריאליסטי"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg><span>Render</span></button>
   <button class="tb" id="lockBtn" hidden aria-label="מצב ניהול"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
 </div>
+<div class="lightpop" id="lightPop" hidden role="dialog" aria-label="תאורה"></div>
 <div class="dlg" id="dlg" hidden></div>
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="hint">גרירה לסיבוב · גלגלת לזום · לחיצה על מגירה פותחת אותה</div>
@@ -275,7 +340,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.86;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;   // shadow.radius = softness per light type
 
 const scene = new THREE.Scene();
 const pmrem = new THREE.PMREMGenerator(renderer);
@@ -289,7 +354,7 @@ controls.minDistance = 0.15; controls.maxDistance = 7;
 controls.maxPolarAngle = Math.PI * 0.53;
 controls.autoRotateSpeed = 1.2;
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0xa9b0b6, 0.25));
+const hemi = new THREE.HemisphereLight(0xffffff, 0xa9b0b6, 0.25); scene.add(hemi);
 const key = new THREE.DirectionalLight(0xffffff, 2.2);
 key.position.set(-1.4, 3.4, 0.7);
 key.castShadow = true;
@@ -1154,6 +1219,85 @@ function clampWings(moved) {
   }
 }
 
+// ---------- מתלה קיר: wall rack, 60 cm wide, 60 / 120 / 200 cm high ----------
+// Thin frame (30 mm wide, 8 mm deep side rails with a slot, top/bottom bands with rounded inner corners).
+const rackMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#eceeee'), roughness:0.42, metalness:0.15, clearcoat:0.2 });
+const slotMat = new THREE.MeshStandardMaterial({ color:0x9aa1a7, roughness:0.6, metalness:0.3 });
+const wallMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#f2f0ec'), roughness:0.95 });
+const WALL = { W:600, T:8, RAIL:30, BAND:55, START:5 };
+const wall = { height:1200, showWall:false, elevBy:{ 600:1000, 1200:500, 2000:0 } };   // elevBy: bottom of the rack above the floor (mm), per height
+const wallElev = () => wall.showWall ? (wall.elevBy[wall.height] || 0) : 0;
+const floorMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#dcdad5'), roughness:0.9 });
+const WALL_DEFAULT = {
+  600:  { 4:1, 5:1, 6:1, 9:1 },
+  1200: { 3:1, 4:2, 5:1, 6:2, 9:2 },
+  2000: { 2:1, 3:2, 4:2, 5:2, 6:2, 9:2 },
+};
+const wallComp = JSON.parse(JSON.stringify(WALL_DEFAULT));
+const wallUsable = () => wall.height - 10;
+
+function buildWall() {
+  const g = new THREE.Group();
+  const root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
+  const { W, T, RAIL, BAND } = WALL, H = wall.height;
+  // frame: one plate with a rounded window
+  const outer = new THREE.Shape(); outer.moveTo(-W/2, 0); outer.lineTo(W/2, 0); outer.lineTo(W/2, H); outer.lineTo(-W/2, H); outer.lineTo(-W/2, 0);
+  const r = 45, x0 = -W/2 + RAIL, x1 = W/2 - RAIL, y0 = BAND, y1 = H - BAND;
+  const hole = new THREE.Path();
+  hole.moveTo(x0 + r, y0); hole.lineTo(x1 - r, y0); hole.quadraticCurveTo(x1, y0, x1, y0 + r);
+  hole.lineTo(x1, y1 - r); hole.quadraticCurveTo(x1, y1, x1 - r, y1);
+  hole.lineTo(x0 + r, y1); hole.quadraticCurveTo(x0, y1, x0, y1 - r);
+  hole.lineTo(x0, y0 + r); hole.quadraticCurveTo(x0, y0, x0 + r, y0);
+  outer.holes.push(hole);
+  const fg = new THREE.ExtrudeGeometry(outer, { depth:T, bevelEnabled:true, bevelThickness:0.6, bevelSize:0.6, bevelSegments:1, curveSegments:10 });
+  root.add(shadowOn(new THREE.Mesh(fg, rackMat)));
+  // the slot along each rail
+  for (const sx of [-1, 1]) {
+    const sl = new THREE.Mesh(new THREE.BoxGeometry(8, H - 6, 1.2), slotMat); sl.position.set(sx*(W/2 - RAIL/2), H/2, T + 0.2); root.add(sl);
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(RAIL, 4, T + 2), slotMat); cap.position.set(sx*(W/2 - RAIL/2), H + 1, T/2); root.add(cap);
+    if (wallElev() === 0) { const foot = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(44, 4, 46), rackMat)); foot.position.set(sx*(W/2 - RAIL/2 - 4), 2, 20); root.add(foot); }
+  }
+  const E = wallElev();
+  root.position.y = E * 0.001;                   // the rack hangs at the chosen height
+  if (wall.showWall) {
+    const wh = Math.max(2700, E + H + 500);
+    const wl = new THREE.Mesh(new THREE.PlaneGeometry(3200, wh), wallMat);
+    wl.position.set(0, wh/2 - E, -1); wl.receiveShadow = true; root.add(wl);
+    const fl = new THREE.Mesh(new THREE.PlaneGeometry(3200, 1600), floorMat);
+    fl.rotation.x = -Math.PI/2; fl.position.set(0, -E, 800); fl.receiveShadow = true; root.add(fl);
+  }
+  // units: biggest at the bottom, hung on the rails
+  const list = [], rodList = [];
+  let y = WALL.START + E;
+  const c = wallComp[wall.height];
+  for (const n of ORDER) for (let i = 0; i < (c[n] || 0); i++) {
+    const u = makeUnit(n);
+    u.group.position.set(0, y*0.001, (T + 1)*0.001);
+    g.add(u.group); list.push(...u.drawers); rodList.push(u.rod);
+    y += MODELS[n].H - RIM;
+  }
+  g.position.z = -0.12;                          // centre the view on the units
+  return { group:g, drawers:list, rods:rodList, H, E };
+}
+function renderWallComp() {
+  const c = wallComp[wall.height], box = document.getElementById('wlComp');
+  if (!THUMBS) { try { THUMBS = makeThumbs(); } catch (e) { THUMBS = {}; } }
+  box.innerHTML = '';
+  const used = stackHeight(c), lim = wallUsable();
+  for (const n of ORDER) {
+    const add = used === 0 ? MODELS[n].H : MODELS[n].H - RIM, cnt = c[n] || 0;
+    const row = document.createElement('div'); row.className = 'ci'; row.title = `רב תא ${n}`;
+    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="ctl"><button aria-label="פחות">−</button><b>${cnt}</b><button aria-label="יותר">+</button></span>`;
+    const [minus, plus] = row.querySelectorAll('button');
+    minus.disabled = !(cnt > 0); plus.disabled = used + add > lim + 5;
+    minus.onclick = () => { c[n] = Math.max(0, cnt - 1); rebuild(true); };
+    plus.onclick = () => { c[n] = cnt + 1; rebuild(true); };
+    box.appendChild(row);
+  }
+  document.getElementById('wlBar').style.width = Math.min(100, used / lim * 100) + '%';
+  document.getElementById('wlUse').innerHTML = `גובה מנוצל: <b>${used}</b> מתוך <b>${lim}</b> מ"מ · הגדול תמיד למטה`;
+}
+
 // ---------- (re)build the scene ----------
 function rebuild(keepCamera = false) {
   if (!isCab()) { spread = spreadTarget = 0; CAB = null; }
@@ -1168,6 +1312,13 @@ function rebuild(keepCamera = false) {
     document.getElementById('dims').innerHTML =
       `מק"ט <b>${MODELS[current].sku}</b> · רוחב <b>${MODELS[current].W}</b> · גובה <b>${MODELS[current].H}</b> · עומק <b>${D}</b> מ"מ`;
     makeCellButtons(current);
+  } else if (mode === 'wall') {
+    const wb = buildWall();
+    world.add(wb.group); drawers = wb.drawers; rods = wb.rods;
+    if (!keepCamera) frame(800, wb.H + wb.E + 60, wb.H + wb.E > 900);
+    document.getElementById('dims').innerHTML = `מתלה קיר · רוחב <b>60</b> · גובה <b>${wb.H/10}</b> · עומק המתלה <b>0.8</b> ס"מ` + (wall.showWall ? ` · תחתית המתלה <b>${wb.E/10}</b> ס"מ מהרצפה` : '');
+    syncElev();
+    renderWallComp();
   } else if (isCab()) {
     tena = TN[mode === 'smart' ? 'smart' : 'delux'];
     WING_GROUPS.clear(); WING_FRAMES.clear();
@@ -1296,6 +1447,23 @@ for (const px of ['tn', 'sm']) {
     e.target.value = cm; tena.depth = Math.round(cm * 10); rebuild(true);
   };
 }
+
+segGroup('wlHeight', (v) => { wall.height = +v; rebuild(); });
+segGroup('wlWall', (v) => { wall.showWall = v === '1'; rebuild(); });
+// height of the rack above the floor (only meaningful with the wall shown); top stays under 2.7 m
+function syncElev() {
+  const row = document.getElementById('wlElevRow'), inp = document.getElementById('wlElev');
+  row.hidden = !wall.showWall;
+  const maxCm = Math.max(0, Math.floor((2700 - wall.height) / 10));
+  inp.max = maxCm; inp.value = Math.min(maxCm, (wall.elevBy[wall.height] || 0) / 10);
+  document.getElementById('wlElevVal').textContent = `${inp.value} ס"מ`;
+}
+document.getElementById('wlElev').oninput = (e) => {
+  wall.elevBy[wall.height] = +e.target.value * 10;
+  document.getElementById('wlElevVal').textContent = `${e.target.value} ס"מ`;
+  clearTimeout(syncElev.t); syncElev.t = setTimeout(() => rebuild(true), 60);
+};
+document.getElementById('wlElev').onchange = () => { clearTimeout(syncElev.t); rebuild(); };   // re-frame when the slider is released
 
 function renderComp() {
   if (!THUMBS) { try { THUMBS = makeThumbs(); } catch (e) { THUMBS = {}; } }
@@ -1481,6 +1649,7 @@ function captureFamily() {
     mode, current,
     stand: { ...stand },
     comp: JSON.parse(JSON.stringify(comp)),
+    wall: { ...wall }, wallComp: JSON.parse(JSON.stringify(wallComp)),
     tn: JSON.parse(JSON.stringify(TN)), spread: spreadTarget > 0.5, wing: tenaOpenWing,
     rod: $('rod').checked, labels: $('labelsOn').checked, openAll: $('openAll').checked,
     open: drawers.map((d, i) => (d.userData.target > 0.1 || d.userData.pending) ? i : -1).filter(i => i >= 0),
@@ -1491,6 +1660,8 @@ function applyFamily(f) {
   mode = f.mode || mode; current = f.current || current;
   if (f.stand) Object.assign(stand, f.stand);
   if (f.comp) for (const k in f.comp) comp[k] = { ...f.comp[k] };
+  if (f.wall) { Object.assign(wall, f.wall); setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0'); }
+  if (f.wallComp) for (const k in f.wallComp) wallComp[k] = { ...f.wallComp[k] };
   const tn = f.tn || (f.tena ? { delux:f.tena } : null);
   if (tn) for (const v of ['delux', 'smart']) if (tn[v]) {
     Object.assign(TN[v], JSON.parse(JSON.stringify(tn[v])));
@@ -1526,6 +1697,8 @@ function renderPresetPicker() {
 function selectPreset(name, applySettings = true) {
   activeName = name || null;
   const p = activeName && store.presets[activeName];
+  if (p && p.light) { Object.assign(LIGHT, p.light); applyLight(); if (buildLightPop.sync && !$('lightPop').hidden) buildLightPop.sync(); }
+  if (p) renderNotes = p.notes || '';
   if (p && applySettings && p.families && p.families[FAMILY]) applyFamily(p.families[FAMILY]);
   resetView();
   renderPresetPicker();
@@ -1542,7 +1715,7 @@ $('spreadBtn').onclick = () => setSpread(spreadTarget < 0.5);
 function openDialog(html, onReady) {
   const wrap = $('dlg'); wrap.innerHTML = `<div class="dlg-card" role="dialog" aria-modal="true">${html}</div>`;
   wrap.hidden = false;
-  const close = () => { wrap.hidden = true; wrap.innerHTML = ''; };
+  const close = () => { if (wrap._onClose) { wrap._onClose(); wrap._onClose = null; } wrap.hidden = true; wrap.innerHTML = ''; };
   wrap.onclick = (e) => { if (e.target === wrap) close(); };
   wrap.querySelectorAll('[data-close]').forEach(b => b.onclick = close);
   onReady && onReady(wrap.firstElementChild, close);
@@ -1558,7 +1731,7 @@ $('saveBtn').onclick = () => {
   const names = Object.keys(store.presets);
   openDialog(`
     <h3>שמירת הגדרת קטלוג</h3>
-    <p class="dlg-sub">נשמרים: זווית המצלמה (יחסית לגודל המוצר, לכל המשפחות) וכל ההגדרות של "משפחת רב תא".</p>
+    <p class="dlg-sub">נשמרים: זווית המצלמה (יחסית לגודל המוצר, לכל המשפחות), התאורה, הערות הרינדור וכל ההגדרות של "משפחת רב תא".</p>
     <label class="fld">שם ההגדרה
       <input id="pName" list="pNames" placeholder="למשל: קטלוג חוליות" value="${activeName ? activeName.replace(/"/g, '&quot;') : ''}">
       <datalist id="pNames">${names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">`).join('')}</datalist>
@@ -1575,7 +1748,7 @@ $('saveBtn').onclick = () => {
       const name = card.querySelector('#pName').value.trim();
       if (!name) return err('צריך לתת שם להגדרה.');
       const prev = store.presets[name] || {};
-      const data = { camera: cameraSnapshot(), families: { ...(prev.families || {}), [FAMILY]: captureFamily() }, updated: new Date().toISOString() };
+      const data = { camera: cameraSnapshot(), light: { ...LIGHT }, notes: renderNotes, families: { ...(prev.families || {}), [FAMILY]: captureFamily() }, updated: new Date().toISOString() };
       try {
         await persist('save', { name, data, makeActive: card.querySelector('#pActive').checked });
         activeName = name; renderPresetPicker(); close(); toast(`נשמר: ${name}`);
@@ -1635,6 +1808,7 @@ function captureCanvas(maxSide = 2400) {
 const toBlob = (cv, type = 'image/png', q) => new Promise(r => cv.toBlob(r, type, q));
 function fileStem() {
   if (mode === 'unit') return `rav-ta-${current}`;
+  if (mode === 'wall') return `wall-rack-${wall.height/10}`;
   if (isCab()) return `ta-na-${tena.variant}-${tena.size}${spreadTarget > 0.5 ? '-spread' : ''}`;
   return `rav-ta-${stand.type === 'double' ? 'double' : 'single'}-${stand.base}-${stand.height / 10}`;
 }
@@ -1660,6 +1834,7 @@ function describe() {
   const flags = [];
   if ($('rod').checked) flags.push('a thin stainless steel security rod across the front');
   if ($('labelsOn').checked) flags.push('plain white paper labels in the label windows');
+  if (mode === 'wall') return `A slim wall-mounted rack (600 mm wide, ${wall.height} mm high, only 8 mm deep: two 30 mm side rails with a slot and top/bottom bands with rounded inner corners, light grey-white) holding stacked ${base.toLowerCase()} (largest at the bottom)${wall.showWall ? ', mounted on a plain wall with its bottom ' + (wallElev()/10) + ' cm above the floor, floor visible' : ''}${flags.length ? '; ' + flags.join('; ') : ''}.`;
   if (isCab()) { const S = sizeDef();
     const shell = tena.variant === 'smart'
       ? `An open storage rack ("Ta-Na SMART"), ${S.W} mm wide, ${cfg().H} mm high: open frame of rectangular painted steel tube in ${tena.color === 'blue' ? 'deep blue' : 'light grey RAL 7035'}, levelling feet, no panels.`
@@ -1697,12 +1872,26 @@ $('renderBtn').onclick = () => {
         <div class="seg2 three" id="rDpi"><button data-v="72">72</button><button data-v="150">150</button><button data-v="300" class="on">300</button></div></div>
     </div>
     <div class="use" id="rSize"></div>
+    <div class="lbl">הערות לתמונה</div>
+    <div class="notes">
+      <textarea id="rNotes" rows="3" placeholder="למשל: רקע של מחסן מסודר, בתאים ברגים ואומים, במגירה העליונה כפפות…"></textarea>
+      <div class="partial" id="rPartial" aria-live="polite"></div>
+      <div class="files" id="rFiles"></div>
+      <div class="micbar">
+        <button class="mic" id="rAttach" title="צירוף תמונות (או גרירה לכאן)" aria-label="צירוף תמונות"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6a3.4 3.4 0 0 1 4.8 4.8l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></svg></button>
+        <input type="file" id="rFileIn" accept="image/png,image/jpeg,image/webp" multiple hidden>
+        <button class="mic" id="rMic" hidden aria-pressed="false" title="הקלטת הערה" aria-label="הקלטת הערה"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        <canvas id="rWave" aria-hidden="true"></canvas>
+      </div>
+    </div>
+    <div class="use">אפשר לצרף עד 4 תמונות ייחוס (כפתור האטב או גרירה) ולהפנות אליהן בהערות – למשל "רקע כמו בקובץ 1". הקבצים לא נשמרים בהגדרת הקטלוג. התאורה מהלוח "תאורה" נשלחת גם היא. ההערות והתאורה נשמרות בהגדרת הקטלוג. עם רקע שקוף, בקשות לגבי רקע לא יבוצעו – רק תוכן התאים.</div>
     <div class="dlg-err" id="rErr" hidden></div>
     <div class="r-out" id="rOut" hidden></div>
     <div class="dlg-actions" id="rActs">
       <button class="btn primary" id="rGo">רנדר</button>
       <button class="btn" data-close>ביטול</button>
     </div>`, (card, close) => {
+    $('dlg')._onClose = mountNotes(card);
     const st = { bg:'transparent', ratio:'1:1', res:'std', dpi:300 };
     const q = (sel) => card.querySelector(sel);
     const seg = (id, key, after) => card.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => {
@@ -1737,7 +1926,7 @@ $('renderBtn').onclick = () => {
         const cv = padToRatio(captureCanvas(1536), z.w, z.h);
         let image = cv.toDataURL('image/webp', 0.95);
         if (!image.startsWith('data:image/webp')) image = cv.toDataURL('image/png');
-        const r = await api('/api/render', { image, background: st.bg, description: describe(), size: `${z.w}x${z.h}` });
+        const r = await api('/api/render', { image, background: st.bg, description: describe(), size: `${z.w}x${z.h}`, lighting: lightingText(), notes: renderNotes.trim(), refs: renderFiles.map(f => f.data) });
         out.innerHTML = `<img src="${r.image}" alt="רינדור ריאליסטי">`;
         go.textContent = 'רנדר שוב'; go.disabled = false;
         if (!q('#rDl')) {
@@ -1809,6 +1998,273 @@ async function withDpi(blob, dpi) {
   renderPresetPicker();
   if (store.active && store.presets[store.active]) selectPreset(store.active);
 })();
+
+// =====================================================================
+// Lighting: type (sun / cloudy-window / fluorescent / studio / warm bulb), direction, height, intensity
+// Saved with each catalog setting, and described to the realistic render.
+// =====================================================================
+const LIGHT_TYPES = {
+  sun:    { he:'שמש',            color:'#fff0d4', key:3.0, soft:1,  env:0.45, hemi:0.12, fill:0.12, fillColor:'#dfe9ff',
+            en:'warm direct sunlight with crisp, well-defined shadows' },
+  cloudy: { he:'מעונן / חלון',   color:'#eef3ff', key:1.1, soft:16, env:1.05, hemi:0.45, fill:0.35, fillColor:'#eef3ff',
+            en:'soft, diffuse daylight as from a large window on an overcast day, very soft shadows' },
+  fluor:  { he:'פלורסנט',        color:'#e9f6ff', key:1.5, soft:9,  env:0.85, hemi:0.42, fill:0.3,  fillColor:'#e4f3ff',
+            en:'cool white overhead fluorescent tube lighting, like a clean warehouse or workshop' },
+  studio: { he:'סטודיו',         color:'#ffffff', key:2.2, soft:6,  env:0.75, hemi:0.25, fill:0.6,  fillColor:'#e8f0ff',
+            en:'soft professional studio lighting with two softboxes, clean catalogue look' },
+  bulb:   { he:'נורה חמה',       color:'#ffc78a', key:1.9, soft:4,  env:0.32, hemi:0.12, fill:0.1,  fillColor:'#ffd9a8',
+            en:'warm tungsten light bulb, cosy amber tone, gentle falloff' },
+};
+const LIGHT = { type:'studio', az:-63, el:65, power:1 };      // az: 0 = from the front, +90 = from the right
+function applyLight() {
+  const T = LIGHT_TYPES[LIGHT.type] || LIGHT_TYPES.studio;
+  const az = THREE.MathUtils.degToRad(LIGHT.az), el = THREE.MathUtils.degToRad(LIGHT.el), r = 3.8;
+  key.position.set(Math.sin(az) * Math.cos(el) * r, Math.sin(el) * r, Math.cos(az) * Math.cos(el) * r);
+  key.color.set(T.color); key.intensity = T.key * LIGHT.power; key.shadow.radius = T.soft;
+  rim.color.set(T.fillColor); rim.intensity = T.fill * LIGHT.power;
+  rim.position.set(-key.position.x * 0.6, 1.2, -key.position.z * 0.6);
+  hemi.intensity = T.hemi * LIGHT.power;
+  hemi.color.set(LIGHT.type === 'bulb' ? '#ffe2c0' : '#ffffff');
+  scene.environmentIntensity = T.env * Math.min(1.4, 0.6 + 0.4 * LIGHT.power);
+}
+function lightingText() {
+  const T = LIGHT_TYPES[LIGHT.type] || LIGHT_TYPES.studio;
+  const a = ((LIGHT.az % 360) + 540) % 360 - 180;               // -180..180
+  const side = Math.abs(a) < 25 ? 'the front' : Math.abs(a) > 155 ? 'behind' :
+    (a < 0 ? 'the left' : 'the right') + (Math.abs(a) < 70 ? ' front' : Math.abs(a) > 110 ? ' back' : '');
+  const h = LIGHT.el > 60 ? 'high above' : LIGHT.el < 25 ? 'a low angle' : 'about 45 degrees up';
+  const p = LIGHT.power > 1.3 ? 'bright' : LIGHT.power < 0.7 ? 'dim, moody' : 'balanced';
+  return `${T.en}; main light coming from ${side}, ${h}; ${p} exposure.`;
+}
+
+// ---------- the lighting popover ----------
+function buildLightPop() {
+  const pop = $('lightPop');
+  pop.innerHTML = `
+    <div class="lp-head"><b>תאורה</b><button class="tb" id="lpClose" aria-label="סגירה">✕</button></div>
+    <div class="lp-types">${Object.entries(LIGHT_TYPES).map(([k, t]) => `<button data-v="${k}">${t.he}</button>`).join('')}</div>
+    <div class="lp-row">
+      <div class="compass" id="lpCompass" role="slider" aria-label="כיוון האור" tabindex="0">
+        <span class="c-lbl c-back">מאחור</span><span class="c-lbl c-front">מקדימה</span>
+        <span class="c-lbl c-left">שמאל</span><span class="c-lbl c-right">ימין</span>
+        <span class="c-prod" aria-hidden="true"></span>
+        <span class="c-dot" id="lpDot" aria-hidden="true"></span>
+      </div>
+      <div class="lp-sliders">
+        <label>גובה <input type="range" id="lpEl" min="5" max="85" step="1"></label>
+        <label>עוצמה <input type="range" id="lpPow" min="30" max="200" step="5"></label>
+        <div class="use" id="lpTxt"></div>
+      </div>
+    </div>`;
+  const sync = () => {
+    pop.querySelectorAll('.lp-types button').forEach(b => b.classList.toggle('on', b.dataset.v === LIGHT.type));
+    const a = THREE.MathUtils.degToRad(LIGHT.az), rr = 46 * Math.cos(THREE.MathUtils.degToRad(LIGHT.el)) + 8;
+    $('lpDot').style.transform = `translate(${Math.sin(a) * rr}px, ${Math.cos(a) * rr}px)`;   // down = front
+    $('lpEl').value = LIGHT.el; $('lpPow').value = Math.round(LIGHT.power * 100);
+    $('lpTxt').textContent = `${LIGHT_TYPES[LIGHT.type].he} · גובה ${LIGHT.el}° · עוצמה ${Math.round(LIGHT.power * 100)}%`;
+    applyLight();
+  };
+  pop.querySelectorAll('.lp-types button').forEach(b => b.onclick = () => { LIGHT.type = b.dataset.v; sync(); });
+  $('lpEl').oninput = (e) => { LIGHT.el = +e.target.value; sync(); };
+  $('lpPow').oninput = (e) => { LIGHT.power = e.target.value / 100; sync(); };
+  const comp = $('lpCompass');
+  const setFrom = (e) => {
+    const r = comp.getBoundingClientRect(), dx = e.clientX - (r.left + r.width/2), dy = e.clientY - (r.top + r.height/2);
+    LIGHT.az = Math.round(THREE.MathUtils.radToDeg(Math.atan2(dx, dy))); sync();
+  };
+  comp.onpointerdown = (e) => { comp.setPointerCapture(e.pointerId); setFrom(e); comp.onpointermove = setFrom; };
+  comp.onpointerup = () => { comp.onpointermove = null; };
+  comp.onkeydown = (e) => { if (e.key === 'ArrowLeft') { LIGHT.az -= 10; sync(); } if (e.key === 'ArrowRight') { LIGHT.az += 10; sync(); } };
+  $('lpClose').onclick = () => toggleLightPop(false);
+  sync();
+  buildLightPop.sync = sync;
+}
+function toggleLightPop(on) {
+  const pop = $('lightPop'); on = on ?? pop.hidden;
+  if (on && !pop.innerHTML) buildLightPop();
+  if (on && buildLightPop.sync) buildLightPop.sync();
+  pop.hidden = !on; $('lightBtn').classList.toggle('on', on); $('lightBtn').setAttribute('aria-expanded', on);
+}
+
+// =====================================================================
+// Microphone: live waveform + live transcription
+//   • inside Claude: the platform's dictation (Anthropic speech-to-text)
+//   • on the website: the browser's speech recognition (Chrome / Edge / Safari) + Web Audio for the waveform
+// =====================================================================
+const Mic = {
+  kind: null, d: null, rec: null, stream: null, ctx: null, analyser: null, buf: null,
+  level: 0, listening: false, handlers: {},
+  async init() {
+    try { if (window.claude && window.claude.use) { this.d = await window.claude.use('dictation'); if (this.d) this.kind = 'claude'; } } catch {}
+    if (!this.kind && (window.SpeechRecognition || window.webkitSpeechRecognition)) this.kind = 'web';
+    if (this.kind === 'claude') {
+      this.d.onPartial(({ text }) => { this.level = Math.min(1, this.level + 0.35); this.handlers.partial && this.handlers.partial(text); });
+      this.d.onFinal(({ text }) => { this.level = 1; this.handlers.final && this.handlers.final(text); });
+      this.d.onState(({ state, reason }) => {
+        this.listening = state !== 'idle';
+        this.handlers.state && this.handlers.state(this.listening, reason);
+      });
+    }
+    return this.kind;
+  },
+  on(h) { this.handlers = h; },
+  start() {                                     // must run straight from the click
+    if (this.kind === 'claude') {
+      return this.d.start({ language:'he' }).catch(e => {
+        if (e && e.code === 'unavailable') return this.d.start();
+        throw e;
+      });
+    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = this.rec = new SR();
+    rec.lang = 'he-IL'; rec.continuous = true; rec.interimResults = true;
+    rec.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) this.handlers.final && this.handlers.final(t);
+        else interim += t;
+      }
+      this.handlers.partial && this.handlers.partial(interim);
+    };
+    rec.onend = () => { this.cleanup(); this.handlers.state && this.handlers.state(false, 'stopped'); };
+    rec.onerror = (e) => { this.handlers.error && this.handlers.error(e.error); };
+    rec.start();
+    this.listening = true; this.handlers.state && this.handlers.state(true);
+    // real waveform from the microphone
+    navigator.mediaDevices && navigator.mediaDevices.getUserMedia({ audio:true }).then(stream => {
+      if (!this.listening) { stream.getTracks().forEach(t => t.stop()); return; }
+      this.stream = stream; this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.analyser = this.ctx.createAnalyser(); this.analyser.fftSize = 1024;
+      this.ctx.createMediaStreamSource(stream).connect(this.analyser);
+      this.buf = new Uint8Array(this.analyser.fftSize);
+    }).catch(() => {});
+    return Promise.resolve();
+  },
+  async stop() {
+    if (this.kind === 'claude') return this.d.stop();
+    this.rec && this.rec.stop();
+  },
+  cleanup() {
+    this.listening = false;
+    this.stream && this.stream.getTracks().forEach(t => t.stop());
+    this.ctx && this.ctx.close().catch(() => {});
+    this.stream = this.ctx = this.analyser = this.buf = null;
+  },
+  // samples for the line (−1..1)
+  wave(n, t) {
+    const out = new Array(n);
+    if (this.analyser) {
+      this.analyser.getByteTimeDomainData(this.buf);
+      const step = this.buf.length / n;
+      for (let i = 0; i < n; i++) out[i] = (this.buf[Math.floor(i * step)] - 128) / 128 * 2.2;
+      return out;
+    }
+    // no raw audio (Claude dictation): a lively line driven by the words as they arrive
+    this.level *= 0.94;
+    const a = this.listening ? 0.08 + this.level * 0.75 : 0;
+    for (let i = 0; i < n; i++) {
+      const x = i / n, env = Math.sin(Math.PI * x);
+      out[i] = env * a * (Math.sin(x * 18 + t * 9) * 0.6 + Math.sin(x * 41 - t * 13) * 0.3 + Math.sin(x * 7 + t * 4) * 0.4);
+    }
+    return out;
+  },
+};
+const micReady = Mic.init();
+
+// notes area inside the render dialog
+let renderNotes = '';
+// reference images for the render (this session only – not saved in catalog settings)
+let renderFiles = [];                              // [{ name, data (data URL), thumb }]
+const MAX_FILES = 4, OK_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+async function shrink(file, max = 1280) {
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height); bmp.close && bmp.close();
+  let data = c.toDataURL('image/webp', 0.82);
+  if (!data.startsWith('data:image/webp')) data = c.toDataURL('image/jpeg', 0.85);
+  return data;
+}
+function mountFiles(card, ta) {
+  const box = card.querySelector('#rFiles'), inp = card.querySelector('#rFileIn'), notes = card.querySelector('.notes');
+  const msg = (t) => { const p = card.querySelector('#rPartial'); p.textContent = t; setTimeout(() => { if (p.textContent === t) p.textContent = ''; }, 3500); };
+  const draw = () => {
+    box.innerHTML = '';
+    renderFiles.forEach((f, i) => {
+      const chip = document.createElement('div'); chip.className = 'fchip';
+      chip.innerHTML = `<button class="fref" title="הוספת 'קובץ ${i + 1}' להערות"><img src="${f.data}" alt=""><span>קובץ ${i + 1}</span></button><button class="fx" aria-label="הסרת קובץ ${i + 1}">✕</button>`;
+      chip.querySelector('.fref').onclick = () => {
+        const tag = `קובץ ${i + 1}`, a = ta.selectionStart ?? ta.value.length;
+        const pre = ta.value.slice(0, a), post = ta.value.slice(a);
+        const ins = (pre && !/\s$/.test(pre) ? ' ' : '') + tag + ' ';
+        ta.value = pre + ins + post; renderNotes = ta.value; ta.focus(); ta.selectionStart = ta.selectionEnd = (pre + ins).length;
+      };
+      chip.querySelector('.fx').onclick = () => { renderFiles.splice(i, 1); draw(); };
+      box.appendChild(chip);
+    });
+    box.hidden = !renderFiles.length;
+  };
+  const add = async (files) => {
+    for (const f of files) {
+      if (renderFiles.length >= MAX_FILES) { msg(`אפשר עד ${MAX_FILES} קבצים`); break; }
+      if (!OK_TYPES.includes(f.type)) { msg(`"${f.name}" – רק תמונות JPG, PNG או WebP`); continue; }
+      try { renderFiles.push({ name:f.name, data: await shrink(f) }); }
+      catch { msg(`לא הצלחתי לקרוא את "${f.name}"`); }
+    }
+    draw();
+  };
+  card.querySelector('#rAttach').onclick = () => inp.click();
+  inp.onchange = () => { add([...inp.files]); inp.value = ''; };
+  notes.ondragover = (e) => { e.preventDefault(); notes.classList.add('drop'); };
+  notes.ondragleave = (e) => { if (!notes.contains(e.relatedTarget)) notes.classList.remove('drop'); };
+  notes.ondrop = (e) => { e.preventDefault(); notes.classList.remove('drop'); add([...e.dataTransfer.files]); };
+  draw();
+}
+function mountNotes(card) {
+  const ta = card.querySelector('#rNotes'), part = card.querySelector('#rPartial'), btn = card.querySelector('#rMic');
+  const cv = card.querySelector('#rWave'), bar = card.querySelector('.micbar');
+  ta.value = renderNotes;
+  ta.oninput = () => { renderNotes = ta.value; };
+  mountFiles(card, ta);
+  let raf = 0;
+  const draw = () => {
+    const c = cv.getContext('2d'), w = cv.width = cv.clientWidth * devicePixelRatio, h = cv.height = cv.clientHeight * devicePixelRatio;
+    c.clearRect(0, 0, w, h);
+    const n = 96, s = Mic.wave(n, performance.now() / 1000);
+    c.lineWidth = 2.2 * devicePixelRatio; c.lineJoin = c.lineCap = 'round';
+    const g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#2f3b45'); g.addColorStop(0.5, '#1f6feb'); g.addColorStop(1, '#2f3b45');
+    c.strokeStyle = Mic.listening ? g : '#c4ccd3';
+    c.beginPath();
+    for (let i = 0; i < n; i++) {
+      const x = i / (n - 1) * w, y = h/2 + Math.max(-1, Math.min(1, s[i])) * h * 0.42;
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+    c.stroke();
+    if (Mic.listening) raf = requestAnimationFrame(draw);
+  };
+  const setUI = (on, reason) => {
+    btn.classList.toggle('rec', on); btn.setAttribute('aria-pressed', on);
+    btn.title = on ? 'עצירת הקלטה' : 'הקלטת הערה'; bar.classList.toggle('on', on);
+    if (on) { cancelAnimationFrame(raf); draw(); } else { part.textContent = ''; draw(); }
+    if (!on && reason === 'not_granted') part.textContent = 'אין הרשאה למיקרופון – אפשר להקליד.';
+  };
+  const append = (t) => {
+    t = t.trim(); if (!t) return;
+    ta.value = (ta.value && !/\s$/.test(ta.value) ? ta.value + ' ' : ta.value) + t;
+    renderNotes = ta.value; part.textContent = '';
+  };
+  Mic.on({ partial: (t) => part.textContent = t, final: append, state: setUI, error: () => {} });
+  micReady.then(kind => { btn.hidden = !kind; if (!kind) cv.parentElement.classList.add('nomic'); draw(); });
+  btn.onclick = () => {
+    if (Mic.listening) { Mic.stop(); return; }
+    Mic.start().catch(e => { setUI(false, e && e.code); });
+  };
+  return () => { if (Mic.listening) Mic.stop(); cancelAnimationFrame(raf); };
+}
+
+applyLight();
+$('lightBtn').onclick = () => toggleLightPop();
 
 const clock = new THREE.Clock();
 rebuild();
