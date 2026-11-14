@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>רב תא – מודל תלת־ממדי</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20500%20500%22%3E%3Cstyle%3Epath%7Bfill%3A%2314181c%7D%40media%20%28prefers-color-scheme%3Adark%29%7Bpath%7Bfill%3A%23fff%7D%7D%3C/style%3E%20%3Cpath%20d%3D%22M405.31%2C77.59h0c-19.04%2C0-34.48%2C15.44-34.48%2C34.48h0c0%2C19.04%2C15.44%2C34.48%2C34.48%2C34.48h0c19.04%2C0%2C34.48-15.44%2C34.48-34.48h0c0-19.04-15.44-34.48-34.48-34.48Z%22/%3E%20%3Cpath%20d%3D%22M336.07%2C43.11h0c-37.96.15-68.69%2C30.97-68.69%2C68.96v68.96h-.14v68.96h-136.83s-1.24%2C0-1.24%2C0V112.07H60.21v68.96h0v38.96s0%2C.02%2C0%2C.04v128.9s0%2C.02%2C0%2C.04v38.96h0v68.96h68.96v-68.96h0s0%2C0%2C0%2C0v-68.96h5.79s0%2C0%2C0%2C0h126.34s0%2C0%2C0%2C0h5.93v68.96h0s-.14%2C0-.14%2C0v68.96h68.96v-68.96h.14v-181.64h.14v-100.38c3.12-35.2%2C32.68-62.8%2C68.69-62.8h-68.96Z%22/%3E%20%3Cpath%20d%3D%22M439.79%2C181.04v-9.23c-10.11%2C5.85-21.84%2C9.21-34.35%2C9.23h-.27c-12.51-.02-24.24-3.38-34.35-9.23v9.23h0v275.85h68.96V181.04h0Z%22/%3E%20%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20500%20500%22%3E%20%3Crect%20width%3D%22500%22%20height%3D%22500%22/%3E%20%3Cpath%20d%3D%22M405.31%2C77.59h0c-19.04%2C0-34.48%2C15.44-34.48%2C34.48h0c0%2C19.04%2C15.44%2C34.48%2C34.48%2C34.48h0c19.04%2C0%2C34.48-15.44%2C34.48-34.48h0c0-19.04-15.44-34.48-34.48-34.48Z%22%20fill%3D%22%230dff00%22/%3E%20%3Cpath%20d%3D%22M336.07%2C43.11h0c-37.96.15-68.69%2C30.97-68.69%2C68.96v68.96h-.14v68.96h-136.83s-1.24%2C0-1.24%2C0V112.07H60.21v68.96h0v38.96s0%2C.02%2C0%2C.04v128.9s0%2C.02%2C0%2C.04v38.96h0v68.96h68.96v-68.96h0s0%2C0%2C0%2C0v-68.96h5.79s0%2C0%2C0%2C0h126.34s0%2C0%2C0%2C0h5.93v68.96h0s-.14%2C0-.14%2C0v68.96h68.96v-68.96h.14v-181.64h.14v-100.38c3.12-35.2%2C32.68-62.8%2C68.69-62.8h-68.96Z%22%20fill%3D%22%230dff00%22/%3E%20%3Cpath%20d%3D%22M439.79%2C181.04v-9.23c-10.11%2C5.85-21.84%2C9.21-34.35%2C9.23h-.27c-12.51-.02-24.24-3.38-34.35-9.23v9.23h0v275.85h68.96V181.04h0Z%22%20fill%3D%22%230dff00%22/%3E%20%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -12,14 +12,17 @@
   * { box-sizing: border-box; }
   html, body { margin:0; height:100%; overflow:hidden; font-family:'Heebo',system-ui,sans-serif; color:var(--ink);
     background: radial-gradient(120% 90% at 50% 35%, #ffffff 0%, #eef0f2 55%, #dfe3e6 100%); }
-  :root { --hh:64px; }
+  :root { --hh:64px; --fh:32px; }
   .apphead { position:fixed; top:0; left:0; right:0; height:var(--hh); z-index:10; display:flex; align-items:center; gap:16px; padding:0 24px;
     background:#14181c; border-bottom:1px solid #000; }
   .apphead { direction:ltr; justify-content:flex-start; }   /* logo on the left in both languages */
+  .appfoot { position:fixed; bottom:0; left:0; right:0; height:var(--fh); z-index:10; display:flex; align-items:center; justify-content:center;
+    background:#14181c; color:#9aa3ab; font-size:12px; direction:ltr; }
+  .appfoot a { color:#fff; text-decoration:none; } .appfoot a:hover { text-decoration:underline; }
   .apphead .logo { height:30px; width:auto; display:block; fill:#fff; }
-  #c { position:fixed; top:var(--hh); left:0; width:100%; height:calc(100% - var(--hh)); display:block; touch-action:none; }
+  #c { position:fixed; top:var(--hh); left:0; width:100%; height:calc(100% - var(--hh) - var(--fh)); display:block; touch-action:none; }
   @media (max-width:640px){ :root { --hh:52px; } .apphead { padding:0 14px; } .apphead .logo { height:26px; } }
-  .side { position:fixed; top:calc(var(--hh) + 16px); right:16px; width:450px; max-height:calc(100vh - var(--hh) - 32px); overflow:auto;
+  .side { position:fixed; top:calc(var(--hh) + 16px); right:16px; width:450px; max-height:calc(100vh - var(--hh) - var(--fh) - 32px); overflow:auto;
     display:flex; flex-direction:column; gap:8px; padding-bottom:2px; }
   .tabs { display:flex; gap:4px; direction:rtl; border-bottom:1px solid var(--line); padding:0 2px; }
   .tab { font:inherit; font-size:13px; font-weight:500; padding:8px 14px; border:1px solid transparent; border-bottom:none;
@@ -238,10 +241,10 @@
   .ctl.cnt { display:flex; align-items:center; gap:6px; }
   .ctl.cnt button { font:inherit; width:26px; height:26px; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer; color:var(--ink); }
   .camsec { margin-top:10px; padding-top:8px; border-top:1px dashed var(--line); }
-  .pad { position:fixed; bottom:64px; left:50%; transform:translateX(-50%); display:grid; grid-template-columns:repeat(3, 44px); gap:6px; z-index:12; direction:ltr; }
+  .pad { position:fixed; bottom:calc(var(--fh) + 64px); left:50%; transform:translateX(-50%); display:grid; grid-template-columns:repeat(3, 44px); gap:6px; z-index:12; direction:ltr; }
   .pad button { width:44px; height:44px; border-radius:10px; border:1px solid var(--line); background:rgba(255,255,255,.85); font-size:16px; cursor:pointer; color:var(--ink); touch-action:none; }
   .pad button:active { background:var(--acc); color:#fff; }
-  .hint { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); font-size:12px; color:var(--muted);
+  .hint { position:fixed; bottom:calc(var(--fh) + 14px); left:50%; transform:translateX(-50%); font-size:12px; color:var(--muted);
     background:rgba(255,255,255,.75); padding:6px 12px; border-radius:20px; border:1px solid var(--line); white-space:nowrap; }
   .note { font-size:11px; color:#8a6d3b; margin-top:10px; line-height:1.5; }
   @media (max-width:640px){ .side{ top:auto; bottom:52px; right:8px; left:8px; width:auto; max-height:55vh; } .panel{ padding:12px; } .sub,.note{display:none;} }
@@ -256,7 +259,7 @@
 <body>
 <header class="apphead"><svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="385 465 3430 655" role="img" aria-label="HISTORGIC">
   <path d="M3350.4,605.38c-55.23,0-100,44.77-100,100h0v400h100v-500h0Z"/>
-  <path d="M3226.1,476.78c0,51.28-41.57,92.85-92.85,92.85,51.28,0,92.85,41.57,92.85,92.85,0-51.28,41.57-92.85,92.85-92.85-51.28,0-92.85-41.57-92.85-92.85"/>
+  <path d="M3226.1,476.78c0,51.28-41.57,92.85-92.85,92.85,51.28,0,92.85,41.57,92.85,92.85,0-51.28,41.57-92.85,92.85-92.85-51.28,0-92.85-41.57-92.85-92.85" fill="#0dff00"/>
   <path d="M3500,805.38v-100h300c0-55.23-44.77-100-100-100h-200c-55.23,0-100,44.77-100,100h0v300h0c0,55.23,44.77,100,100,100h200c55.23,0,100-44.77,100-100h-300v-200Z"/>
   <path d="M1798.21,605.38h-388.21c23.76,26.54,38.21,61.58,38.21,100h0s50,0,50,0h100.8v400h100v-400h149.2c0-38.42,14.45-73.46,38.21-100h-88.21Z"/>
   <path d="M900.4,555.38h0c-27.61,0-50,22.39-50,50h0c0,27.61,22.39,50,50,50h0c27.61,0,50-22.39,50-50h0c0-27.61-22.39-50-50-50Z"/>
@@ -275,9 +278,10 @@
   <rect x="2900" y="1005.38" width="200" height="100"/>
   <rect x="1100" y="1005.38" width="200" height="100"/>
   <polygon points="2547.5 929.14 2547.52 929.14 2547.5 929.14 2547.5 929.14"/>
-  <path d="M2708.8,904.82c17.8-19.88,30.37-44.54,35.56-71.81,2.64-8.97,4.07-18.47,4.07-28.3h-.23v-99.33c0-55.23-44.77-100-100-100h-338.21c23.76,26.54,38.21,61.58,38.21,100h0v400h100v-150c0-55.23,44.77-100,100-100h-100v-150h200v100h.23v.36l-.23-.36c0,52.38-40.28,95.35-91.55,99.64-5.22.29-8.45.36-8.45.36,4.36.16,8.63.44,12.83.82,49.16,6.3,87.16,48.3,87.17,99.17h0v100.01h100v-100c0-8.73-1.12-17.19-3.22-25.27-4.75-28.66-17.63-54.57-36.18-75.29Z"/>
+  <path d="M2448.21,955.38v150h-100v-400h0c0-38.42-14.45-73.46-38.21-100h338.21c55.23,0,100,44.77,100,100v99.33h.23c0,9.83-1.43,19.33-4.07,28.3-5.19,27.27-17.76,51.93-35.56,71.81,18.55,20.73,31.43,46.64,36.18,75.29,2.1,8.07,3.22,16.54,3.22,25.27v100h-100v-100h0c0-50.89-38-92.88-87.17-99.18-4.2-.38-8.48-.66-12.83-.82,0,0,3.23-.07,8.45-.36,51.27-4.29,91.55-47.26,91.55-99.64l.23.36v-.36h-.23v-100h-200v150s0,101.51,0,100Z"/>
 </svg></header>
 <canvas id="c"></canvas>
+<footer class="appfoot">© 2026&nbsp;<a href="https://the-design-guy.com" target="_blank" rel="noopener">The Design Guy</a>&nbsp;·&nbsp;<span>כל הזכויות שמורות</span></footer>
 <div class="side">
   <div class="tabs" role="tablist" aria-label="משפחות מוצרים">
     <button class="tab on" role="tab" aria-selected="true" data-f="tilt">משפחת רב תא</button>
@@ -3682,7 +3686,7 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
-  'סצנה':'Scene', 'צמוד לקיר':'touching the wall', 'פנים הארון (מלמעלה למטה)':'Inside the cabinet (top to bottom)', '+ אזור רב תאים':'+ Tilt bin zone', 'פנוי':'Free', 'למעלה':'Up', 'למטה':'Down', 'הסרה':'Remove',
+  'סצנה':'Scene', 'כל הזכויות שמורות':'All rights reserved', 'צמוד לקיר':'touching the wall', 'פנים הארון (מלמעלה למטה)':'Inside the cabinet (top to bottom)', '+ אזור רב תאים':'+ Tilt bin zone', 'פנוי':'Free', 'למעלה':'Up', 'למטה':'Down', 'הסרה':'Remove',
   'גובה מהרצפה בס"מ':'Height above the floor in cm', 'מדף מעל:':'Shelf above:', 'אין מקום – פנו גובה בארון':'No room – free some height in the cabinet', 'אין מקום לאזור רב תאים':'No room for a tilt bin zone',
   'גובה תפוס:':'Height used:', 'גוררים מדף על המודל כדי להזיז אותו':'drag a shelf on the model to move it', 'מתוך':'of', 'דלתות הזזה עם מנעול (אופציה)':'Lockable sliding doors (option)', 'דלתות הזזה':'sliding doors', 'דלת':'Door',
   'לחיצה על דלת במודל מזיזה אותה. בכל צמד הדלת השמאלית רצה מאחור והימנית מלפנים, עם מנעול צילינדר. בפריסת כנפיים הדלתות יורדות.':'Click a door on the model to slide it. In each pair the left door runs behind and the right one in front, with a cylinder lock. When the wings are spread the doors come off.',
