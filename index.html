@@ -156,7 +156,6 @@
   .r-chk.bad { background:#fdecea; color:#a3261d; font-weight:600; }
   .r-chk small { font-weight:400; }
   .toast { position:fixed; top:calc(var(--hh) + 64px); left:16px; background:var(--acc); color:#fff; font-size:13px; padding:8px 12px; border-radius:8px; z-index:30; }
-  @media (max-width:640px){ .toolbar{ top:calc(var(--hh) + 8px); left:8px; right:8px; } .preset select{ max-width:110px; } .tb.big span{ display:none; } }
   .lightpop { position:fixed; top:calc(var(--hh) + 70px); left:16px; width:340px; background:rgba(255,255,255,.95); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
     border:1px solid var(--line); border-radius:12px; padding:12px; box-shadow:0 12px 36px rgba(30,40,50,.14); z-index:15; direction:rtl; }
   .lp-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; font-size:15px; }
@@ -252,7 +251,38 @@
   .hint { position:fixed; bottom:calc(var(--fh) + 14px); left:50%; transform:translateX(-50%); font-size:12px; color:var(--muted);
     background:rgba(255,255,255,.75); padding:6px 12px; border-radius:20px; border:1px solid var(--line); white-space:nowrap; }
   .note { font-size:11px; color:#8a6d3b; margin-top:10px; line-height:1.5; }
-  @media (max-width:640px){ .side{ top:auto; bottom:52px; right:8px; left:8px; width:auto; max-height:55vh; } .panel{ padding:12px; } .sub,.note{display:none;} }
+  /* ---------- mobile: the model fills the screen, everything else lives in a drawer behind the ☰ ---------- */
+  .mmenu, .mhead, .mtools, .mfoot, .mback { display:none; }
+  @media (max-width:640px){
+    :root { --fh:0px; }
+    .appfoot, .hint { display:none; }
+    .mmenu { display:inline-flex; margin-left:auto; width:40px; height:40px; align-items:center; justify-content:center; border:0; border-radius:10px; background:transparent; color:#fff; cursor:pointer; }
+    .mmenu:active { background:rgba(255,255,255,.12); }
+    /* bottom bar: camera mode, snapshot, render */
+    .toolbar { top:auto; bottom:calc(14px + env(safe-area-inset-bottom)); left:50%; right:auto; transform:translateX(-50%); max-width:calc(100vw - 20px); }
+    html[dir=ltr] .toolbar { left:50%; right:auto; }
+    .toolbar .preset select { max-width:150px; }
+    .toolbar .tb { height:40px; min-width:40px; }
+    .toolbar .preset { height:40px; }
+    /* the drawer */
+    .side, html[dir=ltr] .side { position:fixed; top:0; bottom:0; right:0; left:auto; width:min(92vw, 440px); max-height:none; z-index:40; gap:8px;
+      background:var(--bg, #f4f6f7); padding:0 10px calc(10px + env(safe-area-inset-bottom)); box-shadow:-12px 0 40px rgba(0,0,0,.18);
+      transform:translateX(105%); transition:transform .26s ease; visibility:hidden; overscroll-behavior:contain; }
+    html[dir=ltr] .side { right:auto; left:0; transform:translateX(-105%); box-shadow:12px 0 40px rgba(0,0,0,.18); }
+    body.menu-open .side, html[dir=ltr] body.menu-open .side { transform:none; visibility:visible; }
+    .mback { display:block; position:fixed; inset:0; z-index:39; background:rgba(12,16,20,.38); opacity:0; pointer-events:none; transition:opacity .26s; }
+    body.menu-open .mback { opacity:1; pointer-events:auto; }
+    .mhead { display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:2; background:var(--bg, #f4f6f7);
+      padding:12px 2px 8px; margin:0 -2px; font-weight:700; font-size:16px; }
+    .mhead button { width:40px; height:40px; border:0; border-radius:10px; background:#e9edf0; font-size:18px; cursor:pointer; color:var(--ink); }
+    .mtools { display:flex; flex-wrap:wrap; gap:6px; padding:4px 0 8px; border-bottom:1px solid var(--line); }
+    .mtools .tb { height:40px; min-width:40px; background:#fff; border:1px solid var(--line); }
+    .mfoot { display:block; text-align:center; font-size:12px; color:var(--muted); padding:14px 0 4px; direction:ltr; }
+    .mfoot a { color:var(--ink); }
+    .panel { padding:12px; }
+    .lightpop { z-index:45; }
+    .dlg { z-index:60; } .toast { z-index:61; top:calc(var(--hh) + 12px); left:12px; right:12px; }
+  }
 </style>
 <script type="importmap">
 { "imports": {
@@ -284,10 +314,13 @@
   <rect x="1100" y="1005.38" width="200" height="100"/>
   <polygon points="2547.5 929.14 2547.52 929.14 2547.5 929.14 2547.5 929.14"/>
   <path d="M2448.21,955.38v150h-100v-400h0c0-38.42-14.45-73.46-38.21-100h338.21c55.23,0,100,44.77,100,100v99.33h.23c0,9.83-1.43,19.33-4.07,28.3-5.19,27.27-17.76,51.93-35.56,71.81,18.55,20.73,31.43,46.64,36.18,75.29,2.1,8.07,3.22,16.54,3.22,25.27v100h-100v-100h0c0-50.89-38-92.88-87.17-99.18-4.2-.38-8.48-.66-12.83-.82,0,0,3.23-.07,8.45-.36,51.27-4.29,91.55-47.26,91.55-99.64l.23.36v-.36h-.23v-100h-200v150s0,101.51,0,100Z"/>
-</svg></header>
+</svg><button class="mmenu" id="menuBtn" aria-label="תפריט" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></header>
 <canvas id="c"></canvas>
 <footer class="appfoot">© 2026&nbsp;<a href="https://the-design-guy.com" target="_blank" rel="noopener">The Design Guy</a>&nbsp;·&nbsp;<span>כל הזכויות שמורות</span></footer>
-<div class="side">
+<div class="mback" id="mBack"></div>
+<div class="side" id="side">
+  <div class="mhead"><span>תפריט</span><button id="menuClose" aria-label="סגירת התפריט">✕</button></div>
+  <div class="mtools" id="mTools"></div>
   <div class="tabs" role="tablist" aria-label="משפחות מוצרים">
     <button class="tab on" role="tab" aria-selected="true" data-f="tilt">משפחת רב תא</button>
     <button class="tab" role="tab" aria-selected="false" data-f="metal">ארונות מתכת</button>
@@ -567,6 +600,7 @@
     <div class="dims" id="dims"></div>
     <div class="note">הערכה: הציר והמסילות הפנימיות, ומיקום חורי המוט.</div>
   </div>
+  <div class="mfoot">© 2026 <a href="https://the-design-guy.com" target="_blank" rel="noopener">The Design Guy</a> · <span>כל הזכויות שמורות</span></div>
 </div>
 <div class="toolbar" role="toolbar" aria-label="כלי תצוגה">
   <label class="preset" title="הגדרת קטלוג">
@@ -2517,7 +2551,8 @@ function rebuild(keepCamera = false) {
 
 function frame(W, H, tall) {
   const s = 0.001, size = (tall ? Math.max(W, H) * 1.05 : Math.max(W, H*1.8)) * s;
-  const dist = size / (2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))) * (innerWidth < 640 ? 1.9 : 1.25);
+  // on a narrow (portrait) screen the width decides: back off until the product fits across
+  const dist = size / (2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))) * (innerWidth < 640 ? 1.4 / Math.min(1, camera.aspect) : 1.25);
   controls.target.set(innerWidth < 640 ? 0 : (tall ? 0.3 : 0.12) * dirSign(), H*s*(tall ? 0.5 : 0.45), 0);
   const dir = tall ? new THREE.Vector3(-0.75, 0.22, 1).normalize() : new THREE.Vector3(-0.5, 0.3, 1).normalize();
   camera.position.copy(controls.target).addScaledVector(dir, dist);
@@ -3063,6 +3098,38 @@ $('shotBtn').onclick = async () => {
   const blob = await toBlob(captureCanvas());
   await saveFile(blob, `${fileStem()}.png`);
 };
+
+// ---------- mobile: ☰ drawer ----------
+{
+  const mq = matchMedia('(max-width:640px)'), tb = document.querySelector('.toolbar'), mt = document.getElementById('mTools');
+  const ORDER0 = [...tb.children];                                  // original toolbar order, to put things back on desktop
+  const MOVE = ['resetBtn', 'langBtn', 'lightBtn', 'saveBtn', 'sceneBtn', 'spreadBtn', 'lockBtn'];
+  const VIEW = ['resetBtn', 'lightBtn', 'spreadBtn'];                // these act on the view: close the drawer so it is visible
+  const setOpen = (on) => {
+    document.body.classList.toggle('menu-open', on);
+    document.getElementById('menuBtn').setAttribute('aria-expanded', on);
+    if (!on) resize();
+  };
+  window.closeMenu = () => setOpen(false);
+  const place = () => {
+    if (mq.matches) MOVE.forEach(id => mt.appendChild(document.getElementById(id)));
+    else { ORDER0.forEach(el => tb.appendChild(el)); setOpen(false); }
+  };
+  mq.addEventListener('change', place); place();
+  document.getElementById('menuBtn').onclick = () => setOpen(!document.body.classList.contains('menu-open'));
+  document.getElementById('menuClose').onclick = () => setOpen(false);
+  document.getElementById('mBack').onclick = () => setOpen(false);
+  VIEW.forEach(id => document.getElementById(id).addEventListener('click', () => { if (mq.matches) setOpen(false); }, true));
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) setOpen(false); });
+  // swipe the drawer back toward its edge to close it
+  const side = document.getElementById('side'); let sx = null, sy = 0;
+  side.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive:true });
+  side.addEventListener('touchend', (e) => {
+    if (sx === null) return; const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null;
+    const toEdge = document.documentElement.dir === 'ltr' ? -dx : dx;
+    if (toEdge > 80 && Math.abs(dy) < 60) setOpen(false);
+  }, { passive:true });
+}
 
 // ---------- realistic render (GPT Image via /api/render) ----------
 // exact counts from the model, sent with every render and used by the count check
@@ -3711,7 +3778,7 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
-  'סצנה':'Scene', '✓ מספר התאים נבדק ותואם למודל':'✓ Bin count checked – matches the model', 'מספר התאים שונה מהמודל – לא לשימוש.':'The bin count differs from the model – do not use.',
+  'סצנה':'Scene', 'תפריט':'Menu', 'סגירת התפריט':'Close menu', '✓ מספר התאים נבדק ותואם למודל':'✓ Bin count checked – matches the model', 'מספר התאים שונה מהמודל – לא לשימוש.':'The bin count differs from the model – do not use.',
   'נמצא פער במספר התאים':'Bin count mismatch', 'מרנדר שוב, ניסיון':'rendering again, attempt', 'בדיקת הספירה לא רצה':'The count check did not run', 'בדקו את מספר התאים בעין.':'check the bin count by eye.', 'במודל:':'Model:', 'בתמונה:':'Image:', 'כל הזכויות שמורות':'All rights reserved', 'צמוד לקיר':'touching the wall', 'פנים הארון (מלמעלה למטה)':'Inside the cabinet (top to bottom)', '+ אזור רב תאים':'+ Tilt bin zone', 'פנוי':'Free', 'למעלה':'Up', 'למטה':'Down', 'הסרה':'Remove',
   'גובה מהרצפה בס"מ':'Height above the floor in cm', 'מדף מעל:':'Shelf above:', 'אין מקום – פנו גובה בארון':'No room – free some height in the cabinet', 'אין מקום לאזור רב תאים':'No room for a tilt bin zone',
   'גובה תפוס:':'Height used:', 'גוררים מדף על המודל כדי להזיז אותו':'drag a shelf on the model to move it', 'מתוך':'of', 'דלתות הזזה עם מנעול (אופציה)':'Lockable sliding doors (option)', 'דלתות הזזה':'sliding doors', 'דלת':'Door',
