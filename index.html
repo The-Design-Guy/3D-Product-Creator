@@ -150,6 +150,20 @@
   .spin { width:28px; height:28px; border:3px solid #d5dbe0; border-top-color:var(--acc); border-radius:50%; animation:sp 0.9s linear infinite; }
   @keyframes sp { to { transform:rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .spin { animation-duration:3s; } }
+  .r-understood { background:#eef4ff; border:1px solid #c9dafb; color:#1d4ea8; border-radius:10px; padding:9px 11px; font-size:13px; font-weight:600; margin:10px 0 4px; }
+  .rf { display:grid; gap:8px; margin:8px 0 6px; }
+  .rf-f { display:grid; gap:4px; font-size:13px; font-weight:600; color:var(--ink); }
+  .rf-f b { color:#1d4ea8; font-weight:600; }
+  .rf-f i { font-style:normal; }
+  .rf-f textarea { width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:10px; padding:8px 10px; font:inherit; font-weight:400; font-size:14px; resize:vertical; background:#fff; }
+  .rf-f textarea.filled { border-color:#9dbcf3; background:#f7faff; }
+  .rf-slot { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:12.5px; color:var(--muted); padding:2px 0 4px; border-radius:10px; }
+  .rf-slot.drop { outline:2px dashed #7aa7f0; outline-offset:2px; }
+  .rf-slot .rf-st { flex:1; min-width:150px; }
+  .rf-chips { display:flex; gap:6px; }
+  .rf-chips .fchip img { width:44px; height:44px; object-fit:cover; border-radius:6px; display:block; }
+  .rf-chips .fchip { position:relative; }
+  .rf-chips .fx { position:absolute; top:-6px; left:-6px; width:20px; height:20px; border-radius:50%; border:0; background:#2f3b45; color:#fff; font-size:11px; cursor:pointer; }
   .r-base { display:flex; align-items:center; gap:10px; border:1px solid #bfe3cb; background:#f1faf4; border-radius:10px; padding:8px; margin:6px 0 10px; }
   .r-base img { width:84px; height:64px; object-fit:cover; border-radius:6px; background:#fff; cursor:zoom-in; }
   .r-base .t { flex:1; font-size:13px; line-height:1.45; color:#1e6b3a; }
@@ -2990,7 +3004,7 @@ function selectPreset(name, applySettings = true) {
   activeName = name || null;
   const p = activeName && store.presets[activeName];
   if (p && p.light) { Object.assign(LIGHT, p.light); applyLight(); if (buildLightPop.sync && !$('lightPop').hidden) buildLightPop.sync(); }
-  if (p) renderNotes = p.notes || '';
+  if (p) { renderNotes = p.notes || ''; renderFields = { contents:'', background:'', extra:'', ...(p.fields || {}) }; renderParsedFrom = renderNotes; }
   if (p && applySettings && p.families && p.families[FAMILY]) applyFamily(p.families[FAMILY]);
   resetView();
   renderPresetPicker();
@@ -3040,7 +3054,7 @@ $('saveBtn').onclick = () => {
       const name = card.querySelector('#pName').value.trim();
       if (!name) return err('צריך לתת שם להגדרה.');
       const prev = store.presets[name] || {};
-      const data = { camera: cameraSnapshot(), light: { ...LIGHT }, notes: renderNotes, families: { ...(prev.families || {}), [FAMILY]: captureFamily() }, updated: new Date().toISOString() };
+      const data = { camera: cameraSnapshot(), light: { ...LIGHT }, notes: renderNotes, fields: { ...renderFields }, families: { ...(prev.families || {}), [FAMILY]: captureFamily() }, updated: new Date().toISOString() };
       try {
         await persist('save', { name, data, makeActive: card.querySelector('#pActive').checked });
         activeName = name; renderPresetPicker(); close(); toast(`נשמר: ${name}`);
@@ -3279,20 +3293,33 @@ $('renderBtn').onclick = () => {
     </div>
     <div class="use" id="rSize"></div>
     </div>
-    <div class="lbl">הערות לתמונה <span class="r-later" id="rLater" hidden>· ייכנסו בשלב 2</span></div>
+    <div class="lbl">מה רוצים בתמונה? <span class="r-later">כתבו או הקליטו חופשי – ה־AI יפזר לשדות</span></div>
     <details class="r-layout"><summary>ההרכב שנשלח לרינדור (נבנה אוטומטית מהמודל)</summary><pre id="rLayout" dir="ltr"></pre></details>
     <div class="notes">
-      <textarea id="rNotes" rows="3" placeholder="למשל: רקע של מחסן מסודר, בתאים ברגים ואומים, במגירה העליונה כפפות…"></textarea>
+      <textarea id="rNotes" rows="3" placeholder="למשל: בתאים בלונים בצבעי הקשת לפי שורות, ברקע חנות ציוד למסיבות עם מדפים על הקיר הימני וקופה בצד…"></textarea>
       <div class="partial" id="rPartial" aria-live="polite"></div>
-      <div class="files" id="rFiles"></div>
       <div class="micbar">
-        <button class="mic" id="rAttach" title="צירוף תמונות (או גרירה לכאן)" aria-label="צירוף תמונות"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6a3.4 3.4 0 0 1 4.8 4.8l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></svg></button>
-        <input type="file" id="rFileIn" accept="image/png,image/jpeg,image/webp" multiple hidden>
-        <button class="mic" id="rMic" hidden aria-pressed="false" title="הקלטת הערה" aria-label="הקלטת הערה"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        <button class="mic" id="rMic" hidden aria-pressed="false" title="הקלטה" aria-label="הקלטה"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
         <canvas id="rWave" aria-hidden="true"></canvas>
       </div>
     </div>
-    <div class="use">אפשר לצרף עד 4 תמונות ייחוס (כפתור האטב או גרירה) ולהפנות אליהן בהערות – למשל "רקע כמו בקובץ 1". הקבצים לא נשמרים בהגדרת הקטלוג. התאורה מהלוח "תאורה" נשלחת גם היא. ההערות והתאורה נשמרות בהגדרת הקטלוג. עם רקע שקוף, בקשות לגבי רקע לא יבוצעו – רק תוכן התאים.</div>
+    <div class="r-understood" id="rUnderstood" hidden>זה מה שהבנתי. אם זה בסדר, נמשיך. אם לא – תשנה מה שצריך, ולחץ המשך.</div>
+    <div class="rf" id="rFields">
+      <label class="rf-f"><span>1. מה יש בתאים <b>· הכי חשוב</b> <i class="r-later" data-later="2">· שלב 2</i></span><textarea id="rfContents" rows="2" placeholder="מה נכנס לתאים, באילו צבעים, כמה מלאים, מה בכל שורה…"></textarea></label>
+      <div class="rf-slot" data-slot="contents"><span class="rf-st">2. רפרנס לתכולת התאים (לא חובה)</span><div class="rf-chips"></div>
+        <button class="mic rf-add" title="העלאת תמונה" aria-label="העלאת תמונה – 2. רפרנס לתכולת התאים (לא חובה)"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6a3.4 3.4 0 0 1 4.8 4.8l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></svg></button>
+        <button class="mic rf-cam" title="צילום" aria-label="צילום – 2. רפרנס לתכולת התאים (לא חובה)"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+        <input type="file" class="rf-in" accept="image/png,image/jpeg,image/webp" multiple hidden>
+        <input type="file" class="rf-camin" accept="image/*" capture="environment" hidden></div>
+      <label class="rf-f"><span>3. מה ברקע <i class="r-later" data-later="1">· שלב 1</i></span><textarea id="rfBackground" rows="2" placeholder="איזה חלל, מה על הקיר ליד, רצפה, ריהוט ואביזרים מסביב…"></textarea></label>
+      <div class="rf-slot" data-slot="room"><span class="rf-st">4. רפרנס לחדר / לחלל (לא חובה)</span><div class="rf-chips"></div>
+        <button class="mic rf-add" title="העלאת תמונה" aria-label="העלאת תמונה – 4. רפרנס לחדר / לחלל (לא חובה)"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6a3.4 3.4 0 0 1 4.8 4.8l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></svg></button>
+        <button class="mic rf-cam" title="צילום" aria-label="צילום – 4. רפרנס לחדר / לחלל (לא חובה)"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+        <input type="file" class="rf-in" accept="image/png,image/jpeg,image/webp" multiple hidden>
+        <input type="file" class="rf-camin" accept="image/*" capture="environment" hidden></div>
+      <label class="rf-f"><span>5. מה עוד חשוב לשים לב <i class="r-later" data-later="both">· בשני השלבים</i></span><textarea id="rfExtra" rows="2" placeholder="אווירה, תאורה, דגשים, מה לא לעשות…"></textarea></label>
+    </div>
+    <div class="use">התאורה מהלוח "תאורה" נשלחת גם היא. הטקסט והשדות נשמרים בהגדרת הקטלוג; התמונות לא. עם רקע שקוף, בקשות לגבי רקע לא יבוצעו – רק תוכן התאים.</div>
     <div class="dlg-err" id="rErr" hidden></div>
     <div class="r-out" id="rOut" hidden></div>
     <div class="dlg-actions" id="rActs">
@@ -3327,22 +3354,27 @@ $('renderBtn').onclick = () => {
     showSize();
     // ---- two-stage flow: 1) empty base from the 3D view, checked and approved  2) the base edited with the notes ----
     st.flow = 'two'; st.base = null; st.last = null;
+    const briefStale = () => !!renderNotes.trim() && renderNotes !== renderParsedFrom;
+    const briefBody = () => ({ contents: renderFields.contents.trim(), backdrop: renderFields.background.trim(), extra: renderFields.extra.trim(),
+      contentRefs: renderRefs.contents.map(f => f.data), roomRefs: renderRefs.room.map(f => f.data) });
+    const bgSig = () => renderFields.background.trim() + '|' + renderRefs.room.map(f => f.data.length).join(',');
     const goLabel = () => st.flow === 'one' ? 'רנדר' : st.base ? 'שלב 2: רינדור סופי' : 'שלב 1: רינדור בסיס (ריק)';
     function syncFlow() {
       const two = st.flow === 'two';
       q('#rFlowNote').textContent = !two ? 'הכול בבת אחת: מתאים למוצר בודד ופשוט.'
         : st.base ? 'שלב 2: הבסיס המאושר נערך לפי ההערות והקבצים. המוצרים, הקירות והזווית נשארים כמו בבסיס.'
         : 'שלב 1: צילום ריאליסטי של המוצרים והחדר, עם תאים ריקים, ובדיקת ספירה ומבנה. אחרי שתאשרו אותו – שלב 2 עם ההערות.';
-      q('#rLater').hidden = !(two && !st.base);
+      card.querySelectorAll('.rf-f [data-later]').forEach(el => el.hidden = !two);
+      const bgChanged = two && st.base && st.base.sig !== bgSig();
       q('#rSetup').hidden = !!(two && st.base);   // size and background follow the base
       const bb = q('#rBaseBox'); bb.hidden = !(two && st.base);
       if (two && st.base) {
-        bb.innerHTML = `<img src="${st.base.image}" alt="תמונת הבסיס המאושרת"><div class="t"><b>✓ בסיס מאושר</b><small>${st.base.size.replace('x', ' × ')} px · ${st.base.ok === true ? 'הבדיקה עברה' : st.base.ok === false ? 'אושר למרות פער בבדיקה' : 'בלי בדיקה'}</small></div><button class="btn" id="rBaseReset">בסיס חדש</button>`;
+        bb.innerHTML = `<img src="${st.base.image}" alt="תמונת הבסיס המאושרת"><div class="t"><b>✓ בסיס מאושר</b><small>${st.base.size.replace('x', ' × ')} px · ${st.base.ok === true ? 'הבדיקה עברה' : st.base.ok === false ? 'אושר למרות פער בבדיקה' : 'בלי בדיקה'}</small>${bgChanged ? '<small style="color:#a3261d">הרקע השתנה אחרי האישור – כדי שייכנס צריך בסיס חדש</small>' : ''}</div><button class="btn" id="rBaseReset">בסיס חדש</button>`;
         bb.querySelector('img').onclick = () => openLightbox(st.base.image);
         bb.querySelector('#rBaseReset').onclick = () => { st.base = null; q('#rOut').hidden = true; q('#rApprove').hidden = true; syncFlow(); showSize(); };
       }
       q('#rApprove').hidden = !(two && !st.base && st.last);
-      if (!q('#rGo').disabled || q('#rGo').textContent !== 'מרנדר…') q('#rGo').textContent = goLabel();
+      if (q('#rGo').textContent !== 'מרנדר…') q('#rGo').textContent = briefStale() ? 'המשך' : goLabel();
     }
     card.querySelectorAll('#rFlow button').forEach(b => b.onclick = () => {
       st.flow = b.dataset.v; card.querySelectorAll('#rFlow button').forEach(c => c.classList.toggle('on', c === b));
@@ -3351,7 +3383,7 @@ $('renderBtn').onclick = () => {
     q('#rApprove').onclick = () => {
       const L = st.last; if (!L) return;
       if (L.check?.ok === false && !confirm('הבדיקה מצאה פער בתמונה הזו. לאשר אותה כבסיס בכל זאת?')) return;
-      st.base = { image:L.image, structure:L.body.structure, description:L.body.description, size:L.body.size, bg:L.body.background, ok:L.check?.ok ?? null };
+      st.base = { image:L.image, structure:L.body.structure, description:L.body.description, size:L.body.size, bg:L.body.background, ok:L.check?.ok ?? null, sig:L.sig };
       st.last = null; q('#rOut').hidden = true; syncFlow();
     };
     syncFlow();
@@ -3367,7 +3399,25 @@ $('renderBtn').onclick = () => {
       }
       throw new Error('תמונת הבסיס גדולה מדי להעלאה');
     }
+    // the free text changed since the fields were built → sort it into the fields first and ask before rendering
+    const syncGo = () => { if (q('#rGo').textContent !== 'מרנדר…' && q('#rGo').textContent !== 'מפרש…') q('#rGo').textContent = briefStale() ? 'המשך' : goLabel(); };
+    async function runParse() {
+      const go = q('#rGo'), er = q('#rErr'); er.hidden = true; go.disabled = true; go.textContent = 'מפרש…';
+      try { await parseBrief(card); }
+      catch (e) {                                   // could not sort it: the whole text goes to "also important"
+        const ta = q('#rfExtra'); ta.value = [ta.value, renderNotes.trim()].filter(Boolean).join('\n'); renderFields.extra = ta.value; renderParsedFrom = renderNotes;
+        er.textContent = 'לא הצלחתי לפרש לשדות (' + e.message + ') – הטקסט נכנס ל"מה עוד חשוב". אפשר לסדר ידנית.'; er.hidden = false;
+      }
+      q('#rUnderstood').hidden = false; go.disabled = false; go.textContent = 'המשך';
+      q('#rFields').scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }
+    card.addEventListener('notes-changed', () => { q('#rUnderstood').hidden = true; syncGo(); });
+    card.addEventListener('brief-changed', () => { if (st.base) syncFlow(); });
+    card.addEventListener('mic-stopped', () => { if (briefStale() && !q('#rGo').disabled) runParse(); });
+    syncGo();
     q('#rGo').onclick = async () => {
+      if (briefStale()) { await runParse(); return; }
+      q('#rUnderstood').hidden = true;
       const z = st.flow === 'two' && st.base ? (() => { const [w, h] = st.base.size.split('x').map(Number); return { w, h }; })() : size();
       if (z.error) return;
       const go = q('#rGo'), out = q('#rOut'), er = q('#rErr');
@@ -3377,13 +3427,13 @@ $('renderBtn').onclick = () => {
         let body;
         if (st.flow === 'two' && st.base) {
           // stage 2: edit the approved base; its layout, description and size were fixed when it was approved
-          body = { stage:'edit', image: await shrinkForUpload(st.base.image), background: st.base.bg, description: st.base.description, structure: st.base.structure, size: st.base.size, notes: renderNotes.trim(), refs: renderFiles.map(f => f.data) };
+          body = { stage:'edit', image: await shrinkForUpload(st.base.image), background: st.base.bg, description: st.base.description, structure: st.base.structure, size: st.base.size, ...briefBody() };
         } else {
           // the view is framed to the chosen ratio, so the model keeps its composition
           const cv = padToRatio(captureCanvas(1536), z.w, z.h);
           let image = cv.toDataURL('image/webp', 0.95);
           if (!image.startsWith('data:image/webp')) image = cv.toDataURL('image/png');
-          body = { image, background: st.bg, description: describe(), structure: structureSummary(), size: `${z.w}x${z.h}`, lighting: lightingText(), notes: renderNotes.trim(), refs: renderFiles.map(f => f.data) };
+          body = { image, background: st.bg, description: describe(), structure: structureSummary(), size: `${z.w}x${z.h}`, lighting: lightingText(), ...briefBody() };
           if (st.flow === 'two') body.stage = 'base';
         }
         // up to 3 attempts: a result whose bin count does not match the model is rendered again
@@ -3394,7 +3444,7 @@ $('renderBtn').onclick = () => {
           if (!r.check || r.check.ok !== false || !body.structure) break;
         }
         const ck = r.check || { ok:null };
-        st.last = { image:r.image, check:ck, body };
+        st.last = { image:r.image, check:ck, body, sig:bgSig() };
         const chk = ck.ok === true ? `<div class="r-chk ok">✓ נבדק: מספר התאים והפרופילים תואמים ${body.stage === 'edit' ? 'לבסיס' : 'למודל'}</div>`
           : ck.ok === false ? `<div class="r-chk bad">⚠ התמונה לא תואמת למודל – לא לשימוש. ${ck.detail || ''}<br><small>במודל: ${ck.view || '?'} · בתמונה: ${ck.result || '?'}</small></div>`
           : body.structure ? `<div class="r-chk">בדיקת הספירה לא רצה (${ck.detail || 'לא ידוע'}) – בדקו את מספר התאים בעין.</div>` : '';
@@ -3711,9 +3761,11 @@ const micReady = Mic.init();
 
 // notes area inside the render dialog
 let renderNotes = '';
-// reference images for the render (this session only – not saved in catalog settings)
-let renderFiles = [];                              // [{ name, data (data URL), thumb }]
-const MAX_FILES = 4, OK_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+// the render brief: free text (typed or dictated) that the AI sorts into fields, plus reference images per field
+let renderFields = { contents:'', background:'', extra:'' };
+let renderParsedFrom = '';                         // the free text the fields were last built from
+let renderRefs = { contents:[], room:[] };          // this session only – not saved in catalog settings
+const SLOT_MAX = 2, OK_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 async function shrink(file, max = 1280) {
   const bmp = await createImageBitmap(file);
   const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
@@ -3723,48 +3775,64 @@ async function shrink(file, max = 1280) {
   if (!data.startsWith('data:image/webp')) data = c.toDataURL('image/jpeg', 0.85);
   return data;
 }
-function mountFiles(card, ta) {
-  const box = card.querySelector('#rFiles'), inp = card.querySelector('#rFileIn'), notes = card.querySelector('.notes');
+const FIELD_IDS = { contents:'rfContents', background:'rfBackground', extra:'rfExtra' };
+function mountBrief(card) {
   const msg = (t) => { const p = card.querySelector('#rPartial'); p.textContent = t; setTimeout(() => { if (p.textContent === t) p.textContent = ''; }, 3500); };
-  const draw = () => {
-    box.innerHTML = '';
-    renderFiles.forEach((f, i) => {
-      const chip = document.createElement('div'); chip.className = 'fchip';
-      chip.innerHTML = `<button class="fref" title="הוספת 'קובץ ${i + 1}' להערות"><img src="${f.data}" alt=""><span>קובץ ${i + 1}</span></button><button class="fx" aria-label="הסרת קובץ ${i + 1}">✕</button>`;
-      chip.querySelector('.fref').onclick = () => {
-        const tag = `קובץ ${i + 1}`, a = ta.selectionStart ?? ta.value.length;
-        const pre = ta.value.slice(0, a), post = ta.value.slice(a);
-        const ins = (pre && !/\s$/.test(pre) ? ' ' : '') + tag + ' ';
-        ta.value = pre + ins + post; renderNotes = ta.value; ta.focus(); ta.selectionStart = ta.selectionEnd = (pre + ins).length;
-      };
-      chip.querySelector('.fx').onclick = () => { renderFiles.splice(i, 1); draw(); };
-      box.appendChild(chip);
-    });
-    box.hidden = !renderFiles.length;
-  };
-  const add = async (files) => {
-    for (const f of files) {
-      if (renderFiles.length >= MAX_FILES) { msg(`אפשר עד ${MAX_FILES} קבצים`); break; }
-      if (!OK_TYPES.includes(f.type)) { msg(`"${f.name}" – רק תמונות JPG, PNG או WebP`); continue; }
-      try { renderFiles.push({ name:f.name, data: await shrink(f) }); }
-      catch { msg(`לא הצלחתי לקרוא את "${f.name}"`); }
-    }
+  for (const [k, id] of Object.entries(FIELD_IDS)) {
+    const ta = card.querySelector('#' + id); ta.value = renderFields[k] || '';
+    ta.oninput = () => { renderFields[k] = ta.value; ta.classList.remove('filled'); card.dispatchEvent(new Event('brief-changed')); };
+  }
+  card.querySelectorAll('.rf-slot').forEach(slot => {
+    const key = slot.dataset.slot, box = slot.querySelector('.rf-chips'), inp = slot.querySelector('.rf-in'), cam = slot.querySelector('.rf-camin');
+    const draw = () => {
+      box.innerHTML = '';
+      renderRefs[key].forEach((f, i) => {
+        const chip = document.createElement('div'); chip.className = 'fchip';
+        chip.innerHTML = `<img src="${f.data}" alt=""><button class="fx" aria-label="הסרת תמונה">✕</button>`;
+        chip.querySelector('img').onclick = () => openLightbox(f.data);
+        chip.querySelector('.fx').onclick = () => { renderRefs[key].splice(i, 1); draw(); };
+        box.appendChild(chip);
+      });
+      slot.querySelectorAll('.rf-add, .rf-cam').forEach(b => b.disabled = renderRefs[key].length >= SLOT_MAX);
+      card.dispatchEvent(new Event('brief-changed'));
+    };
+    const add = async (files) => {
+      for (const f of files) {
+        if (renderRefs[key].length >= SLOT_MAX) { msg(`אפשר עד ${SLOT_MAX} תמונות בכל שדה`); break; }
+        if (!OK_TYPES.includes(f.type)) { msg(`"${f.name}" – רק תמונות JPG, PNG או WebP`); continue; }
+        try { renderRefs[key].push({ name:f.name, data: await shrink(f) }); }
+        catch { msg(`לא הצלחתי לקרוא את "${f.name}"`); }
+      }
+      draw();
+    };
+    slot.querySelector('.rf-add').onclick = () => inp.click();
+    slot.querySelector('.rf-cam').onclick = () => cam.click();
+    inp.onchange = () => { add([...inp.files]); inp.value = ''; };
+    cam.onchange = () => { add([...cam.files]); cam.value = ''; };
+    slot.ondragover = (e) => { e.preventDefault(); slot.classList.add('drop'); };
+    slot.ondragleave = (e) => { if (!slot.contains(e.relatedTarget)) slot.classList.remove('drop'); };
+    slot.ondrop = (e) => { e.preventDefault(); slot.classList.remove('drop'); add([...e.dataTransfer.files]); };
     draw();
-  };
-  card.querySelector('#rAttach').onclick = () => inp.click();
-  inp.onchange = () => { add([...inp.files]); inp.value = ''; };
-  notes.ondragover = (e) => { e.preventDefault(); notes.classList.add('drop'); };
-  notes.ondragleave = (e) => { if (!notes.contains(e.relatedTarget)) notes.classList.remove('drop'); };
-  notes.ondrop = (e) => { e.preventDefault(); notes.classList.remove('drop'); add([...e.dataTransfer.files]); };
-  draw();
+  });
+}
+// free text → fields, via /api/parse; the fields stay editable before going on
+async function parseBrief(card) {
+  const text = renderNotes.trim(); if (!text) return true;
+  const r = await api('/api/parse', { text, fields: renderFields });
+  for (const [k, id] of Object.entries(FIELD_IDS)) {
+    const ta = card.querySelector('#' + id), v = r.fields[k] || '';
+    if (v !== ta.value) { ta.value = v; renderFields[k] = v; ta.classList.toggle('filled', !!v); }
+  }
+  renderParsedFrom = renderNotes;
+  return true;
 }
 function mountNotes(card) {
   const ta = card.querySelector('#rNotes'), part = card.querySelector('#rPartial'), btn = card.querySelector('#rMic');
   const cv = card.querySelector('#rWave'), bar = card.querySelector('.micbar');
   ta.value = renderNotes;
-  ta.oninput = () => { renderNotes = ta.value; };
+  ta.oninput = () => { renderNotes = ta.value; card.dispatchEvent(new Event('notes-changed')); };
   { const lay = card.querySelector('#rLayout'); if (lay) { const t = structureSummary(); lay.textContent = t || '—'; lay.closest('details').hidden = !t; } }
-  mountFiles(card, ta);
+  mountBrief(card);
   let raf = 0;
   const draw = () => {
     const c = cv.getContext('2d'), w = cv.width = cv.clientWidth * devicePixelRatio, h = cv.height = cv.clientHeight * devicePixelRatio;
@@ -3786,11 +3854,12 @@ function mountNotes(card) {
     btn.title = on ? 'עצירת הקלטה' : 'הקלטת הערה'; bar.classList.toggle('on', on);
     if (on) { cancelAnimationFrame(raf); draw(); } else { part.textContent = ''; draw(); }
     if (!on && reason === 'not_granted') part.textContent = 'אין הרשאה למיקרופון – אפשר להקליד.';
+    if (!on) setTimeout(() => card.dispatchEvent(new Event('mic-stopped')), 400);   // the last words arrive just after the stop
   };
   const append = (t) => {
     t = t.trim(); if (!t) return;
     ta.value = (ta.value && !/\s$/.test(ta.value) ? ta.value + ' ' : ta.value) + t;
-    renderNotes = ta.value; part.textContent = '';
+    renderNotes = ta.value; part.textContent = ''; card.dispatchEvent(new Event('notes-changed'));
   };
   Mic.on({ partial: (t) => part.textContent = t, final: append, state: setUI, error: () => {} });
   micReady.then(kind => { btn.hidden = !kind; if (!kind) cv.parentElement.classList.add('nomic'); draw(); });
@@ -3908,7 +3977,14 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
-  'סצנה':'Scene', 'תהליך':'Process', 'שני שלבים (מומלץ)':'Two stages (recommended)', 'מהיר – שלב אחד':'Quick – one stage', 'ייכנסו בשלב 2':'used in stage 2',
+  'סצנה':'Scene', 'מה רוצים בתמונה?':'What do you want in the picture?', 'כתבו או הקליטו חופשי – ה־AI יפזר לשדות':'type or dictate freely – the AI sorts it into the fields',
+  'זה מה שהבנתי. אם זה בסדר, נמשיך. אם לא – תשנה מה שצריך, ולחץ המשך.':'This is what I understood. If it is right, we go on. If not – change what you need and press Continue.',
+  '1. מה יש בתאים':'1. What is in the bins', '· הכי חשוב':'· most important', '3. מה ברקע':'3. Background', '2. רפרנס לתכולת התאים (לא חובה)':'2. Reference for the bin contents (optional)',
+  '4. רפרנס לחדר / לחלל (לא חובה)':'4. Reference for the room / space (optional)', '5. מה עוד חשוב לשים לב':'5. What else matters', '· שלב 1':'· stage 1', '· שלב 2':'· stage 2', '· בשני השלבים':'· both stages',
+  'המשך':'Continue', 'מפרש…':'Sorting…', 'העלאת תמונה':'Upload image', 'הקלטה':'Record', 'הסרת תמונה':'Remove image',
+  'הרקע השתנה אחרי האישור – כדי שייכנס צריך בסיס חדש':'The background changed after approval – a new base is needed for it',
+  'התאורה מהלוח "תאורה" נשלחת גם היא. הטקסט והשדות נשמרים בהגדרת הקטלוג; התמונות לא. עם רקע שקוף, בקשות לגבי רקע לא יבוצעו – רק תוכן התאים.':'The lighting from the "Lighting" panel is sent too. The text and fields are saved in the catalog setting; the images are not. With a transparent background, background requests are ignored – only the bin contents apply.',
+  'תהליך':'Process', 'שני שלבים (מומלץ)':'Two stages (recommended)', 'מהיר – שלב אחד':'Quick – one stage', 'ייכנסו בשלב 2':'used in stage 2',
   'שלב 1: רינדור בסיס (ריק)':'Stage 1: base render (empty)', 'שלב 2: רינדור סופי':'Stage 2: final render', 'שלב 2: רנדר שוב':'Stage 2: render again', 'רנדר בסיס שוב':'Render the base again',
   '✓ אשר כבסיס':'✓ Approve as base', 'אשר כבסיס למרות הפער':'Approve as base despite the mismatch', '✓ בסיס מאושר':'✓ Approved base', 'בסיס חדש':'New base', 'הבדיקה עברה':'check passed', 'אושר למרות פער בבדיקה':'approved despite a mismatch', 'בלי בדיקה':'not checked',
   'הכול בבת אחת: מתאים למוצר בודד ופשוט.':'All at once: for a single, simple product.',

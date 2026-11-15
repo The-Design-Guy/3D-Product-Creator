@@ -10,47 +10,59 @@ const QUALITY = process.env.OPENAI_IMAGE_QUALITY || 'high';
 // model that checks the bin count of the result against the 3D view (any OpenAI model that reads images)
 const CHECK_MODEL = process.env.OPENAI_CHECK_MODEL || 'gpt-4.1';
 
-function prompt(description, background, lighting, notes, refCount, structure, productRef) {
+// numbered list of the extra images after the first one: "image 2 = bin contents reference …"
+const refLines = (labels, offset = 2) => labels.map((l, i) => `image ${i + offset} = ${l}`).join(', ');
+const REF_TEXT = {
+  contents:'a reference photo of the ITEMS that go inside the bins (copy the items, not the storage)',
+  room:'a reference photo of the ROOM / SPACE for the background (copy the space, not any storage in it)',
+  client:'a client reference file',
+};
+
+// stage 1 (or the single-stage render): photorealistic photo from the 3D view
+function prompt(description, background, lighting, brief, labels, structure, productRef, stage) {
+  const n = 1 + labels.length + (productRef ? 1 : 0);
   return [
-    refCount
-      ? `You receive ${refCount + 1 + (productRef ? 1 : 0)} images. The FIRST image is the 3D viewport render of the product: turn it into a photorealistic studio product photograph of the exact same object. ${productRef ? 'The images between the first and the last one are client reference files' : 'The other images are client reference files'}, numbered in order: image 2 = "קובץ 1" (file 1)${refCount > 1 ? `, image 3 = "קובץ 2" (file 2)` : ''}${refCount > 2 ? `, image 4 = "קובץ 3" (file 3)` : ''}${refCount > 3 ? `, image 5 = "קובץ 4" (file 4)` : ''}. Use a reference file ONLY in the way the client notes ask (for example as a background, or as the items to show inside the bins). If the notes do not mention a file, ignore it. Never copy the product from a client file.`
-      : `${productRef ? 'You receive 2 images. The FIRST image is the 3D viewport render of the product: turn' : 'Turn'} this 3D viewport render into a photorealistic studio product photograph of the exact same object.`,
+    `You receive ${n} image${n > 1 ? 's' : ''}. The FIRST image is the 3D viewport render of the product: turn it into a photorealistic photograph of the exact same object.`,
+    labels.length ? `Reference images: ${refLines(labels)}. Use each one ONLY for what it is labelled; never copy a product, shelf or storage unit from a reference image.` : '',
     productRef ? `The LAST image is an official catalogue photo of ONE real tilt-bin unit (a 5-bin unit). Use it ONLY as the construction and material reference for every tilt-bin unit in the result: the light grey housing with flat, solid side walls that run the full depth of the unit, its rounded edges, the clear angled bin fronts with their label window and small screw, and exactly how each clear bin sits INSIDE the housing between the side walls – a bin never sticks out past the side walls and its clear sides are hidden by the housing, only the clear front shows. Do NOT copy its number of bins, its size, angle or position: the units, their sizes and the number of bins come ONLY from the FIRST image.` : '',
     `Product: ${description}`,
     'Keep EVERYTHING about the object identical: geometry, proportions, number of bins and units, their order, the camera angle, framing and perspective.',
     'Do not add, remove, move or redesign any part of the product. Do not add text or logos.',
-    notes
-      ? 'Client notes (may be in Hebrew). Apply them ONLY to the background, the surroundings, props around the product and the contents placed inside the bins/drawers; never to the product\'s shape, size, colours or construction:\n<<' + notes + '>>'
+    brief
+      ? 'Client brief (may be in Hebrew). Apply it ONLY to what each section names – the bin contents, the background and surroundings, props around the product – never to the product\'s shape, size, colours or construction:\n<<' + brief + '>>'
       : 'Do not add extra objects.',
-    notes && background === 'transparent' ? 'The background must stay fully transparent: ignore any background request in the notes, apply only what concerns the bin contents.' : '',
-    // the structure lock comes AFTER the notes on purpose: the last instructions weigh the most
-    'STRUCTURE LOCK – this overrides everything above, including the client notes:',
+    stage === 'base' ? 'All bins stay EMPTY in this image: nothing inside any bin.' : '',
+    brief && background === 'transparent' ? 'The background must stay fully transparent: ignore any background request, apply only what concerns the bin contents.' : '',
+    // the structure lock comes AFTER the brief on purpose: the last instructions weigh the most
+    'STRUCTURE LOCK – this overrides everything above, including the client brief:',
     structure ? `Exact layout from the CAD data:\n${structure}\nGo through this layout column by column and row by row: every row of the result must have exactly the number of bins listed (a 6-bin unit is a row of exactly 6 bins, never 5 or 7).` : '',
     'Before drawing, count in the FIRST image every unit, every column, every row and every single bin (drawer), from left to right and from top to bottom. The result must have EXACTLY the same number of units, columns, rows and bins, in the same arrangement and sizes. Never add, remove, merge, split, enlarge or shrink bins, rows, columns, shelves or units.',
     'PROFILES AND HARDWARE: every aluminium or steel profile, rail, band, upright and frame keeps exactly the cross-section, width, thickness, slots, rounded corners, colour and finish it has in the FIRST image, and the joints stay exactly as drawn. Do not add screws, bolts, rivets, brackets, connectors, wall plugs, end caps, holes, labels or any fitting that is not in the first image.',
-    notes ? 'Anything the notes ask to put "in the bins" goes INSIDE the bins that already exist, behind their clear fronts; it never creates new bins or changes how many there are. If a note cannot be done without changing the count, ignore that part of the note.' : '',
+    brief && stage !== 'base' ? 'Anything the brief puts "in the bins" goes INSIDE the bins that already exist, behind their clear fronts; it never creates new bins or changes how many there are. If something cannot be done without changing the count, leave it out.' : '',
     'Make the materials real: matte powder-coated / injection-moulded light grey RAL 7035 plastic, crystal-clear polystyrene bins with real refraction, subtle reflections and slightly brighter edges where the plastic is thick, brushed metal where there is metal.',
     background === 'transparent'
       ? 'Isolated product with a fully transparent background, no floor and no shadow outside the object.'
+      : /BACKGROUND/.test(brief) ? 'Build the background and surroundings as the brief describes, around the product exactly where it stands, with natural contact shadows.'
       : 'Seamless light grey-white studio background with a soft natural contact shadow under the product.',
     `Lighting: ${lighting || 'soft, even professional catalogue lighting.'}`,
   ].filter(Boolean).join('\n');
 }
 
-// stage 2 of the two-stage render: the approved, empty base photo is edited – only additions from the notes
-function editPrompt(description, background, notes, refCount, structure) {
+// stage 2 of the two-stage render: the approved, empty base photo is edited – only additions from the brief
+function editPrompt(description, background, brief, labels, structure) {
+  const n = 1 + labels.length;
   return [
-    `You receive ${refCount + 1} image${refCount ? 's' : ''}. The FIRST image is an approved photorealistic photograph of the product(s) with EMPTY bins. EDIT this photograph: keep every product, unit, bin, profile, frame, wall and floor, the materials, the lighting, the camera angle, perspective and framing exactly as they are – the result must look like the same photograph with things added.`,
-    refCount ? `The other images are client reference files, numbered in order: image 2 = "קובץ 1" (file 1)${refCount > 1 ? `, image 3 = "קובץ 2" (file 2)` : ''}${refCount > 2 ? `, image 4 = "קובץ 3" (file 3)` : ''}${refCount > 3 ? `, image 5 = "קובץ 4" (file 4)` : ''}. Use a file ONLY in the way the client notes ask. If the notes do not mention a file, ignore it. Never copy a product from a client file.` : '',
+    `You receive ${n} image${n > 1 ? 's' : ''}. The FIRST image is an approved photorealistic photograph of the product(s) with EMPTY bins. EDIT this photograph: keep every product, unit, bin, profile, frame, wall and floor, the materials, the lighting, the camera angle, perspective and framing exactly as they are – the result must look like the same photograph with things added.`,
+    labels.length ? `Reference images: ${refLines(labels)}. Use each one ONLY for what it is labelled; never copy a product, shelf or storage unit from a reference image.` : '',
     `Product: ${description}`,
-    notes
-      ? 'Client notes (may be in Hebrew). Carry them out by ADDING things: contents inside the existing bins, props and decoration around the products, items in the room. Never change, move, resize or recolour the products themselves:\n<<' + notes + '>>'
+    brief
+      ? 'Client brief (may be in Hebrew). Carry it out by ADDING things – contents inside the existing bins, and anything else the brief names. Never change, move, resize or recolour the products themselves, and keep the room as it is:\n<<' + brief + '>>'
       : 'Do not add anything.',
-    notes && background === 'transparent' ? 'The background must stay fully transparent: ignore any background request in the notes, apply only what concerns the bin contents.' : '',
-    'STRUCTURE LOCK – this overrides everything above, including the client notes:',
+    brief && background === 'transparent' ? 'The background must stay fully transparent: apply only what concerns the bin contents.' : '',
+    'STRUCTURE LOCK – this overrides everything above, including the client brief:',
     structure ? `Exact layout of the products in the photograph:\n${structure}\nEvery row of the result must keep exactly the number of bins listed (a 6-bin unit is a row of exactly 6 bins, never 5 or 7).` : '',
     'Keep EXACTLY the units, columns, rows and bins of the FIRST image: never add, remove, merge, split, enlarge or shrink bins, rows, columns, shelves or units. Every profile, rail, upright, side wall and frame keeps its shape, width, colour and finish; add no screws, brackets or fittings. The clear bins stay INSIDE their grey housings.',
-    notes ? 'Anything the notes ask to put "in the bins" goes INSIDE the bins that already exist, behind their clear fronts; it never creates new bins or changes how many there are. If a note cannot be done without changing the products, ignore that part of the note.' : '',
+    brief ? 'Anything the brief puts "in the bins" goes INSIDE the bins that already exist, behind their clear fronts; it never creates new bins or changes how many there are. If something cannot be done without changing the products, leave it out.' : '',
     'New items get the same lighting as the photograph, with natural contact shadows.',
   ].filter(Boolean).join('\n');
 }
@@ -62,9 +74,19 @@ export default async function handler(req, res) {
 
   const { image, background = 'transparent', description = '' } = req.body || {};
   const lighting = String(req.body?.lighting || '').slice(0, 300);
-  // stage: 'base' = empty photo from the 3D view (notes and files are left for stage 2), 'edit' = edit the approved base, none = one stage
+  // stage: 'base' = photo from the 3D view with the room but EMPTY bins, 'edit' = the approved base gets the bin contents, none = one stage
   const stage = ['base', 'edit'].includes(req.body?.stage) ? req.body.stage : '';
-  const notes = stage === 'base' ? '' : String(req.body?.notes || '').replace(/[<>]/g, '').slice(0, 1200);
+  const txt = (k, n = 1500) => String(req.body?.[k] || '').replace(/[<>]/g, '').trim().slice(0, n);
+  let contents = txt('contents'), bg = txt('backdrop'), extra = txt('extra');
+  if (!contents && !bg && !extra) extra = txt('notes', 1200);               // older pages: free notes only
+  // which part of the brief goes into which stage: the room in stage 1, the bin contents in stage 2, "extra" in both
+  const useContents = stage !== 'base', useBg = stage !== 'edit';
+  const brief = [
+    useContents && contents ? `IN THE BINS: ${contents}` : '',
+    useBg && (bg || (req.body?.roomRefs || []).length) ? `BACKGROUND AND SURROUNDINGS: ${bg || 'the room shown in the room reference photo'}` : '',
+    useContents && !contents && (req.body?.contentRefs || []).length ? 'IN THE BINS: the items shown in the bin contents reference photo' : '',
+    extra ? `ALSO IMPORTANT: ${extra}` : '',
+  ].filter(Boolean).join('\n');
   const structure = String(req.body?.structure || '').replace(/[<>]/g, '').slice(0, 4000);
   const t0 = Date.now();
   // output size: WIDTHxHEIGHT, edges multiple of 16, each ≤ 3840, ratio ≤ 3:1, 655,360–8,294,400 pixels
@@ -79,13 +101,20 @@ export default async function handler(req, res) {
   const m = /^data:image\/(png|webp|jpeg);base64,(.+)$/.exec(image || '');
   if (!m) return res.status(400).json({ error: 'expected a data:image/... base64 image' });
 
-  // reference images (up to 4), already shrunk by the browser
-  const refs = [];
-  for (const r of (stage !== 'base' && Array.isArray(req.body?.refs) ? req.body.refs : []).slice(0, 4)) {
-    const rm = /^data:image\/(png|webp|jpeg);base64,(.+)$/.exec(String(r || ''));
-    if (!rm) return res.status(400).json({ error: 'קובץ ייחוס לא תקין (רק JPG, PNG, WebP)' });
-    refs.push(rm);
-  }
+  // reference images, already shrunk by the browser: 2 for the bin contents, 2 for the room (older pages: 4 general)
+  const refs = [], labels = [];
+  const take = (arr, label, max) => {
+    for (const r of (Array.isArray(arr) ? arr : []).slice(0, max)) {
+      const rm = /^data:image\/(png|webp|jpeg);base64,(.+)$/.exec(String(r || ''));
+      if (!rm) return false;
+      refs.push(rm); labels.push(REF_TEXT[label]);
+    }
+    return true;
+  };
+  const okRefs = (useContents ? take(req.body?.contentRefs, 'contents', 2) : true)
+    && (useBg ? take(req.body?.roomRefs, 'room', 2) : true)
+    && (stage === '' ? take(req.body?.refs, 'client', 4) : true);
+  if (!okRefs) return res.status(400).json({ error: 'קובץ ייחוס לא תקין (רק JPG, PNG, WebP)' });
   const blob = (mm) => new Blob([Buffer.from(mm[2], 'base64')], { type: `image/${mm[1]}` });
   const ext = (mm) => (mm[1] === 'jpeg' ? 'jpg' : mm[1]);
 
@@ -97,14 +126,14 @@ export default async function handler(req, res) {
   if (refs.length || productRef) {
     // several input images: the view first, then the client files in order, then the product reference
     form.append('image[]', blob(m), stage === 'edit' ? `base.${ext(m)}` : `view.${ext(m)}`);
-    refs.forEach((rm, i) => form.append('image[]', blob(rm), `file-${i + 1}.${ext(rm)}`));
+    refs.forEach((rm, i) => form.append('image[]', blob(rm), `reference-${i + 1}.${ext(rm)}`));
     if (productRef) form.append('image[]', blob(pm), 'tilt-bin-reference.webp');
   } else {
     form.append('image', blob(m), `view.${ext(m)}`);
   }
   form.append('prompt', stage === 'edit'
-    ? editPrompt(String(description).slice(0, 2000), background, notes, refs.length, structure)
-    : prompt(String(description).slice(0, 2000), background, lighting, notes, refs.length, structure, productRef));
+    ? editPrompt(String(description).slice(0, 2000), background, brief, labels, structure)
+    : prompt(String(description).slice(0, 2000), background, lighting, brief, labels, structure, productRef, stage));
   form.append('background', background === 'transparent' ? 'transparent' : 'opaque');
   form.append('output_format', 'webp');          // smaller response than PNG, keeps transparency
   form.append('output_compression', '95');
