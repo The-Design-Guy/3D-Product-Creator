@@ -414,6 +414,11 @@
       </div>
       <div class="lbl">גובה עמודים (ללא בסיס)</div>
       <div class="seg2 three" id="stHeight"><button data-v="1160">116</button><button data-v="1800">180</button><button data-v="2000" class="on">200</button></div>
+      <div id="stDepthRow">
+        <div class="lbl">עומק בסיס</div>
+        <label class="slide"><span>עומק</span><input type="range" id="stDepth" min="238" max="424" step="1"><b id="stDepthVal"></b></label>
+        <div class="use" id="stDepthNote"></div>
+      </div>
       <div class="lbl" id="compLbl">הרכב</div>
       <div class="comp" id="comp"></div>
       <div class="bar"><i id="useBar"></i></div>
@@ -1077,7 +1082,10 @@ function handle(parent, x, yTop, z, dir = 1) {
 
 // ---------- stand ----------
 const STAND = { W:599, D:424, BASE_TOP:127, CASTER:97 };
-const stand = { type:'single', base:'legs', height:2000, handle:'left', brake:'brake' };
+const stand = { type:'single', base:'legs', height:2000, handle:'left', brake:'brake', depth:424 };
+// single-sided base depth: from 1 cm in front of the deepest (bottom) unit – plus the 30 mm upright it hangs on – up to the full 424 mm
+const standMinD = () => { const c = curComp() || {}, ns = ORDER.filter(n => (c[n] || 0) > 0); return PROF + (ns.length ? Math.max(...ns.map(n => MODELS[n].D)) : MODELS[3].D) + 10; };
+const standDepth = () => stand.type === 'double' ? STAND.D : Math.max(standMinD(), Math.min(STAND.D, stand.depth || STAND.D));
 const DEFAULT_COMP = {
   1160: { 2:1, 3:1, 4:1, 5:1, 6:1, 9:1 },
   1800: { 2:2, 3:1, 4:1, 5:2, 6:1, 9:1 },
@@ -1103,7 +1111,7 @@ function stackHeight(c) {
 function buildStand() {
   const g = new THREE.Group();
   const root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
-  const { W, D, BASE_TOP, CASTER } = STAND, Hc = stand.height;
+  const { W, BASE_TOP, CASTER } = STAND, D = standDepth(), Hc = stand.height;
   const xU = W/2 - PROF/2, zF = D/2 - PROF/2;
   const zUp = stand.type === 'double' ? D/2 - 190 - PROF/2 : -zF;   // uprights: centre (double) / back (single)
   const yB = BASE_TOP - PROF/2;
@@ -2521,7 +2529,7 @@ function rebuild(keepCamera = false) {
     if (!keepCamera) frame(700, st.totalH, true);
     const t = stand.type === 'double' ? 'דו צדדי' : 'חד צדדי', b = stand.base === 'wheels' ? 'על גלגלים' : 'על רגליים';
     document.getElementById('dims').innerHTML =
-      `מעמד <b>${t}</b> ${b} · רוחב <b>599</b> · עומק בסיס <b>424</b> · גובה כולל <b>${st.totalH}</b> מ"מ`;
+      `מעמד <b>${t}</b> ${b} · רוחב <b>599</b> · עומק בסיס <b>${standDepth()}</b> · גובה כולל <b>${st.totalH}</b> מ"מ`;
     renderComp();
   }
   // optional wall behind the product + floor (the wall rack has its own, with height above the floor)
@@ -2615,6 +2623,15 @@ segGroup('stHandle', (v) => { stand.handle = v; rebuild(true); });
 segGroup('stBrake', (v) => { stand.brake = v; rebuild(true); });
 function syncWheelOpts() { document.getElementById('wheelOpts').hidden = stand.base !== 'wheels'; }
 segGroup('stHeight', (v) => { stand.height = +v; rebuild(); });
+document.getElementById('stDepth').oninput = (e) => { stand.depth = +e.target.value; syncStandDepth(); rebuild(true); };
+function syncStandDepth() {
+  const row = document.getElementById('stDepthRow'); if (!row) return;
+  row.hidden = stand.type === 'double';
+  const mn = standMinD(), d = standDepth(), el = document.getElementById('stDepth');
+  el.min = mn; el.max = STAND.D; el.value = d;
+  document.getElementById('stDepthVal').textContent = (d/10).toFixed(1) + ' ס"מ';
+  document.getElementById('stDepthNote').textContent = `מ־${(mn/10).toFixed(1)} ס"מ (עומק התא התחתון + 1 ס"מ + פרופיל העמוד 3 ס"מ) עד ${STAND.D/10} ס"מ`;
+}
 
 // small rendered thumbnails of each unit, made once with a separate offscreen renderer
 let THUMBS = null;
@@ -2730,6 +2747,7 @@ function renderComp() {
     box.appendChild(row);
   }
   document.getElementById('useBar').style.width = Math.min(100, used / stand.height * 100) + '%';
+  if (mode === 'stand' || (mode === 'scene' && SCN.editType === 'stand')) syncStandDepth();
   document.getElementById('useTxt').innerHTML = `גובה מנוצל: <b>${used}</b> מתוך <b>${stand.height}</b> מ"מ · הגדול תמיד למטה`
     + (stand.type === 'double' ? '<br>בדו צדדי אין רב תא 2 – הבסיס לא עמוק מספיק' : '');
 }
@@ -3220,7 +3238,7 @@ function describe() {
   if (mode === 'unit') return `${base}; ${current} bins side by side; 600 mm wide, ${MODELS[current].H} mm high, ${MODELS[current].D} mm deep${flags.length ? '; ' + flags.join('; ') : ''}.`;
   const t = stand.type === 'double' ? 'double-sided (units on front and back)' : 'single-sided';
   const b = stand.base === 'wheels' ? `on 4 castors${stand.brake === 'brake' ? ' (front castors with brakes)' : ''} with a black side handle` : 'on short legs with levelling feet';
-  return `A ${t} mobile stand made of 30x30 mm slotted aluminium profiles powder-coated RAL 7035, ${stand.height} mm uprights, ${b}, holding stacked ${base.toLowerCase()} (largest at the bottom)${flags.length ? '; ' + flags.join('; ') : ''}.`;
+  return `A ${t} mobile stand made of 30x30 mm slotted aluminium profiles powder-coated RAL 7035, base 599 mm wide and ${standDepth()} mm deep, ${stand.height} mm uprights, ${b}, holding stacked ${base.toLowerCase()} (largest at the bottom)${flags.length ? '; ' + flags.join('; ') : ''}.`;
 }
 $('renderBtn').onclick = () => {
   if (!server) {
@@ -3308,13 +3326,13 @@ $('renderBtn').onclick = () => {
         // up to 3 attempts: a result whose bin count does not match the model is rendered again
         const TRIES = 3; let r = null;
         for (let a = 1; a <= TRIES; a++) {
-          if (a > 1) out.innerHTML = `<div class="spin" aria-label="מרנדר"></div><div class="r-chk warn">נמצא פער במספר התאים (${r.check.detail || 'ללא פירוט'}) – מרנדר שוב, ניסיון ${a} מתוך ${TRIES}…</div>`;
+          if (a > 1) out.innerHTML = `<div class="spin" aria-label="מרנדר"></div><div class="r-chk warn">נמצא פער מול המודל (${r.check.detail || 'ללא פירוט'}) – מרנדר שוב, ניסיון ${a} מתוך ${TRIES}…</div>`;
           r = await api('/api/render', body);
           if (!r.check || r.check.ok !== false || !body.structure) break;
         }
         const ck = r.check || { ok:null };
-        const chk = ck.ok === true ? `<div class="r-chk ok">✓ מספר התאים נבדק ותואם למודל</div>`
-          : ck.ok === false ? `<div class="r-chk bad">⚠ מספר התאים שונה מהמודל – לא לשימוש. ${ck.detail || ''}<br><small>במודל: ${ck.view || '?'} · בתמונה: ${ck.result || '?'}</small></div>`
+        const chk = ck.ok === true ? `<div class="r-chk ok">✓ נבדק: מספר התאים והפרופילים תואמים למודל</div>`
+          : ck.ok === false ? `<div class="r-chk bad">⚠ התמונה לא תואמת למודל – לא לשימוש. ${ck.detail || ''}<br><small>במודל: ${ck.view || '?'} · בתמונה: ${ck.result || '?'}</small></div>`
           : body.structure ? `<div class="r-chk">בדיקת הספירה לא רצה (${ck.detail || 'לא ידוע'}) – בדקו את מספר התאים בעין.</div>` : '';
         out.innerHTML = `${chk}<img src="${r.image}" alt="רינדור ריאליסטי"><button class="r-fs" title="מסך מלא" aria-label="פתיחה במסך מלא"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>`;
         out.querySelector('.r-fs').onclick = () => openLightbox(r.image);
@@ -3821,8 +3839,8 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
-  'סצנה':'Scene', 'ההרכב שנשלח לרינדור (נבנה אוטומטית מהמודל)':'Layout sent with the render (built automatically from the model)', 'תפריט':'Menu', 'סגירת התפריט':'Close menu', '✓ מספר התאים נבדק ותואם למודל':'✓ Bin count checked – matches the model', 'מספר התאים שונה מהמודל – לא לשימוש.':'The bin count differs from the model – do not use.',
-  'נמצא פער במספר התאים':'Bin count mismatch', 'מרנדר שוב, ניסיון':'rendering again, attempt', 'בדיקת הספירה לא רצה':'The count check did not run', 'בדקו את מספר התאים בעין.':'check the bin count by eye.', 'במודל:':'Model:', 'בתמונה:':'Image:', 'כל הזכויות שמורות':'All rights reserved', 'צמוד לקיר':'touching the wall', 'פנים הארון (מלמעלה למטה)':'Inside the cabinet (top to bottom)', '+ אזור רב תאים':'+ Tilt bin zone', 'פנוי':'Free', 'למעלה':'Up', 'למטה':'Down', 'הסרה':'Remove',
+  'סצנה':'Scene', 'עומק בסיס':'Base depth', 'עומק התא התחתון + 1 ס"מ + פרופיל העמוד 3 ס"מ':'bottom unit depth + 1 cm + 3 cm upright profile', 'ההרכב שנשלח לרינדור (נבנה אוטומטית מהמודל)':'Layout sent with the render (built automatically from the model)', 'תפריט':'Menu', 'סגירת התפריט':'Close menu', '✓ נבדק: מספר התאים והפרופילים תואמים למודל':'✓ Checked: bin count and profiles match the model', 'התמונה לא תואמת למודל – לא לשימוש.':'The image does not match the model – do not use.',
+  'נמצא פער מול המודל':'Mismatch with the model', 'מרנדר שוב, ניסיון':'rendering again, attempt', 'בדיקת הספירה לא רצה':'The count check did not run', 'בדקו את מספר התאים בעין.':'check the bin count by eye.', 'במודל:':'Model:', 'בתמונה:':'Image:', 'כל הזכויות שמורות':'All rights reserved', 'צמוד לקיר':'touching the wall', 'פנים הארון (מלמעלה למטה)':'Inside the cabinet (top to bottom)', '+ אזור רב תאים':'+ Tilt bin zone', 'פנוי':'Free', 'למעלה':'Up', 'למטה':'Down', 'הסרה':'Remove',
   'גובה מהרצפה בס"מ':'Height above the floor in cm', 'מדף מעל:':'Shelf above:', 'אין מקום – פנו גובה בארון':'No room – free some height in the cabinet', 'אין מקום לאזור רב תאים':'No room for a tilt bin zone',
   'גובה תפוס:':'Height used:', 'גוררים מדף על המודל כדי להזיז אותו':'drag a shelf on the model to move it', 'מתוך':'of', 'דלתות הזזה עם מנעול (אופציה)':'Lockable sliding doors (option)', 'דלתות הזזה':'sliding doors', 'דלת':'Door',
   'לחיצה על דלת במודל מזיזה אותה. בכל צמד הדלת השמאלית רצה מאחור והימנית מלפנים, עם מנעול צילינדר. בפריסת כנפיים הדלתות יורדות.':'Click a door on the model to slide it. In each pair the left door runs behind and the right one in front, with a cylinder lock. When the wings are spread the doors come off.',
