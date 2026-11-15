@@ -162,6 +162,16 @@
   .pg-num span { font-size:30px; color:var(--pg-text); }
   .pg-line { margin:0; min-height:46px; text-align:center; font-size:15px; line-height:1.5; color:var(--pg-sub); text-wrap:pretty; transition:opacity 250ms ease; }
   @media (prefers-reduced-motion: reduce) { .pg-fill, .pg-line { transition:none; } }
+  .mrow { display:flex; gap:6px; align-items:center; margin-bottom:8px; }
+  .mrow select { flex:1; min-width:0; height:38px; border:1px solid var(--line); border-radius:10px; padding:0 10px; font:inherit; background:#fff; }
+  .mrow .btn { height:38px; padding:0 12px; white-space:nowrap; }
+  .mrow .sb { width:34px; height:34px; border:0; border-radius:8px; background:transparent; color:var(--muted); cursor:pointer; }
+  .mrow .sb:hover { background:#eef1f3; color:var(--ink); }
+  .types .tsub { display:block; font-size:12px; color:var(--muted); margin:8px 0 4px; }
+  .types button.mdl { background:#f3f6fa; }
+  .lib-imgs { display:flex; gap:8px; margin-top:6px; }
+  .lib-imgs figure { margin:0; text-align:center; font-size:11.5px; color:var(--muted); }
+  .lib-imgs img { width:96px; height:72px; object-fit:cover; border-radius:8px; cursor:zoom-in; display:block; background:#fff; border:1px solid var(--line); }
   .r-understood { background:#eef4ff; border:1px solid #c9dafb; color:#1d4ea8; border-radius:10px; padding:9px 11px; font-size:13px; font-weight:600; margin:10px 0 4px; }
   .rf { display:grid; gap:8px; margin:8px 0 6px; }
   .rf-f { display:grid; gap:4px; font-size:13px; font-weight:600; color:var(--ink); }
@@ -379,6 +389,10 @@
         <button class="btn" id="scnTpl">תבנית: 2 מחיצות מהקיר</button>
       </div>
       <div class="types" id="scnTypes" hidden></div>
+      <div class="lbl">סצנות שמורות</div>
+      <div class="mrow"><select id="scnLib" aria-label="סצנה שמורה"><option value="">— פתיחת סצנה שמורה —</option></select><button class="sb adm" id="scnLibDel" title="מחיקת הסצנה" aria-label="מחיקת הסצנה">✕</button></div>
+      <div class="pair adm"><button class="btn" id="scnSaveBase">שמור סצנת בסיס</button><button class="btn" id="scnSaveReady">שמור סצנה מוכנה</button></div>
+      <div class="use" id="scnLibInfo"></div>
       <div class="camsec">
         <div class="lbl">מצלמה</div>
         <div class="seg2" id="camMode"><button data-v="orbit" class="on">סיבוב סביב</button><button data-v="free">תנועה חופשית</button></div>
@@ -2051,8 +2065,7 @@ function sceneTemplate(name) {
 }
 function initScenePanel() {
   $('scnAdd').onclick = () => $('scnTypes').hidden = !$('scnTypes').hidden;
-  $('scnTypes').innerHTML = Object.entries(TYPE_NAME).map(([k, n]) => `<button data-t="${k}">${n}</button>`).join('');
-  $('scnTypes').querySelectorAll('button').forEach(b => b.onclick = () => { $('scnTypes').hidden = true; addItem(b.dataset.t); });
+  renderSceneTypes();
   $('scnTpl').onclick = () => sceneTemplate('partitions');
   $('scnW').onchange = (e) => { SCN.room.W = Math.max(2000, Math.min(100000, Math.round(+e.target.value * 1000) || 6000)); SCN.items.forEach(snapItem); rebuild(); };
   $('scnD').onchange = (e) => { SCN.room.D = Math.max(2000, Math.min(100000, Math.round(+e.target.value * 1000) || 5000)); SCN.items.forEach(snapItem); rebuild(); };
@@ -2749,7 +2762,7 @@ panels.forEach(p => p.querySelector('.head').onclick = () => {
     const s = SCN.items.find(i => i.id === SCN.sel); if (s) s.cfg = capCfg(s.type);
     SCN.sel = null; SCN.editType = null; releaseBody(); if (FREE.on) setFree(false); $('pad').hidden = true;
   }
-  mode = p.dataset.mode;
+  mode = p.dataset.mode; RENDER_STATE.base = RENDER_STATE.final = null;   // a new view needs a new base
   panels.forEach(x => { const on = x === p; x.classList.toggle('open', on); x.querySelector('.head').setAttribute('aria-expanded', on); });
   placeShared();
   rebuild();
@@ -3204,7 +3217,7 @@ $('lockBtn').onclick = () => {
   (card, close) => {
     const go = async () => {
       LS.set('rbt-admin-key', card.querySelector('#aPass').value);
-      try { await api('/api/presets', { action:'login' }); renderPresetPicker(); close(); toast('מצב ניהול פעיל'); }
+      try { await api('/api/presets', { action:'login' }); renderPresetPicker(); renderLibUI(); close(); toast('מצב ניהול פעיל'); }
       catch { LS.set('rbt-admin-key', ''); const e = card.querySelector('#aErr'); e.textContent = 'סיסמה שגויה'; e.hidden = false; }
     };
     card.querySelector('#aGo').onclick = go;
@@ -3492,7 +3505,7 @@ $('renderBtn').onclick = () => {
     }
     showSize();
     // ---- two-stage flow: 1) empty base from the 3D view, checked and approved  2) the base edited with the notes ----
-    st.flow = 'two'; st.base = null; st.last = null;
+    st.flow = 'two'; st.base = RENDER_STATE.base; st.last = null;
     const briefStale = () => !!renderNotes.trim() && renderNotes !== renderParsedFrom;
     const briefBody = () => ({ contents: renderFields.contents.trim(), backdrop: renderFields.background.trim(), extra: renderFields.extra.trim(),
       contentRefs: renderRefs.contents.map(f => f.data), roomRefs: renderRefs.room.map(f => f.data) });
@@ -3508,9 +3521,10 @@ $('renderBtn').onclick = () => {
       q('#rSetup').hidden = !!(two && st.base);   // size and background follow the base
       const bb = q('#rBaseBox'); bb.hidden = !(two && st.base);
       if (two && st.base) {
-        bb.innerHTML = `<img src="${st.base.image}" alt="תמונת הבסיס המאושרת"><div class="t"><b>✓ בסיס מאושר</b><small>${st.base.size.replace('x', ' × ')} px · ${st.base.ok === true ? 'הבדיקה עברה' : st.base.ok === false ? 'אושר למרות פער בבדיקה' : 'בלי בדיקה'}</small>${bgChanged ? '<small style="color:#a3261d">הרקע השתנה אחרי האישור – כדי שייכנס צריך בסיס חדש</small>' : ''}</div><button class="btn" id="rBaseReset">בסיס חדש</button>`;
+        bb.innerHTML = `<img src="${st.base.image}" alt="תמונת הבסיס המאושרת"><div class="t"><b>✓ בסיס מאושר</b><small>${st.base.size.replace('x', ' × ')} px · ${st.base.ok === true ? 'הבדיקה עברה' : st.base.ok === false ? 'אושר למרות פער בבדיקה' : 'בלי בדיקה'}</small>${bgChanged ? '<small style="color:#a3261d">הרקע השתנה אחרי האישור – כדי שייכנס צריך בסיס חדש</small>' : ''}</div><button class="btn" id="rBaseDl">הורדה (PNG)</button><button class="btn" id="rBaseReset">בסיס חדש</button>`;
+        bb.querySelector('#rBaseDl').onclick = () => downloadPng(st.base.image, 'base', st.dpi);
         bb.querySelector('img').onclick = () => openLightbox(st.base.image);
-        bb.querySelector('#rBaseReset').onclick = () => { st.base = null; q('#rOut').hidden = true; q('#rApprove').hidden = true; syncFlow(); showSize(); };
+        bb.querySelector('#rBaseReset').onclick = () => { st.base = null; RENDER_STATE.base = null; q('#rOut').hidden = true; q('#rApprove').hidden = true; syncFlow(); showSize(); };
       }
       q('#rApprove').hidden = !(two && !st.base && st.last);
       if (q('#rGo').textContent !== 'מרנדר…') q('#rGo').textContent = briefStale() ? 'המשך' : goLabel();
@@ -3523,13 +3537,22 @@ $('renderBtn').onclick = () => {
       const L = st.last; if (!L) return;
       if (L.check?.ok === false && !confirm('הבדיקה מצאה פער בתמונה הזו. לאשר אותה כבסיס בכל זאת?')) return;
       st.base = { image:L.image, structure:L.body.structure, description:L.body.description, size:L.body.size, bg:L.body.background, ok:L.check?.ok ?? null, sig:L.sig };
+      RENDER_STATE.base = st.base; RENDER_STATE.final = null;
       st.last = null; q('#rOut').hidden = true; syncFlow();
     };
     syncFlow();
     q('#rTechRow').hidden = mode === 'scene';
     q('#rTechShow').onclick = () => { const t = techSheet(); if (t) openLightbox(t); };
+    // any result as a PNG with the chosen DPI – the stage-1 base too
+    async function downloadPng(src, kind, dpi) {
+      if (/^https?:/.test(src)) src = URL.createObjectURL(await (await fetch(src)).blob());
+      const img = new Image(); img.src = src; await img.decode();
+      const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0);
+      await saveFile(await withDpi(await toBlob(c), dpi), `${fileStem()}-${kind}-${c.width}x${c.height}-${dpi}dpi.png`);
+    }
     // the approved base goes back up as the image to edit: re-encoded so the request stays well under the upload limit
     async function shrinkForUpload(src) {
+      if (/^https?:/.test(src)) src = URL.createObjectURL(await (await fetch(src)).blob());   // a base saved with a scene
       const img = new Image(); img.src = src; await img.decode();
       for (const [edge, qq] of [[4096, 0.92], [2560, 0.9], [2048, 0.86], [1600, 0.82]]) {
         const k = Math.min(1, edge / Math.max(img.naturalWidth, img.naturalHeight));
@@ -3589,6 +3612,7 @@ $('renderBtn').onclick = () => {
         }
         const ck = r.check || { ok:null };
         st.last = { image:r.image, check:ck, body, sig:bgSig() };
+        if (body.stage !== 'base') RENDER_STATE.final = r.image;
         const chk = ck.ok === true ? `<div class="r-chk ok">✓ נבדק: מספר התאים והפרופילים תואמים ${body.stage === 'edit' ? 'לבסיס' : 'למודל'}</div>`
           : ck.ok === false ? `<div class="r-chk bad">⚠ התמונה לא תואמת למודל – לא לשימוש. ${ck.detail || ''}<br><small>במודל: ${ck.view || '?'} · בתמונה: ${ck.result || '?'}</small></div>`
           : body.structure ? `<div class="r-chk">בדיקת הספירה לא רצה (${ck.detail || 'לא ידוע'}) – בדקו את מספר התאים בעין.</div>` : '';
@@ -3604,12 +3628,7 @@ $('renderBtn').onclick = () => {
         if (!q('#rDl')) {
           const dl = document.createElement('button'); dl.className = 'btn'; dl.id = 'rDl'; dl.textContent = 'הורדה (PNG)';
           q('#rActs').insertBefore(dl, q('[data-close]'));
-          dl.onclick = async () => {
-            const img = out.querySelector('img'); const c = document.createElement('canvas');
-            c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0);
-            const png = await withDpi(await toBlob(c), st.dpi);
-            await saveFile(png, `${fileStem()}-realistic-${c.width}x${c.height}-${st.dpi}dpi.png`);
-          };
+          dl.onclick = () => downloadPng(out.querySelector('img').src, st.last && st.last.body.stage === 'base' ? 'base' : 'realistic', st.dpi);
         }
       } catch (e) {
         out.hidden = true; er.textContent = 'הרינדור נכשל: ' + e.message; er.hidden = false;
@@ -3700,6 +3719,167 @@ function fitSize(w, h) {
   return { w, h, note };
 }
 // put the captured model in the middle of a canvas of the requested ratio (transparent margins)
+// ---------- library: product models and saved scenes (shared on the server; changes are admin only) ----------
+let lib = { models:{}, scenes:{} };
+const RENDER_STATE = { base:null, final:null };    // the approved base and the last final render – kept between openings of the render window
+async function loadLib() {
+  try { if (!server) throw 0; const r = await fetch('/api/library'); if (!r.ok) throw 0; lib = await r.json(); }
+  catch { lib = LS.get('rbt-library', { models:{}, scenes:{} }); }
+  lib.models = lib.models || {}; lib.scenes = lib.scenes || {};
+}
+async function persistLib(action, payload) {
+  if (server) { lib = await api('/api/library', { action, ...payload }); return; }
+  const { type, name, newName, data } = payload;
+  if (action === 'save-model') ((lib.models[type] = lib.models[type] || {})[name] = { cfg:data, updated:new Date().toISOString() });
+  if (action === 'delete-model') delete (lib.models[type] || {})[name];
+  if (action === 'save-scene') lib.scenes[name] = { ...data, updated:new Date().toISOString() };
+  if (action === 'delete-scene') delete lib.scenes[name];
+  LS.set('rbt-library', lib);
+}
+const curModel = {};                                // type → name of the model last chosen in its panel
+function askName(title, value, cb) {
+  openDialog(`<h3>${title}</h3><label class="fld">שם<input id="libName" maxlength="80" value="${(value || '').replace(/"/g, '&quot;')}" dir="auto"></label>
+    <div class="dlg-err" id="libErr" hidden></div><div class="dlg-actions"><button class="btn primary" id="libOk">שמירה</button><button class="btn" data-close>ביטול</button></div>`, (card, close) => {
+    const inp = card.querySelector('#libName'); inp.focus(); inp.select();
+    const go = async () => {
+      const n = inp.value.trim(); if (!n) return;
+      const ok = card.querySelector('#libOk'); ok.disabled = true; ok.textContent = 'שומר…';
+      try { await cb(n); close(); } catch (e) { const er = card.querySelector('#libErr'); er.textContent = e.message; er.hidden = false; ok.disabled = false; ok.textContent = 'שמירה'; }
+    };
+    card.querySelector('#libOk').onclick = go; inp.onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  });
+}
+// ---- models: a row at the top of every product panel ----
+function applyModel(t, name) {
+  const m = lib.models[t] && lib.models[t][name]; if (!m) return;
+  curModel[t] = name;
+  applyCfg(t, deep(m.cfg)); syncUI(t);
+  const it = mode === 'scene' && SCN.items.find(i => i.id === SCN.sel && i.type === t);
+  if (it) { it.cfg = capCfg(t); it.name = name; refreshEditor(t); rebuild(true); renderScene(); }
+  else { refreshEditor(t); rebuild(true); }
+  toast(`נטען הדגם "${name}"`);
+}
+function renderModelRows() {
+  panels.forEach(p => {
+    const t = p.dataset.mode; if (t === 'scene') return;
+    const inner = p.querySelector(':scope > .body > .inner'); if (!inner) return;
+    let row = inner.querySelector(':scope > .mdlbox');
+    if (!row) {
+      row = document.createElement('div'); row.className = 'mdlbox';
+      row.innerHTML = `<div class="lbl">דגם</div><div class="mrow"><select aria-label="דגם"></select><button class="btn adm" data-a="save">שמור כדגם</button><button class="sb adm" data-a="del" title="מחיקת הדגם" aria-label="מחיקת הדגם">✕</button></div>`;
+      inner.prepend(row);
+      const sel = row.querySelector('select');
+      sel.onchange = () => { if (sel.value) applyModel(t, sel.value); else curModel[t] = null; };
+      row.querySelector('[data-a=save]').onclick = () => askName('שמירת דגם', curModel[t] || '', async (n) => {
+        if (lib.models[t] && lib.models[t][n] && n !== curModel[t] && !confirm(`כבר יש דגם בשם "${n}". להחליף אותו?`)) throw new Error('בחרו שם אחר');
+        await persistLib('save-model', { type:t, name:n, data:capCfg(t) }); curModel[t] = n;
+        const it = mode === 'scene' && SCN.items.find(i => i.id === SCN.sel && i.type === t); if (it) { it.name = n; renderScene(); }
+        renderLibUI(); toast(`הדגם "${n}" נשמר`);
+      });
+      row.querySelector('[data-a=del]').onclick = async () => {
+        const n = sel.value; if (!n) { toast('בחרו דגם למחיקה'); return; }
+        if (!confirm(`למחוק את הדגם "${n}"?`)) return;
+        try { await persistLib('delete-model', { type:t, name:n }); curModel[t] = null; renderLibUI(); } catch (e) { toast(e.message); }
+      };
+    }
+    const names = Object.keys(lib.models[t] || {}).sort((a, b) => a.localeCompare(b));
+    const sel = row.querySelector('select');
+    sel.innerHTML = `<option value="">— הגדרה חופשית —</option>` + names.map(n => `<option>${n.replace(/</g, '&lt;')}</option>`).join('');
+    sel.value = curModel[t] && names.includes(curModel[t]) ? curModel[t] : '';
+    row.querySelector('[data-a=del]').hidden = !names.length;
+  });
+}
+// ---- models in the scene's "add product" list ----
+function addModelItem(t, name) {
+  const m = lib.models[t] && lib.models[t][name]; if (!m) return;
+  const it = { id:SCN.next++, type:t, cfg:deep(m.cfg), rot:0, name };
+  SCN.items.push(it); rebuild(true); selectItem(it.id);
+}
+function renderSceneTypes() {
+  const box = $('scnTypes'); if (!box) return;
+  const models = Object.entries(lib.models).flatMap(([t, ms]) => TYPE_NAME[t] ? Object.keys(ms).sort((a, b) => a.localeCompare(b)).map(n => [t, n]) : []);
+  box.innerHTML = Object.entries(TYPE_NAME).map(([k, n]) => `<button data-t="${k}">${n}</button>`).join('')
+    + (models.length ? `<span class="tsub">דגמים שמורים</span>` + models.map(([t, n]) => `<button class="mdl" data-t="${t}" data-m="${n.replace(/"/g, '&quot;')}">${n.replace(/</g, '&lt;')} <small>· ${TYPE_NAME[t]}</small></button>`).join('') : '');
+  box.querySelectorAll('button').forEach(b => b.onclick = () => { box.hidden = true; b.dataset.m ? addModelItem(b.dataset.t, b.dataset.m) : addItem(b.dataset.t); });
+}
+// ---- saved scenes: base (products only) and ready (with the full render brief and its images) ----
+function sceneSnap() {
+  const s = SCN.items.find(i => i.id === SCN.sel); if (s) s.cfg = capCfg(s.type);
+  return { room:deep(SCN.room), next:SCN.next, shots:deep(SCN.shots || []),
+    items:SCN.items.map(({ id, type, cfg, x, z, y, rot, hidden, name }) => deep({ id, type, cfg, x, z, y:y || 0, rot, hidden:!!hidden, name })) };
+}
+async function uploadImage(src, kind) {
+  if (!src) return null;
+  if (/^https?:/.test(src)) return src;                       // already stored
+  if (!server) return null;
+  const blob = await (await fetch(src)).blob();
+  const r = await fetch(`/api/blob?kind=${kind}`, { method:'POST', headers:{ 'content-type':blob.type || 'image/webp', 'x-admin-key':adminKey() }, body:blob });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j.url;
+}
+async function saveScene(kind, name) {
+  const data = { kind, scene:sceneSnap(), camera:shotNow('') };
+  if (kind === 'ready') {
+    data.brief = { notes:renderNotes, fields:{ ...renderFields } }; data.light = { ...LIGHT };
+    let warn = '';
+    try {
+      const b = RENDER_STATE.base;
+      if (b) { const url = await uploadImage(b.image, 'base'); if (url) data.base = { ...b, image:undefined, url }; }
+      if (RENDER_STATE.final) { const url = await uploadImage(RENDER_STATE.final, 'final'); if (url) data.final = { url }; }
+    } catch (e) { warn = e.message; }
+    await persistLib('save-scene', { name, data });
+    toast(warn ? `הסצנה נשמרה בלי התמונות: ${warn}` : `הסצנה המוכנה "${name}" נשמרה${data.base || data.final ? ' עם התמונות' : ''}`);
+  } else { await persistLib('save-scene', { name, data }); toast(`סצנת הבסיס "${name}" נשמרה`); }
+  renderLibUI(); $('scnLib').value = name; showSceneInfo(name);
+}
+function loadScene(name) {
+  const sc = lib.scenes[name]; if (!sc) return;
+  if (mode !== 'scene') panels.find(p => p.dataset.mode === 'scene').querySelector('.head').click();
+  releaseBody(); if (FREE.on) setFree(false);
+  SCN.room = deep(sc.scene.room); SCN.items = deep(sc.scene.items); SCN.next = sc.scene.next || SCN.items.length + 1;
+  SCN.shots = deep(sc.scene.shots || []); renderShots && renderShots(); SCN.sel = null; SCN.editType = null; sceneUndo.length = 0;
+  rebuild(); renderScene();
+  if (sc.camera) setTimeout(() => goShot(sc.camera), 60);
+  RENDER_STATE.base = null; RENDER_STATE.final = null;
+  if (sc.kind === 'ready') {
+    renderNotes = sc.brief?.notes || ''; renderParsedFrom = renderNotes;
+    renderFields = { contents:'', background:'', extra:'', ...(sc.brief?.fields || {}) };
+    if (sc.light) { Object.assign(LIGHT, sc.light); applyLight(); }
+    if (sc.base?.url) RENDER_STATE.base = { ...sc.base, image:sc.base.url };
+    if (sc.final?.url) RENDER_STATE.final = sc.final.url;
+  }
+  showSceneInfo(name);
+  toast(sc.kind === 'ready' ? `נפתחה הסצנה המוכנה "${name}"${RENDER_STATE.base ? ' – הבסיס המאושר מחכה בחלון ה־Render' : ''}` : `נפתחה סצנת הבסיס "${name}"`);
+}
+function showSceneInfo(name) {
+  const box = $('scnLibInfo'), sc = name && lib.scenes[name]; if (!box) return;
+  if (!sc) { box.innerHTML = ''; return; }
+  const imgs = [[sc.base?.url, 'בסיס מאושר'], [sc.final?.url, 'תמונה סופית']].filter(([u]) => u);
+  box.innerHTML = `${sc.kind === 'ready' ? 'סצנה מוכנה: מוצרים, מיקומים, מצלמה, תאורה והבריף המלא' : 'סצנת בסיס: חדר, מוצרים, מיקומים ומצלמה'} · עודכנה ${new Date(sc.updated || Date.now()).toLocaleDateString('he-IL')}`
+    + (imgs.length ? `<div class="lib-imgs">${imgs.map(([u, t]) => `<figure><img src="${u}" alt="${t}" loading="lazy"><figcaption>${t}</figcaption></figure>`).join('')}</div>` : '');
+  box.querySelectorAll('img').forEach(im => im.onclick = () => openLightbox(im.src));
+}
+function renderLibUI() {
+  renderModelRows(); renderSceneTypes();
+  const sel = $('scnLib'); if (sel) {
+    const v = sel.value, names = Object.keys(lib.scenes).sort((a, b) => a.localeCompare(b));
+    sel.innerHTML = `<option value="">— פתיחת סצנה שמורה —</option>` + names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n.replace(/</g, '&lt;')} · ${lib.scenes[n].kind === 'ready' ? 'מוכנה' : 'בסיס'}</option>`).join('');
+    sel.value = names.includes(v) ? v : '';
+    $('scnLibDel').hidden = !names.length;
+  }
+  document.querySelectorAll('.adm').forEach(el => el.style.display = isAdmin() ? '' : 'none');
+}
+{
+  $('scnLib').onchange = (e) => { if (e.target.value) loadScene(e.target.value); };
+  $('scnSaveBase').onclick = () => askName('שמירת סצנת בסיס', $('scnLib').value, (n) => saveScene('base', n));
+  $('scnSaveReady').onclick = () => askName('שמירת סצנה מוכנה', $('scnLib').value, (n) => saveScene('ready', n));
+  $('scnLibDel').onclick = async () => {
+    const n = $('scnLib').value; if (!n) { toast('בחרו סצנה למחיקה'); return; }
+    if (!confirm(`למחוק את הסצנה "${n}"?`)) return;
+    try { await persistLib('delete-scene', { name:n }); renderLibUI(); showSceneInfo(null); } catch (e) { toast(e.message); }
+  };
+}
 // ---------- render progress gauge: estimated percentage + what is happening now ----------
 // The server does the whole render in one request, so the percentage follows the time a render usually takes
 // (learned from the last renders on this computer) and slows down near the end until the answer arrives.
@@ -3863,6 +4043,7 @@ async function withDpi(blob, dpi) {
 // ---------- start-up: load presets and open in the active one ----------
 (async () => {
   await loadStore();
+  await loadLib(); renderLibUI();
   renderPresetPicker();
   if (store.active && store.presets[store.active]) selectPreset(store.active);
 })();
@@ -4258,7 +4439,12 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
-  'סצנה':'Scene', 'הרינדור עדיין רץ. לסגור בכל זאת? התוצאה לא תוצג.':'The render is still running. Close anyway? The result will not be shown.', 'התקדמות הרינדור':'Render progress', 'מוכן!':'Done!', 'מרנדר שוב עם אותן הוראות…':'rendering again with the same instructions…', 'ניסיון':'Attempt',
+  'סצנה':'Scene', 'סצנות שמורות':'Saved scenes', '— פתיחת סצנה שמורה —':'— open a saved scene —', 'סצנה שמורה':'Saved scene', 'מחיקת הסצנה':'Delete the scene',
+  'שמור סצנת בסיס':'Save base scene', 'שמור סצנה מוכנה':'Save ready scene', 'שמירת סצנת בסיס':'Save base scene', 'שמירת סצנה מוכנה':'Save ready scene', 'דגם':'Model', 'שמור כדגם':'Save as model',
+  'מחיקת הדגם':'Delete the model', '— הגדרה חופשית —':'— free setup —', 'שמירת דגם':'Save model', 'שם':'Name', 'שמירה':'Save', 'שומר…':'Saving…', 'דגמים שמורים':'Saved models',
+  'בסיס מאושר':'Approved base', 'תמונה סופית':'Final image', 'מוכנה':'ready', 'בסיס':'base', 'בחרו דגם למחיקה':'Pick a model to delete', 'בחרו סצנה למחיקה':'Pick a scene to delete', 'בחרו שם אחר':'Choose another name',
+  'סצנה מוכנה: מוצרים, מיקומים, מצלמה, תאורה והבריף המלא':'Ready scene: products, positions, camera, lighting and the full brief', 'סצנת בסיס: חדר, מוצרים, מיקומים ומצלמה':'Base scene: room, products, positions and camera', 'עודכנה':'updated',
+  'הרינדור עדיין רץ. לסגור בכל זאת? התוצאה לא תוצג.':'The render is still running. Close anyway? The result will not be shown.', 'התקדמות הרינדור':'Render progress', 'מוכן!':'Done!', 'מרנדר שוב עם אותן הוראות…':'rendering again with the same instructions…', 'ניסיון':'Attempt',
   'שולח את תמונת הבסיס המאושרת ואת הבריף…':'Sending the approved base image and the brief…', 'שולח את המודל, ההרכב מלמעלה למטה':'Sending the model, the top-to-bottom layout', ', שרטוט המידות':', the dimension drawing', ' ותמונת הייחוס…':' and the reference photo…',
   'ה־AI עורך את תמונת הבסיס – המוצרים נשארים כמו שהם…':'The AI edits the base image – the products stay as they are…', 'ממלא את התאים לפי מה שביקשת…':'Filling the bins as you asked…', 'מוסיף את מה שביקשת…':'Adding what you asked for…',
   'מתאים תאורה וצללים לפריטים החדשים…':'Matching light and shadows for the new items…', 'ה־AI הופך את התלת־ממד לצילום ריאליסטי…':'The AI turns the 3D view into a realistic photo…',
