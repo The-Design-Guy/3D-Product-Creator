@@ -1,5 +1,5 @@
 {
   "functions": {
-    "api/render.js": { "maxDuration": 180 }
+    "api/render.js": { "maxDuration": 300 }
   }
 }

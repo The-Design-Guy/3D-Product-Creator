@@ -129,7 +129,7 @@
   .ratios button.on { background:var(--acc); color:#fff; border-color:var(--acc); }
   .r-out { margin-top:12px; border:1px solid var(--line); border-radius:10px; min-height:160px; display:flex; align-items:center; justify-content:center;
     background:repeating-conic-gradient(#f3f5f6 0 25%, #fff 0 50%) 0 0/16px 16px; }
-  .r-out { position:relative; }
+  .r-out { position:relative; flex-direction:column; }
   .r-fs { position:absolute; top:8px; right:8px; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center;
     border:0; border-radius:8px; background:rgba(20,26,32,.62); color:#fff; cursor:pointer; backdrop-filter:blur(4px); }
   .r-fs:hover { background:rgba(20,26,32,.82); }
@@ -150,6 +150,11 @@
   .spin { width:28px; height:28px; border:3px solid #d5dbe0; border-top-color:var(--acc); border-radius:50%; animation:sp 0.9s linear infinite; }
   @keyframes sp { to { transform:rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .spin { animation-duration:3s; } }
+  .r-chk { align-self:stretch; font-size:12.5px; border-radius:8px; padding:7px 50px 7px 10px; margin:8px; background:#eef1f3; color:var(--muted); line-height:1.5; }
+  .r-chk.ok { background:#e5f5ea; color:#1e6b3a; }
+  .r-chk.warn { background:#fff4dc; color:#7a5300; margin-top:8px; }
+  .r-chk.bad { background:#fdecea; color:#a3261d; font-weight:600; }
+  .r-chk small { font-weight:400; }
   .toast { position:fixed; top:calc(var(--hh) + 64px); left:16px; background:var(--acc); color:#fff; font-size:13px; padding:8px 12px; border-radius:8px; z-index:30; }
   @media (max-width:640px){ .toolbar{ top:calc(var(--hh) + 8px); left:8px; right:8px; } .preset select{ max-width:110px; } .tb.big span{ display:none; } }
   .lightpop { position:fixed; top:calc(var(--hh) + 70px); left:16px; width:340px; background:rgba(255,255,255,.95); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
@@ -865,6 +870,7 @@ function makeUnit(n) {
     d.rotation.x = 0;
   });
   rod.userData = { angle:0, target:0, lift:rod.userData.lift, drawers:list }; rod.rotation.x = 0;
+  group.userData.unitN = n;                       // for the bin count sent with a render
   return { group, drawers:list, rod };
 }
 function buildUnitTemplate(n) {
@@ -3059,6 +3065,14 @@ $('shotBtn').onclick = async () => {
 };
 
 // ---------- realistic render (GPT Image via /api/render) ----------
+// exact counts from the model, sent with every render and used by the count check
+function structureSummary() {
+  const byN = {}; let units = 0, bins = 0;
+  world.traverse(o => { const n = o.userData && o.userData.unitN; if (n) { byN[n] = (byN[n] || 0) + 1; units++; bins += n; } });
+  if (!units) return '';
+  const parts = Object.keys(byN).map(Number).sort((a, b) => b - a).map(n => `${byN[n]} × ${n}-bin unit${byN[n] > 1 ? 's' : ''}`);
+  return `${units} tilt-bin unit${units > 1 ? 's' : ''} in total (${parts.join(', ')}) = ${bins} bins in total, including any hidden from this camera angle.`;
+}
 function describe() {
   if (mode === 'scene') return describeScene();
   const base = 'Wall-mounted tilt-bin storage unit: injection-moulded body in light grey RAL 7035 (matte, slightly satin), with clear transparent polystyrene tilt-out bins';
@@ -3181,8 +3195,19 @@ $('renderBtn').onclick = () => {
         const cv = padToRatio(captureCanvas(1536), z.w, z.h);
         let image = cv.toDataURL('image/webp', 0.95);
         if (!image.startsWith('data:image/webp')) image = cv.toDataURL('image/png');
-        const r = await api('/api/render', { image, background: st.bg, description: describe(), size: `${z.w}x${z.h}`, lighting: lightingText(), notes: renderNotes.trim(), refs: renderFiles.map(f => f.data) });
-        out.innerHTML = `<img src="${r.image}" alt="רינדור ריאליסטי"><button class="r-fs" title="מסך מלא" aria-label="פתיחה במסך מלא"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>`;
+        const body = { image, background: st.bg, description: describe(), structure: structureSummary(), size: `${z.w}x${z.h}`, lighting: lightingText(), notes: renderNotes.trim(), refs: renderFiles.map(f => f.data) };
+        // up to 3 attempts: a result whose bin count does not match the model is rendered again
+        const TRIES = 3; let r = null;
+        for (let a = 1; a <= TRIES; a++) {
+          if (a > 1) out.innerHTML = `<div class="spin" aria-label="מרנדר"></div><div class="r-chk warn">נמצא פער במספר התאים (${r.check.detail || 'ללא פירוט'}) – מרנדר שוב, ניסיון ${a} מתוך ${TRIES}…</div>`;
+          r = await api('/api/render', body);
+          if (!r.check || r.check.ok !== false || !body.structure) break;
+        }
+        const ck = r.check || { ok:null };
+        const chk = ck.ok === true ? `<div class="r-chk ok">✓ מספר התאים נבדק ותואם למודל</div>`
+          : ck.ok === false ? `<div class="r-chk bad">⚠ מספר התאים שונה מהמודל – לא לשימוש. ${ck.detail || ''}<br><small>במודל: ${ck.view || '?'} · בתמונה: ${ck.result || '?'}</small></div>`
+          : body.structure ? `<div class="r-chk">בדיקת הספירה לא רצה (${ck.detail || 'לא ידוע'}) – בדקו את מספר התאים בעין.</div>` : '';
+        out.innerHTML = `${chk}<img src="${r.image}" alt="רינדור ריאליסטי"><button class="r-fs" title="מסך מלא" aria-label="פתיחה במסך מלא"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>`;
         out.querySelector('.r-fs').onclick = () => openLightbox(r.image);
         out.querySelector('img').ondblclick = () => openLightbox(r.image);
         go.textContent = 'רנדר שוב'; go.disabled = false;
@@ -3686,7 +3711,8 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
-  'סצנה':'Scene', 'כל הזכויות שמורות':'All rights reserved', 'צמוד לקיר':'touching the wall', 'פנים הארון (מלמעלה למטה)':'Inside the cabinet (top to bottom)', '+ אזור רב תאים':'+ Tilt bin zone', 'פנוי':'Free', 'למעלה':'Up', 'למטה':'Down', 'הסרה':'Remove',
+  'סצנה':'Scene', '✓ מספר התאים נבדק ותואם למודל':'✓ Bin count checked – matches the model', 'מספר התאים שונה מהמודל – לא לשימוש.':'The bin count differs from the model – do not use.',
+  'נמצא פער במספר התאים':'Bin count mismatch', 'מרנדר שוב, ניסיון':'rendering again, attempt', 'בדיקת הספירה לא רצה':'The count check did not run', 'בדקו את מספר התאים בעין.':'check the bin count by eye.', 'במודל:':'Model:', 'בתמונה:':'Image:', 'כל הזכויות שמורות':'All rights reserved', 'צמוד לקיר':'touching the wall', 'פנים הארון (מלמעלה למטה)':'Inside the cabinet (top to bottom)', '+ אזור רב תאים':'+ Tilt bin zone', 'פנוי':'Free', 'למעלה':'Up', 'למטה':'Down', 'הסרה':'Remove',
   'גובה מהרצפה בס"מ':'Height above the floor in cm', 'מדף מעל:':'Shelf above:', 'אין מקום – פנו גובה בארון':'No room – free some height in the cabinet', 'אין מקום לאזור רב תאים':'No room for a tilt bin zone',
   'גובה תפוס:':'Height used:', 'גוררים מדף על המודל כדי להזיז אותו':'drag a shelf on the model to move it', 'מתוך':'of', 'דלתות הזזה עם מנעול (אופציה)':'Lockable sliding doors (option)', 'דלתות הזזה':'sliding doors', 'דלת':'Door',
   'לחיצה על דלת במודל מזיזה אותה. בכל צמד הדלת השמאלית רצה מאחור והימנית מלפנים, עם מנעול צילינדר. בפריסת כנפיים הדלתות יורדות.':'Click a door on the model to slide it. In each pair the left door runs behind and the right one in front, with a cylinder lock. When the wings are spread the doors come off.',
