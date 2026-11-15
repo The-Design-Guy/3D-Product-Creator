@@ -390,7 +390,7 @@
           <div><div class="lbl">סיבוב</div>
             <div class="rot" id="scnRot"><button data-r="-90">⟲ 90°</button><button data-r="-15">−15°</button><input class="num" type="number" id="scnR" step="1" aria-label="זווית"><button data-r="15">+15°</button><button data-r="90">90° ⟳</button></div></div>
         </div>
-        <div class="use">קליק בוחר מוצר; גרירה של מוצר נבחר מזיזה אותו על הרצפה, וליד קיר או מוצר אחר הוא נצמד. לחיצה כפולה פותחת מגירה.</div>
+        <div class="use">קליק בוחר מוצר, קליק נוסף משחרר. גרירה מזיזה על הרצפה. חיצים: ס"מ בכל לחיצה לפי כיוון המוצר (Shift – 10 ס"מ). החזקת הלחצן השמאלי על המוצר + גלגלת: גובה מהרצפה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. Ctrl+Z מבטל. לחיצה כפולה פותחת מגירה.</div>
         <div class="use" id="scnEditHint" hidden>לרב תא בודד בוחרים את מספר התאים בלשונית "רב תא" לפני ההוספה.</div>
         <div id="scnEdit"></div>
       </div>
@@ -1876,6 +1876,8 @@ function releaseBody() {
 }
 
 // ---------- footprint + snapping ----------
+const yOf = (it) => it.y || 0;
+const vOverlap = (a, b, ya = yOf(a)) => ya < yOf(b) + (b.h || 0) - 1e-4 && yOf(b) < ya + (a.h || 0) - 1e-4;
 function extents(it) {
   const a = THREE.MathUtils.degToRad(it.rot), c = Math.abs(Math.cos(a)), s = Math.abs(Math.sin(a));
   return { ex: c*it.hx + s*it.hz, ez: s*it.hx + c*it.hz };
@@ -1892,7 +1894,7 @@ function snapItem(it) {
   const { ex, ez } = extents(it);
   // other items: sit flush next to them, never inside them
   for (const o of SCN.items) {
-    if (o === it || o.hidden || o.hx === undefined) continue;
+    if (o === it || o.hidden || o.hx === undefined || !vOverlap(it, o)) continue;   // one above the other: no conflict
     const q = extents(o), dx = it.x - o.x, dz = it.z - o.z;
     const ox = ex + q.ex - Math.abs(dx), oz = ez + q.ez - Math.abs(dz);   // overlap (>0) per axis
     if (oz > 0.02 && ox > -SN) { if (ox > 0 && oz > 0 && oz < ox) it.z = o.z + Math.sign(dz || 1)*(ez + q.ez); else it.x = o.x + Math.sign(dx || 1)*(ex + q.ex); }
@@ -1937,7 +1939,7 @@ function buildScene() {
     inner.position.x -= c.x; inner.position.z -= c.z;
     it.hx = sz.x/2; it.hz = sz.z/2; it.h = box.max.y;
     if (it.x === undefined) placeNew(it);
-    wrap.position.set(it.x, 0, it.z); wrap.rotation.y = THREE.MathUtils.degToRad(it.rot);
+    wrap.position.set(it.x, yOf(it), it.z); wrap.rotation.y = THREE.MathUtils.degToRad(it.rot);
     wrap.userData.itemId = it.id; wrap.visible = !it.hidden;
     world.add(wrap); ITEM_GROUPS.set(it.id, wrap);
     if (!it.hidden) { list.push(...b.drawers); rodList.push(...b.rods); }
@@ -2018,8 +2020,8 @@ function addItem(type) {
 }
 function moveSel(fn) {
   const it = SCN.items.find(i => i.id === SCN.sel); if (!it) return;
-  fn(it); snapItem(it);
-  const g = ITEM_GROUPS.get(it.id); if (g) { g.position.set(it.x, 0, it.z); g.rotation.y = THREE.MathUtils.degToRad(it.rot); }
+  fn(it); snapItem(it); guideSnap(it, true);
+  placeGroup(it);
   renderScene();
 }
 function sceneTemplate(name) {
@@ -2048,6 +2050,106 @@ function initScenePanel() {
   $('scnR').onchange = (e) => moveSel(it => { it.rot = ((+e.target.value % 360) + 360) % 360; });
 }
 
+// ---------- precise placement: arrows (1 cm, Shift 10 cm), height (hold + wheel), collisions, pink guides, undo ----------
+function placeGroup(it) {
+  const g = ITEM_GROUPS.get(it.id); if (g) { g.position.set(it.x, yOf(it), it.z); g.rotation.y = THREE.MathUtils.degToRad(it.rot); }
+}
+// would the item, at x/z/y, go into a wall, out of the room or into another product?
+function collides(it, x, z, y, e = 1e-4) {
+  const R = SCN.room, W2 = R.W/2000, D2 = R.D/2000, { ex, ez } = extents(it);
+  if (x - ex < -W2 - e || x + ex > W2 + e || z - ez < -D2 - e || z + ez > D2 + e || y < -e) return true;
+  for (const o of SCN.items) {
+    if (o === it || o.hidden || o.hx === undefined || !(y < yOf(o) + o.h - e && yOf(o) < y + it.h - e)) continue;
+    const q = extents(o);
+    if (Math.abs(x - o.x) < ex + q.ex - e && Math.abs(z - o.z) < ez + q.ez - e) return true;
+  }
+  return false;
+}
+// the product it stands on (if any)
+function restsOn(it) {
+  const { ex, ez } = extents(it);
+  return SCN.items.find(o => o !== it && !o.hidden && o.hx !== undefined && Math.abs(yOf(o) + o.h - yOf(it)) < 0.003
+    && Math.abs(it.x - o.x) < ex + extents(o).ex - 1e-3 && Math.abs(it.z - o.z) < ez + extents(o).ez - 1e-3) || null;
+}
+// move by (dx, dz, dy); when the way is blocked, stop exactly where the products / wall touch
+function nudge(it, dx, dz, dy) {
+  const x0 = it.x, z0 = it.z, y0 = yOf(it), at = (t) => [x0 + dx*t, z0 + dz*t, Math.min(3, y0 + dy*t)];
+  if (collides(it, x0, z0, y0) || !collides(it, ...at(1))) { [it.x, it.z, it.y] = at(1); it.y = Math.max(0, it.y); return; }
+  let lo = 0, hi = 1;
+  // search with zero tolerance, so the result sits exactly at contact and a later sideways move is not blocked by rounding
+  for (let i = 30; i--;) { const m = (lo + hi) / 2; if (collides(it, ...at(m), 0)) hi = m; else lo = m; }
+  [it.x, it.z, it.y] = at(lo);
+}
+// Illustrator-style smart guides: edges / centres lined up with another product, snapped within 1 cm
+const guideMat = new THREE.LineBasicMaterial({ color:0xff2d95, depthTest:false, transparent:true, opacity:0.95 });
+let guideObj = null, guideT = 0;
+function clearGuides() { if (guideObj) { guideObj.parent && guideObj.parent.remove(guideObj); guideObj.geometry.dispose(); guideObj = null; } }
+function guideSnap(it, snap) {
+  clearGuides();
+  const SN = 0.0095, others = SCN.items.filter(o => o !== it && !o.hidden && o.hx !== undefined);
+  const lines = [];
+  for (const axis of ['x', 'z']) {
+    const e = (o) => axis === 'x' ? extents(o).ex : extents(o).ez;
+    const mine = (it2) => [it2[axis] - e(it2), it2[axis], it2[axis] + e(it2)];
+    let best = null;
+    for (const o of others) for (const a of mine(it)) for (const b of mine(o)) {
+      const d = b - a; if (Math.abs(d) <= SN + 1e-6 && (!best || Math.abs(d) < Math.abs(best.d))) best = { d, o };
+    }
+    if (best && snap && Math.abs(best.d) > 1e-6) {
+      const was = it[axis]; it[axis] += best.d;
+      if (collides(it, it.x, it.z, yOf(it))) it[axis] = was;
+    }
+    // draw every alignment that holds now
+    for (const o of others) for (const a of mine(it)) for (const b of mine(o)) if (Math.abs(b - a) < 1e-4) {
+      const pA = new THREE.Vector3(it.x, yOf(it) + it.h/2, it.z), pB = new THREE.Vector3(o.x, yOf(o) + o.h/2, o.z);
+      pA[axis] = pB[axis] = a;
+      const ext = pB.clone().sub(pA).normalize().multiplyScalar(0.12);
+      lines.push(pA.clone().sub(ext), pB.clone().add(ext));
+    }
+  }
+  if (!lines.length) return;
+  guideObj = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(lines), guideMat);
+  guideObj.renderOrder = 10; world.add(guideObj);
+  clearTimeout(guideT); guideT = setTimeout(clearGuides, 1600);
+}
+// undo (Ctrl+Z) for placing products in the scene
+const sceneUndo = [];
+function pushUndo(it) {
+  const last = sceneUndo[sceneUndo.length - 1], st = { id:it.id, x:it.x, z:it.z, y:yOf(it), rot:it.rot };
+  if (last && last.id === st.id && last.x === st.x && last.z === st.z && last.y === st.y && last.rot === st.rot) return;
+  sceneUndo.push(st); if (sceneUndo.length > 200) sceneUndo.shift();
+}
+function undoScene() {
+  const st = sceneUndo.pop(); if (!st) { toast('אין מה לבטל'); return; }
+  const it = SCN.items.find(i => i.id === st.id); if (!it) return undoScene();
+  Object.assign(it, { x:st.x, z:st.z, y:st.y, rot:st.rot }); placeGroup(it);
+  if (SCN.sel !== it.id) selectItem(it.id); else renderScene();
+  guideSnap(it, false);
+}
+const typing = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || document.activeElement.isContentEditable;
+addEventListener('keydown', (e) => {
+  if (mode !== 'scene' || typing() || !$('dlg').hidden || document.querySelector('.lb')) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undoScene(); return; }
+  const it = SCN.items.find(i => i.id === SCN.sel); if (!it) return;
+  if (e.key === 'Escape') { selectItem(null); return; }
+  const dir = { ArrowRight:[1, 0], ArrowLeft:[-1, 0], ArrowUp:[0, -1], ArrowDown:[0, 1] }[e.key]; if (!dir) return;
+  e.preventDefault(); e.stopPropagation();
+  // in the product's own frame: ←/→ along its width, ↑ backwards (toward its back), ↓ toward its front
+  const step = e.shiftKey ? 0.1 : 0.01, a = THREE.MathUtils.degToRad(it.rot), [lx, lz] = dir;
+  pushUndo(it);
+  nudge(it, (lx*Math.cos(a) + lz*Math.sin(a)) * step, (-lx*Math.sin(a) + lz*Math.cos(a)) * step, 0);
+  guideSnap(it, true); placeGroup(it); renderScene();
+}, true);
+// height: hold the left button on the selected product and turn the wheel
+canvas.addEventListener('wheel', (e) => {
+  if (!sdrag) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const it = sdrag.it; sdrag.moved = true; sdrag.lifted = true;
+  if (!sdrag.undo) { pushUndo(it); sdrag.undo = true; }
+  nudge(it, 0, 0, (e.deltaY < 0 ? 1 : -1) * (e.shiftKey ? 0.1 : 0.01));
+  guideSnap(it, true); placeGroup(it); renderScene();
+}, { capture:true, passive:false });
+
 // ---------- drag items across the floor ----------
 const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), fHit = new THREE.Vector3();
 let sdrag = null;
@@ -2062,19 +2164,28 @@ canvas.addEventListener('pointerdown', (e) => {
   if (SCN.sel !== it.id) { selectItem(it.id); return; }   // first click selects; dragging a selected product moves it
   if (!dragRay.ray.intersectPlane(floorPlane, fHit)) return;
   sdrag = { it, dx: it.x - fHit.x, dz: it.z - fHit.z, sx: e.clientX, sy: e.clientY, moved:false };
+  clearTimeout(deselT);
   controls.enabled = false;
 }, { capture:true });
 addEventListener('pointermove', (e) => {
   if (!sdrag) return;
   if (!sdrag.moved && Math.hypot(e.clientX - sdrag.sx, e.clientY - sdrag.sy) < 5) return;
+  if (!sdrag.undo) { pushUndo(sdrag.it); sdrag.undo = true; }
   sdrag.moved = true; canvas.style.cursor = 'grabbing';
   dragRay.setFromCamera(pointerNDC(e), camera);
   if (dragRay.ray.intersectPlane(floorPlane, fHit)) moveSel(it => { it.x = fHit.x + sdrag.dx; it.z = fHit.z + sdrag.dz; });
 });
-addEventListener('pointerup', () => { if (!sdrag) return; sdrag = null; controls.enabled = true; canvas.style.cursor = ''; });
+let deselT = 0;
+addEventListener('pointerup', () => {
+  if (!sdrag) return;
+  const was = sdrag; sdrag = null; controls.enabled = true; canvas.style.cursor = '';
+  // a plain click on the product that is already selected releases it (unless it turns out to be a double click)
+  if (!was.moved) deselT = setTimeout(() => { if (SCN.sel === was.it.id) selectItem(null); }, 280);
+});
 // in a scene a single click selects; a double click opens a bin
 canvas.addEventListener('dblclick', (e) => {
   if (mode !== 'scene') return;
+  clearTimeout(deselT);
   dragRay.setFromCamera(pointerNDC(e), camera);
   const hit = dragRay.intersectObjects(drawers, true)[0]; if (!hit) return;
   let o = hit.object; while (o && !drawers.includes(o)) o = o.parent;
@@ -2090,7 +2201,7 @@ function describeScene() {
     applyCfg(it.type, it.id === SCN.sel ? capCfg(it.type) : it.cfg);
     mode = it.type; const d = describe(); mode = m;
     const tw = touchWall(it), facing = ({ 0:'facing the camera/room', 90:'turned 90 degrees, its long side running away from the back wall', 180:'facing the back wall', 270:'turned 90 degrees, its long side running away from the back wall' })[Math.round(((it.rot % 360) + 360) % 360 / 90) * 90 % 360];
-    lines.push(`${k + 1}. ${d} Position: ${Math.round((it.x + R.W/2000)*100)} cm from the left side, ${Math.round((it.z + R.D/2000)*100)} cm from the back; ${facing}${tw.length ? '; touching the ' + tw.join(' and ') + ' wall' : ''}.`);
+    lines.push(`${k + 1}. ${d} Position: ${Math.round((it.x + R.W/2000)*100)} cm from the left side, ${Math.round((it.z + R.D/2000)*100)} cm from the back; ${facing}${tw.length ? '; touching the ' + tw.join(' and ') + ' wall' : ''}${yOf(it) > 0.005 ? `; raised ${Math.round(yOf(it)*100)} cm above the floor${restsOn(it) ? ', resting on top of product ' + (SCN.items.filter(i => !i.hidden).indexOf(restsOn(it)) + 1) : ' (wall-mounted / floating exactly at that height)'}` : ''}.`);
   });
   restoreAll(saved);
   const sel = SCN.items.find(i => i.id === SCN.sel); if (sel) applyCfg(sel.type, sel.cfg);
@@ -2947,7 +3058,7 @@ function captureFamily() {
     wall: { ...wall }, wallComp: JSON.parse(JSON.stringify(wallComp)),
     tn: JSON.parse(JSON.stringify(TN)), spread: spreadTarget > 0.5, wing: tenaOpenWing,
     scene: (() => { const s = SCN.items.find(i => i.id === SCN.sel); if (s) s.cfg = capCfg(s.type);
-      return { room:deep(SCN.room), next:SCN.next, shots:deep(SCN.shots || []), items:SCN.items.map(({ id, type, cfg, x, z, rot, hidden, name }) => deep({ id, type, cfg, x, z, rot, hidden:!!hidden, name })) }; })(),
+      return { room:deep(SCN.room), next:SCN.next, shots:deep(SCN.shots || []), items:SCN.items.map(({ id, type, cfg, x, z, y, rot, hidden, name }) => deep({ id, type, cfg, x, z, y:y || 0, rot, hidden:!!hidden, name })) }; })(),
     backWall: $('backWall').checked,
     rod: $('rod').checked, labels: $('labelsOn').checked, openAll: $('openAll').checked,
     open: drawers.map((d, i) => (d.userData.target > 0.1 || d.userData.pending) ? i : -1).filter(i => i >= 0),
@@ -3898,7 +4009,7 @@ const EN = {
   '+ הוסף מוצר':'+ Add product', 'תבנית: 2 מחיצות מהקיר':'Template: 2 partitions from the wall', 'מוצרים בסצנה':'Products in the scene',
   'הסצנה ריקה. הוסף מוצר או בחר תבנית.':'The scene is empty. Add a product or pick a template.', 'שכפול':'Duplicate', 'הסתרה':'Hide', 'הצגה':'Show', 'מחיקה':'Delete',
   'סיבוב':'Rotate', 'זווית':'Angle', 'רוחב החדר במטרים':'Room width in metres', 'עומק החדר במטרים':'Room depth in metres',
-  'קליק בוחר מוצר; גרירה של מוצר נבחר מזיזה אותו על הרצפה, וליד קיר או מוצר אחר הוא נצמד. לחיצה כפולה פותחת מגירה.':'Click selects a product; dragging a selected product moves it across the floor, snapping to walls and other products. Double-click opens a bin.',
+  'קליק בוחר מוצר, קליק נוסף משחרר. גרירה מזיזה על הרצפה. חיצים: ס"מ בכל לחיצה לפי כיוון המוצר (Shift – 10 ס"מ). החזקת הלחצן השמאלי על המוצר + גלגלת: גובה מהרצפה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. Ctrl+Z מבטל. לחיצה כפולה פותחת מגירה.':'Click selects a product, another click releases it. Drag moves it on the floor. Arrows: 1 cm per press in the product\'s own directions (Shift – 10 cm). Hold the left button on the product + wheel: height above the floor. A product never goes into a wall or another product – it stops on contact. Pink line = lined up with another product. Ctrl+Z undoes. Double-click opens a bin.',
   'לרב תא בודד בוחרים את מספר התאים בלשונית "רב תא" לפני ההוספה.':'For a single tilt bin, choose the number of bins in the "Tilt bin" tab before adding it.',
   'צמוד ל':'Touching the ', 'קיר אחורי':'back wall', 'קיר שמאלי':'left wall', 'קיר ימני':'right wall', 'ול':' and the ', 'מוצרים':'products', 'חדר':'room', "מ'":'m', 'עגלת רב-תא EXCLUSIVE':'Exclusive Tilt Bin cart', 'מחיצת EXCLUSIVE מודולרית':'Modular Exclusive Partition',
   'עגלה סגורה דו צדדית · רוחב 66 ס"מ · גובה 110–150 לפי ההרכב':'Closed double-sided cart · width 66 cm · height 110–150 by layout',
@@ -3977,7 +4088,7 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
-  'סצנה':'Scene', 'מה רוצים בתמונה?':'What do you want in the picture?', 'כתבו או הקליטו חופשי – ה־AI יפזר לשדות':'type or dictate freely – the AI sorts it into the fields',
+  'סצנה':'Scene', 'אין מה לבטל':'Nothing to undo', 'מה רוצים בתמונה?':'What do you want in the picture?', 'כתבו או הקליטו חופשי – ה־AI יפזר לשדות':'type or dictate freely – the AI sorts it into the fields',
   'זה מה שהבנתי. אם זה בסדר, נמשיך. אם לא – תשנה מה שצריך, ולחץ המשך.':'This is what I understood. If it is right, we go on. If not – change what you need and press Continue.',
   '1. מה יש בתאים':'1. What is in the bins', '· הכי חשוב':'· most important', '3. מה ברקע':'3. Background', '2. רפרנס לתכולת התאים (לא חובה)':'2. Reference for the bin contents (optional)',
   '4. רפרנס לחדר / לחלל (לא חובה)':'4. Reference for the room / space (optional)', '5. מה עוד חשוב לשים לב':'5. What else matters', '· שלב 1':'· stage 1', '· שלב 2':'· stage 2', '· בשני השלבים':'· both stages',
@@ -4129,6 +4240,7 @@ function stepFree(dt) {
 addEventListener('keydown', (e) => {
   if (!FREE.on || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
   const key = e.key.toLowerCase();
+  if (key.startsWith('arrow') && mode === 'scene' && SCN.sel) return;   // the arrows move the selected product
   if (['w','a','s','d','q','e','arrowup','arrowdown','arrowleft','arrowright','pageup','pagedown','shift'].includes(key)) { FREE.keys.add(key); e.preventDefault(); }
 });
 addEventListener('keyup', (e) => FREE.keys.delete(e.key.toLowerCase()));
