@@ -23,7 +23,7 @@ function prompt(description, background, lighting, notes, refCount, structure) {
     notes && background === 'transparent' ? 'The background must stay fully transparent: ignore any background request in the notes, apply only what concerns the bin contents.' : '',
     // the structure lock comes AFTER the notes on purpose: the last instructions weigh the most
     'STRUCTURE LOCK – this overrides everything above, including the client notes:',
-    structure ? `Exact counts from the CAD data: ${structure}` : '',
+    structure ? `Exact layout from the CAD data:\n${structure}\nGo through this layout column by column and row by row: every row of the result must have exactly the number of bins listed (a 6-bin unit is a row of exactly 6 bins, never 5 or 7).` : '',
     'Before drawing, count in the FIRST image every unit, every column, every row and every single bin (drawer), from left to right and from top to bottom. The result must have EXACTLY the same number of units, columns, rows and bins, in the same arrangement and sizes. Never add, remove, merge, split, enlarge or shrink bins, rows, columns, shelves or units.',
     notes ? 'Anything the notes ask to put "in the bins" goes INSIDE the bins that already exist, behind their clear fronts; it never creates new bins or changes how many there are. If a note cannot be done without changing the count, ignore that part of the note.' : '',
     'Make the materials real: matte powder-coated / injection-moulded light grey RAL 7035 plastic, crystal-clear polystyrene bins with real refraction, subtle reflections and slightly brighter edges where the plastic is thick, brushed metal where there is metal.',
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
   const { image, background = 'transparent', description = '' } = req.body || {};
   const lighting = String(req.body?.lighting || '').slice(0, 300);
   const notes = String(req.body?.notes || '').replace(/[<>]/g, '').slice(0, 1200);
-  const structure = String(req.body?.structure || '').replace(/[<>]/g, '').slice(0, 800);
+  const structure = String(req.body?.structure || '').replace(/[<>]/g, '').slice(0, 4000);
   const t0 = Date.now();
   // output size: WIDTHxHEIGHT, edges multiple of 16, each ≤ 3840, ratio ≤ 3:1, 655,360–8,294,400 pixels
   let size = 'auto';
@@ -109,16 +109,16 @@ async function checkCount(view, result, structure) {
     type:'object', additionalProperties:false,
     required:['view_counts', 'result_counts', 'match', 'problem'],
     properties:{
-      view_counts:{ type:'string', description:'bins per unit/column in the 3D view, left to right, e.g. "col1: 5,5,4 | col2: ..."' },
-      result_counts:{ type:'string', description:'the same, counted in the realistic result' },
+      view_counts:{ type:'string', description:'bins in each row, top to bottom, per column left to right, in the 3D view, e.g. "col1: 9,6,6,5 | col2: ..."' },
+      result_counts:{ type:'string', description:'the same, row by row, counted in the realistic result' },
       match:{ type:'boolean' },
-      problem:{ type:'string', description:'empty if they match; otherwise a short Hebrew description of the difference' },
+      problem:{ type:'string', description:'empty if they match; otherwise a short Hebrew description of the difference, naming the column and the row from the top' },
     },
   };
   const instructions = [
     'Image A is a 3D CAD viewport of a storage product built from tilt-bin units: grey plastic frames holding clear tilt-out bins (drawers). Image B is a photo-realistic rendering that must show exactly the same product.',
     'Count carefully in BOTH images, unit by unit and column by column, left to right and top to bottom: the number of units, and the number of bins in each unit. Count only bins that are visible in each image.',
-    structure ? `For reference, the CAD data says: ${structure} (some bins may be hidden from this camera angle).` : '',
+    structure ? `The CAD data gives this layout (some bins may be hidden from this camera angle):\n${structure}\nIn image B, count the bins in EVERY horizontal row of EVERY column separately and compare each row with the layout and with image A. A single row with one bin more or less is a mismatch.` : '',
     'Items placed inside the bins, props, background and lighting do not matter. Only the number and arrangement of bins, units, columns, rows and shelves matter.',
     'match = true only if every count in B equals the count in A. If anything differs, match = false and describe it in Hebrew in "problem".',
   ].filter(Boolean).join('\n');

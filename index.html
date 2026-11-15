@@ -150,6 +150,9 @@
   .spin { width:28px; height:28px; border:3px solid #d5dbe0; border-top-color:var(--acc); border-radius:50%; animation:sp 0.9s linear infinite; }
   @keyframes sp { to { transform:rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .spin { animation-duration:3s; } }
+  .r-layout { margin:6px 0 10px; font-size:12.5px; color:var(--muted); }
+  .r-layout summary { cursor:pointer; }
+  .r-layout pre { white-space:pre-wrap; font:12px/1.5 ui-monospace,Menlo,monospace; background:#f3f5f7; border-radius:8px; padding:8px 10px; margin:6px 0 0; color:var(--ink); max-height:180px; overflow:auto; }
   .r-chk { align-self:stretch; font-size:12.5px; border-radius:8px; padding:7px 50px 7px 10px; margin:8px; background:#eef1f3; color:var(--muted); line-height:1.5; }
   .r-chk.ok { background:#e5f5ea; color:#1e6b3a; }
   .r-chk.warn { background:#fff4dc; color:#7a5300; margin-top:8px; }
@@ -3134,11 +3137,49 @@ $('shotBtn').onclick = async () => {
 // ---------- realistic render (GPT Image via /api/render) ----------
 // exact counts from the model, sent with every render and used by the count check
 function structureSummary() {
-  const byN = {}; let units = 0, bins = 0;
-  world.traverse(o => { const n = o.userData && o.userData.unitN; if (n) { byN[n] = (byN[n] || 0) + 1; units++; bins += n; } });
-  if (!units) return '';
-  const parts = Object.keys(byN).map(Number).sort((a, b) => b - a).map(n => `${byN[n]} × ${n}-bin unit${byN[n] > 1 ? 's' : ''}`);
-  return `${units} tilt-bin unit${units > 1 ? 's' : ''} in total (${parts.join(', ')}) = ${bins} bins in total, including any hidden from this camera angle.`;
+  // every tilt-bin unit, as seen from this camera: the columns you can see are listed left to right,
+  // each one top to bottom; columns hidden behind others or facing away are only counted
+  camera.updateMatrixWorld(); world.updateMatrixWorld(true);
+  const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0); right.y = 0; right.normalize();
+  const fwd = new THREE.Vector3(); camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
+  const visibleChain = (o) => { for (let p = o; p; p = p.parent) if (p.visible === false) return false; return true; };
+  const units = [], front = new THREE.Vector3();
+  world.traverse(o => {
+    const n = o.userData && o.userData.unitN; if (!n || !visibleChain(o)) return;
+    const box = new THREE.Box3().setFromObject(o), c = box.getCenter(new THREE.Vector3());
+    front.set(0, 0, 1).transformDirection(o.matrixWorld);
+    units.push({ n, box, c, x:c.dot(right), d:c.dot(fwd), y:c.y, sx:c.clone().project(camera).x, face:front.dot(new THREE.Vector3().subVectors(camera.position, c)) > 0 });
+  });
+  if (!units.length) return '';
+  // seen or hidden: is the unit the first box a ray from the camera meets on its way to the unit's centre?
+  const ray = new THREE.Ray(), hitP = new THREE.Vector3();
+  for (const u of units) {
+    if (!u.face) { u.seen = false; continue; }
+    ray.origin.copy(camera.position); ray.direction.subVectors(u.c, camera.position).normalize();
+    const own = ray.intersectBox(u.box, hitP) ? hitP.distanceTo(camera.position) : camera.position.distanceTo(u.c);
+    u.seen = !units.some(o => o !== u && ray.intersectBox(o.box, hitP) && hitP.distanceTo(camera.position) < own - 0.03);
+  }
+  // columns: same side, same place across and in depth
+  const cols = [];
+  for (const u of [...units].sort((a, b) => a.x - b.x)) {
+    const col = cols.find(k => k.face === u.face && Math.abs(k.x - u.x) < 0.2 && Math.abs(k.d - u.d) < 0.13);
+    if (col) { col.list.push(u); col.x = (col.x * (col.list.length - 1) + u.x) / col.list.length; } else cols.push({ face:u.face, x:u.x, d:u.d, list:[u] });
+  }
+  cols.forEach(k => { k.sx = k.list.reduce((a, u) => a + u.sx, 0) / k.list.length; k.seen = k.list.filter(u => u.seen).length / k.list.length >= 0.5; k.bins = k.list.reduce((a, u) => a + u.n, 0); });
+  const runs = (list) => {                       // top to bottom, equal neighbours merged: "2 × 9-bin, 1 × 6-bin"
+    const out = []; for (const u of [...list].sort((a, b) => b.y - a.y)) { const l = out[out.length - 1]; if (l && l.n === u.n) l.c++; else out.push({ n:u.n, c:1 }); }
+    return out.map(r => `${r.c} × ${r.n}-bin`).join(', ');
+  };
+  const seen = cols.filter(k => k.seen).sort((a, b) => a.sx - b.sx), dMin = Math.min(...seen.map(k => k.d));
+  const lines = ['Layout from the 3D model, as seen from this camera. Each column is listed TOP TO BOTTOM; every unit is one horizontal row of bins, and an N-bin unit has exactly N bins side by side.'];
+  if (seen.length) lines.push(`Visible column${seen.length > 1 ? 's, left to right' : ''}:`);
+  seen.forEach((k, i) => lines.push(`${seen.length > 1 ? `  column ${i + 1}${k.d - dMin > 0.13 ? ' (further back)' : ''}: ` : '  '}${runs(k.list)} = ${k.list.length} unit${k.list.length > 1 ? 's' : ''}, ${k.bins} bins`));
+  const hid = cols.filter(k => !k.seen && k.face), away = cols.filter(k => !k.face);
+  const sum = (ks) => `${ks.length} column${ks.length > 1 ? 's' : ''}, ${ks.reduce((a, k) => a + k.list.length, 0)} units, ${ks.reduce((a, k) => a + k.bins, 0)} bins`;
+  if (hid.length) lines.push(`Behind the visible columns, mostly hidden: ${sum(hid)}.`);
+  if (away.length) lines.push(`Facing away from the camera (not visible): ${sum(away)}.`);
+  lines.push(`Total: ${units.length} unit${units.length > 1 ? 's' : ''}, ${units.reduce((a, u) => a + u.n, 0)} bins.`);
+  return lines.join('\n');
 }
 function describe() {
   if (mode === 'scene') return describeScene();
@@ -3209,6 +3250,7 @@ $('renderBtn').onclick = () => {
     </div>
     <div class="use" id="rSize"></div>
     <div class="lbl">הערות לתמונה</div>
+    <details class="r-layout"><summary>ההרכב שנשלח לרינדור (נבנה אוטומטית מהמודל)</summary><pre id="rLayout" dir="ltr"></pre></details>
     <div class="notes">
       <textarea id="rNotes" rows="3" placeholder="למשל: רקע של מחסן מסודר, בתאים ברגים ואומים, במגירה העליונה כפפות…"></textarea>
       <div class="partial" id="rPartial" aria-live="polite"></div>
@@ -3634,6 +3676,7 @@ function mountNotes(card) {
   const cv = card.querySelector('#rWave'), bar = card.querySelector('.micbar');
   ta.value = renderNotes;
   ta.oninput = () => { renderNotes = ta.value; };
+  { const lay = card.querySelector('#rLayout'); if (lay) { const t = structureSummary(); lay.textContent = t || '—'; lay.closest('details').hidden = !t; } }
   mountFiles(card, ta);
   let raf = 0;
   const draw = () => {
@@ -3778,7 +3821,7 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
-  'סצנה':'Scene', 'תפריט':'Menu', 'סגירת התפריט':'Close menu', '✓ מספר התאים נבדק ותואם למודל':'✓ Bin count checked – matches the model', 'מספר התאים שונה מהמודל – לא לשימוש.':'The bin count differs from the model – do not use.',
+  'סצנה':'Scene', 'ההרכב שנשלח לרינדור (נבנה אוטומטית מהמודל)':'Layout sent with the render (built automatically from the model)', 'תפריט':'Menu', 'סגירת התפריט':'Close menu', '✓ מספר התאים נבדק ותואם למודל':'✓ Bin count checked – matches the model', 'מספר התאים שונה מהמודל – לא לשימוש.':'The bin count differs from the model – do not use.',
   'נמצא פער במספר התאים':'Bin count mismatch', 'מרנדר שוב, ניסיון':'rendering again, attempt', 'בדיקת הספירה לא רצה':'The count check did not run', 'בדקו את מספר התאים בעין.':'check the bin count by eye.', 'במודל:':'Model:', 'בתמונה:':'Image:', 'כל הזכויות שמורות':'All rights reserved', 'צמוד לקיר':'touching the wall', 'פנים הארון (מלמעלה למטה)':'Inside the cabinet (top to bottom)', '+ אזור רב תאים':'+ Tilt bin zone', 'פנוי':'Free', 'למעלה':'Up', 'למטה':'Down', 'הסרה':'Remove',
   'גובה מהרצפה בס"מ':'Height above the floor in cm', 'מדף מעל:':'Shelf above:', 'אין מקום – פנו גובה בארון':'No room – free some height in the cabinet', 'אין מקום לאזור רב תאים':'No room for a tilt bin zone',
   'גובה תפוס:':'Height used:', 'גוררים מדף על המודל כדי להזיז אותו':'drag a shelf on the model to move it', 'מתוך':'of', 'דלתות הזזה עם מנעול (אופציה)':'Lockable sliding doors (option)', 'דלתות הזזה':'sliding doors', 'דלת':'Door',
