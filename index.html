@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>רב תא – מודל תלת־ממדי</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20500%20500%22%3E%20%3Crect%20width%3D%22500%22%20height%3D%22500%22/%3E%20%3Cpath%20d%3D%22M405.31%2C77.59h0c-19.04%2C0-34.48%2C15.44-34.48%2C34.48h0c0%2C19.04%2C15.44%2C34.48%2C34.48%2C34.48h0c19.04%2C0%2C34.48-15.44%2C34.48-34.48h0c0-19.04-15.44-34.48-34.48-34.48Z%22%20fill%3D%22%230dff00%22/%3E%20%3Cpath%20d%3D%22M336.07%2C43.11h0c-37.96.15-68.69%2C30.97-68.69%2C68.96v68.96h-.14v68.96h-136.83s-1.24%2C0-1.24%2C0V112.07H60.21v68.96h0v38.96s0%2C.02%2C0%2C.04v128.9s0%2C.02%2C0%2C.04v38.96h0v68.96h68.96v-68.96h0s0%2C0%2C0%2C0v-68.96h5.79s0%2C0%2C0%2C0h126.34s0%2C0%2C0%2C0h5.93v68.96h0s-.14%2C0-.14%2C0v68.96h68.96v-68.96h.14v-181.64h.14v-100.38c3.12-35.2%2C32.68-62.8%2C68.69-62.8h-68.96Z%22%20fill%3D%22%230dff00%22/%3E%20%3Cpath%20d%3D%22M439.79%2C181.04v-9.23c-10.11%2C5.85-21.84%2C9.21-34.35%2C9.23h-.27c-12.51-.02-24.24-3.38-34.35-9.23v9.23h0v275.85h68.96V181.04h0Z%22%20fill%3D%22%230dff00%22/%3E%20%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
@@ -150,6 +151,17 @@
   .spin { width:28px; height:28px; border:3px solid #d5dbe0; border-top-color:var(--acc); border-radius:50%; animation:sp 0.9s linear infinite; }
   @keyframes sp { to { transform:rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .spin { animation-duration:3s; } }
+  .pg { --pg-accent:#2b3035; --pg-track:#dfe3e6; --pg-text:#2b3035; --pg-sub:#6b747c;
+    display:flex; flex-direction:column; align-items:center; gap:10px; width:100%; padding:22px 18px 18px; box-sizing:border-box; background:#f3f5f6; border-radius:14px; }
+  .pg-dial { position:relative; width:min(70vw, 240px); }
+  .pg-dial svg { display:block; width:100%; overflow:visible; }
+  .pg-fill { transition:stroke-dashoffset 120ms linear; }
+  .pg-num { position:absolute; left:0; right:0; top:50%; transform:translateY(calc(-50% + 10px)); text-align:center;
+    font-family:'Barlow Condensed', 'Arial Narrow', sans-serif; font-style:italic; font-weight:800; font-size:68px; line-height:1; color:var(--pg-text); }
+  .pg-num b { font-weight:inherit; }
+  .pg-num span { font-size:30px; color:var(--pg-text); }
+  .pg-line { margin:0; min-height:46px; text-align:center; font-size:15px; line-height:1.5; color:var(--pg-sub); text-wrap:pretty; transition:opacity 250ms ease; }
+  @media (prefers-reduced-motion: reduce) { .pg-fill, .pg-line { transition:none; } }
   .r-understood { background:#eef4ff; border:1px solid #c9dafb; color:#1d4ea8; border-radius:10px; padding:9px 11px; font-size:13px; font-weight:600; margin:10px 0 4px; }
   .rf { display:grid; gap:8px; margin:8px 0 6px; }
   .rf-f { display:grid; gap:4px; font-size:13px; font-weight:600; color:var(--ink); }
@@ -3133,9 +3145,10 @@ $('spreadBtn').onclick = () => setSpread(spreadTarget < 0.5);
 function openDialog(html, onReady) {
   const wrap = $('dlg'); wrap.innerHTML = `<div class="dlg-card" role="dialog" aria-modal="true">${html}</div>`;
   wrap.hidden = false;
-  const close = () => { if (wrap._onClose) { wrap._onClose(); wrap._onClose = null; } wrap.hidden = true; wrap.innerHTML = ''; };
-  wrap.onclick = (e) => { if (e.target === wrap) close(); };
-  wrap.querySelectorAll('[data-close]').forEach(b => b.onclick = close);
+  wrap._busy = false;                             // set while a render runs: the dialog must not close by accident
+  const close = () => { if (wrap._onClose) { wrap._onClose(); wrap._onClose = null; } wrap.hidden = true; wrap.innerHTML = ''; wrap._busy = false; };
+  wrap.onclick = (e) => { if (e.target !== wrap) return; if (wrap._busy) { wrap.firstElementChild.animate([{ transform:'scale(1)' }, { transform:'scale(1.015)' }, { transform:'scale(1)' }], 220); return; } close(); };
+  wrap.querySelectorAll('[data-close]').forEach(b => b.onclick = () => { if (wrap._busy && !confirm('הרינדור עדיין רץ. לסגור בכל זאת? התוצאה לא תוצג.')) return; close(); });
   onReady && onReady(wrap.firstElementChild, close);
   const first = wrap.querySelector('input,select,button'); first && first.focus();
 }
@@ -3549,8 +3562,8 @@ $('renderBtn').onclick = () => {
       const z = st.flow === 'two' && st.base ? (() => { const [w, h] = st.base.size.split('x').map(Number); return { w, h }; })() : size();
       if (z.error) return;
       const go = q('#rGo'), out = q('#rOut'), er = q('#rErr');
-      er.hidden = true; go.disabled = true; go.textContent = 'מרנדר…'; q('#rApprove').hidden = true;
-      out.hidden = false; out.innerHTML = '<div class="spin" aria-label="מרנדר"></div>';
+      er.hidden = true; go.disabled = true; go.textContent = 'מרנדר…'; q('#rApprove').hidden = true; $('dlg')._busy = true;
+      out.hidden = false; out.innerHTML = '';
       try {
         let body;
         if (st.flow === 'two' && st.base) {
@@ -3568,8 +3581,10 @@ $('renderBtn').onclick = () => {
         // up to 3 attempts: a result whose bin count does not match the model is rendered again
         const TRIES = 3; let r = null;
         for (let a = 1; a <= TRIES; a++) {
-          if (a > 1) out.innerHTML = `<div class="spin" aria-label="מרנדר"></div><div class="r-chk warn">נמצא פער מול המודל (${r.check.detail || 'ללא פירוט'}) – מרנדר שוב, ניסיון ${a} מתוך ${TRIES}…</div>`;
-          r = await api('/api/render', body);
+          out.innerHTML = a > 1 ? `<div class="r-chk warn">נמצא פער מול המודל (${r.check.detail || 'ללא פירוט'}) – מרנדר שוב, ניסיון ${a} מתוך ${TRIES}</div>` : '';
+          const gauge = renderGauge(out, gaugeLines(body, a));
+          out.scrollIntoView({ behavior:'smooth', block:'nearest' });
+          try { r = await api('/api/render', body); } finally { gauge.finish(); }
           if (!r.check || r.check.ok !== false || !body.structure) break;
         }
         const ck = r.check || { ok:null };
@@ -3580,7 +3595,7 @@ $('renderBtn').onclick = () => {
         out.innerHTML = `${chk}<img src="${r.image}" alt="רינדור ריאליסטי"><button class="r-fs" title="מסך מלא" aria-label="פתיחה במסך מלא"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>`;
         out.querySelector('.r-fs').onclick = () => openLightbox(r.image);
         out.querySelector('img').ondblclick = () => openLightbox(r.image);
-        go.disabled = false;
+        go.disabled = false; $('dlg')._busy = false;
         if (st.flow === 'two' && !st.base) {          // stage 1 done: approve it, or render the base again
           go.textContent = 'רנדר בסיס שוב';
           const ap = q('#rApprove'); ap.hidden = false; ap.classList.toggle('primary', ck.ok !== false); ap.classList.toggle('warnbtn', ck.ok === false);
@@ -3598,7 +3613,7 @@ $('renderBtn').onclick = () => {
         }
       } catch (e) {
         out.hidden = true; er.textContent = 'הרינדור נכשל: ' + e.message; er.hidden = false;
-        go.textContent = 'נסה שוב'; go.disabled = false;
+        go.textContent = 'נסה שוב'; go.disabled = false; $('dlg')._busy = false;
       }
     };
   });
@@ -3685,6 +3700,50 @@ function fitSize(w, h) {
   return { w, h, note };
 }
 // put the captured model in the middle of a canvas of the requested ratio (transparent margins)
+// ---------- render progress gauge: estimated percentage + what is happening now ----------
+// The server does the whole render in one request, so the percentage follows the time a render usually takes
+// (learned from the last renders on this computer) and slows down near the end until the answer arrives.
+function gaugeLines(body, attempt) {
+  const edit = body.stage === 'edit', L = [];
+  if (attempt > 1) L.push(`ניסיון ${attempt}: מרנדר שוב עם אותן הוראות…`);
+  else L.push(edit ? 'שולח את תמונת הבסיס המאושרת ואת הבריף…' : `שולח את המודל, ההרכב מלמעלה למטה${body.tech ? ', שרטוט המידות' : ''} ותמונת הייחוס…`);
+  if (edit) L.push('ה־AI עורך את תמונת הבסיס – המוצרים נשארים כמו שהם…', body.contents ? 'ממלא את התאים לפי מה שביקשת…' : 'מוסיף את מה שביקשת…', 'מתאים תאורה וצללים לפריטים החדשים…');
+  else L.push('ה־AI הופך את התלת־ממד לצילום ריאליסטי…', 'בונה חומרים: פלסטיק אפור, תאים שקופים, אלומיניום…', body.backdrop || (body.roomRefs || []).length ? 'בונה את החדר והרקע סביב המוצרים…' : 'מוסיף תאורה, השתקפויות וצל מגע…');
+  L.push('סופר את התאים שורה אחרי שורה ומשווה למודל…', 'בודק פרופילים, דפנות ומבנה המתקן…', 'כמעט מוכן…');
+  return L;
+}
+function renderGauge(host, lines) {
+  const el = document.createElement('div'); el.className = 'pg';
+  el.innerHTML = `<div class="pg-dial" role="progressbar" aria-label="התקדמות הרינדור" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <svg viewBox="0 0 240 200" aria-hidden="true"><path d="M 40.33 166 A 92 92 0 1 1 199.67 166" fill="none" stroke="var(--pg-track)" stroke-width="14"></path>
+      <path class="pg-fill" d="M 40.33 166 A 92 92 0 1 1 199.67 166" fill="none" stroke="var(--pg-accent)" stroke-width="14" stroke-dasharray="385.4" stroke-dashoffset="385.4"></path></svg>
+      <div class="pg-num" dir="ltr"><b class="pg-val">0</b><span>%</span></div></div>
+    <p class="pg-line" aria-live="polite"></p>`;
+  host.appendChild(el);
+  const fill = el.querySelector('.pg-fill'), val = el.querySelector('.pg-val'), dial = el.querySelector('.pg-dial'), line = el.querySelector('.pg-line');
+  let expect = 75000; try { expect = +localStorage.getItem('rbt-render-ms') || expect; } catch (e) {}
+  const t0 = performance.now(); let shown = -1, raf = 0, last = 0;
+  const set = (p) => {
+    p = Math.max(last, Math.min(100, p)); last = p; const r = Math.round(p);
+    fill.setAttribute('stroke-dashoffset', (385.4 * (1 - p/100)).toFixed(1)); val.textContent = r; dial.setAttribute('aria-valuenow', r);
+    const i = Math.min(lines.length - 1, Math.floor(p / (100 / lines.length)));
+    if (i !== shown && p < 100) { shown = i; line.style.opacity = 0; setTimeout(() => { line.textContent = lines[i]; line.style.opacity = 1; }, 250); }
+  };
+  // up to 92% over the expected time (ease-out), then creeping towards 99% while we wait
+  const tick = () => {
+    const x = (performance.now() - t0) / expect;
+    set(x < 1 ? 92 * (1 - Math.pow(1 - x, 2.2)) : 92 + 7 * (1 - Math.exp(-(x - 1) * 1.5)));
+    raf = requestAnimationFrame(tick);
+  };
+  tick();
+  return {
+    finish() {
+      cancelAnimationFrame(raf); set(100); line.textContent = 'מוכן!';
+      const took = performance.now() - t0;
+      if (took > 8000) try { localStorage.setItem('rbt-render-ms', String(Math.round(expect * 0.5 + took * 0.5))); } catch (e) {}
+    },
+  };
+}
 // ---------- technical reference sheet: front + side orthographic views, colour-coded, with dimensions ----------
 // Sent with stage 1 (and the one-stage render) so the image model sees the true thickness and depth of every part.
 const TECH_COL = { profile:'#e8833a', unit:'#8fb3e0', board:'#c9a26b', other:'#c9ced3' };
@@ -4199,7 +4258,13 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
-  'סצנה':'Scene', 'שרטוט מידות לעזר (מבט חזית וצד)':'Dimension drawing for reference (front and side views)', 'הצגה':'Show', 'אין מה לבטל':'Nothing to undo', 'מה רוצים בתמונה?':'What do you want in the picture?', 'כתבו או הקליטו חופשי – ה־AI יפזר לשדות':'type or dictate freely – the AI sorts it into the fields',
+  'סצנה':'Scene', 'הרינדור עדיין רץ. לסגור בכל זאת? התוצאה לא תוצג.':'The render is still running. Close anyway? The result will not be shown.', 'התקדמות הרינדור':'Render progress', 'מוכן!':'Done!', 'מרנדר שוב עם אותן הוראות…':'rendering again with the same instructions…', 'ניסיון':'Attempt',
+  'שולח את תמונת הבסיס המאושרת ואת הבריף…':'Sending the approved base image and the brief…', 'שולח את המודל, ההרכב מלמעלה למטה':'Sending the model, the top-to-bottom layout', ', שרטוט המידות':', the dimension drawing', ' ותמונת הייחוס…':' and the reference photo…',
+  'ה־AI עורך את תמונת הבסיס – המוצרים נשארים כמו שהם…':'The AI edits the base image – the products stay as they are…', 'ממלא את התאים לפי מה שביקשת…':'Filling the bins as you asked…', 'מוסיף את מה שביקשת…':'Adding what you asked for…',
+  'מתאים תאורה וצללים לפריטים החדשים…':'Matching light and shadows for the new items…', 'ה־AI הופך את התלת־ממד לצילום ריאליסטי…':'The AI turns the 3D view into a realistic photo…',
+  'בונה חומרים: פלסטיק אפור, תאים שקופים, אלומיניום…':'Building materials: grey plastic, clear bins, aluminium…', 'בונה את החדר והרקע סביב המוצרים…':'Building the room and background around the products…',
+  'מוסיף תאורה, השתקפויות וצל מגע…':'Adding light, reflections and contact shadow…', 'סופר את התאים שורה אחרי שורה ומשווה למודל…':'Counting the bins row by row against the model…',
+  'בודק פרופילים, דפנות ומבנה המתקן…':'Checking profiles, side walls and the frame…', 'כמעט מוכן…':'Almost ready…', 'שרטוט מידות לעזר (מבט חזית וצד)':'Dimension drawing for reference (front and side views)', 'הצגה':'Show', 'אין מה לבטל':'Nothing to undo', 'מה רוצים בתמונה?':'What do you want in the picture?', 'כתבו או הקליטו חופשי – ה־AI יפזר לשדות':'type or dictate freely – the AI sorts it into the fields',
   'זה מה שהבנתי. אם זה בסדר, נמשיך. אם לא – תשנה מה שצריך, ולחץ המשך.':'This is what I understood. If it is right, we go on. If not – change what you need and press Continue.',
   '1. מה יש בתאים':'1. What is in the bins', '· הכי חשוב':'· most important', '3. מה ברקע':'3. Background', '2. רפרנס לתכולת התאים (לא חובה)':'2. Reference for the bin contents (optional)',
   '4. רפרנס לחדר / לחלל (לא חובה)':'4. Reference for the room / space (optional)', '5. מה עוד חשוב לשים לב':'5. What else matters', '· שלב 1':'· stage 1', '· שלב 2':'· stage 2', '· בשני השלבים':'· both stages',
