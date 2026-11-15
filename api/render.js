@@ -16,6 +16,7 @@ const REF_TEXT = {
   contents:'a reference photo of the ITEMS that go inside the bins (copy the items, not the storage)',
   room:'a reference photo of the ROOM / SPACE for the background (copy the space, not any storage in it)',
   client:'a client reference file',
+  tech:'a TECHNICAL DRAWING of this same product: front and side orthographic views, flat colour-coded parts (orange = aluminium profiles, blue = tilt-bin units, tan = base board) with dimensions in mm. Use it ONLY to understand the construction, the proportions and the true thickness and depth of every part – for example the aluminium profiles are only 30 mm thick and the depth comes from the tilt-bin units. NEVER copy its flat colours, lines, arrows, labels, numbers or text into the result',
 };
 
 // stage 1 (or the single-stage render): photorealistic photo from the 3D view
@@ -113,7 +114,8 @@ export default async function handler(req, res) {
   };
   const okRefs = (useContents ? take(req.body?.contentRefs, 'contents', 2) : true)
     && (useBg ? take(req.body?.roomRefs, 'room', 2) : true)
-    && (stage === '' ? take(req.body?.refs, 'client', 4) : true);
+    && (stage === '' ? take(req.body?.refs, 'client', 4) : true)
+    && (stage !== 'edit' && req.body?.tech ? take([req.body.tech], 'tech', 1) : true);
   if (!okRefs) return res.status(400).json({ error: 'קובץ ייחוס לא תקין (רק JPG, PNG, WebP)' });
   const blob = (mm) => new Blob([Buffer.from(mm[2], 'base64')], { type: `image/${mm[1]}` });
   const ext = (mm) => (mm[1] === 'jpeg' ? 'jpg' : mm[1]);

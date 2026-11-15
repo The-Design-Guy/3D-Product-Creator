@@ -169,6 +169,7 @@
   .r-base .t { flex:1; font-size:13px; line-height:1.45; color:#1e6b3a; }
   .r-base .t small { color:var(--muted); display:block; }
   .r-later { font-weight:400; color:var(--muted); }
+  .linkbtn { border:0; background:none; color:#1d4ea8; text-decoration:underline; cursor:pointer; font:inherit; padding:0 4px; }
   #rApprove.warnbtn { border-color:#e6a39d; color:#a3261d; }
   .r-layout { margin:6px 0 10px; font-size:12.5px; color:var(--muted); }
   .r-layout summary { cursor:pointer; }
@@ -3284,6 +3285,19 @@ $('shotBtn').onclick = async () => {
 }
 
 // ---------- realistic render (GPT Image via /api/render) ----------
+// stands: the frame is only thin 30 mm profiles – the depth comes from the bins and the base (sent with every render)
+function standProfileNote(type = stand.type, depth = standDepth()) {
+  const where = type === 'double' ? ' in the middle of the base, with bins hanging on both sides of them'
+    : type === 'single' ? ' at the back of the base, with the bins hanging in front of them'
+    : ' (at the back of a single-sided stand, in the middle of a double-sided one)';
+  return `PROFILE SIZE – IMPORTANT: every upright, the top bar and every base bar of ${type === 'mixed' ? 'every stand' : 'this stand'} is ONE slim 30 x 30 mm aluminium profile – only 3 cm wide and 3 cm deep. The uprights are two thin posts${where}; there are NO side walls, side panels, deep side frames or extra posts. All the rest of the stand's depth comes from the tilt-bin units themselves, plus the base at the bottom: a frame of the same 30 mm profiles with a plywood floor board${depth ? `, ${depth} mm deep` : ''}.`;
+}
+function profileNotes() {
+  if (mode === 'stand') return standProfileNote();
+  if (mode !== 'scene') return '';
+  const types = new Set(SCN.items.filter(i => !i.hidden && i.type === 'stand').map(it => ((it.id === SCN.sel ? capCfg('stand') : it.cfg).stand || {}).type || 'single'));
+  return types.size ? standProfileNote(types.size > 1 ? 'mixed' : [...types][0], 0) : '';
+}
 // exact counts from the model, sent with every render and used by the count check
 function structureSummary() {
   // every tilt-bin unit, as seen from this camera: the columns you can see are listed left to right,
@@ -3369,7 +3383,7 @@ function describe() {
   if (mode === 'unit') return `${base}; ${current} bins side by side; 600 mm wide, ${MODELS[current].H} mm high, ${MODELS[current].D} mm deep${flags.length ? '; ' + flags.join('; ') : ''}.`;
   const t = stand.type === 'double' ? 'double-sided (units on front and back)' : 'single-sided';
   const b = stand.base === 'wheels' ? `on 4 castors${stand.brake === 'brake' ? ' (front castors with brakes)' : ''} with a black side handle` : 'on short legs with levelling feet';
-  return `A ${t} mobile stand made of 30x30 mm slotted aluminium profiles powder-coated RAL 7035, base 599 mm wide and ${standDepth()} mm deep, ${stand.height} mm uprights, ${b}, holding stacked ${base.toLowerCase()} (largest at the bottom)${flags.length ? '; ' + flags.join('; ') : ''}.`;
+  return `A ${t} mobile stand made of 30x30 mm slotted aluminium profiles powder-coated RAL 7035, base 599 mm wide and ${standDepth()} mm deep, ${stand.height} mm uprights, ${b}, holding stacked ${base.toLowerCase()} (largest at the bottom)${flags.length ? '; ' + flags.join('; ') : ''}. ${standProfileNote()}`;
 }
 $('renderBtn').onclick = () => {
   if (!server) {
@@ -3403,6 +3417,7 @@ $('renderBtn').onclick = () => {
         <div class="seg2 three" id="rDpi"><button data-v="72">72</button><button data-v="150">150</button><button data-v="300" class="on">300</button></div></div>
     </div>
     <div class="use" id="rSize"></div>
+    <div class="row" id="rTechRow"><span>שרטוט מידות לעזר (מבט חזית וצד) <button class="linkbtn" id="rTechShow" type="button">הצגה</button></span><label class="sw"><input type="checkbox" id="rTech" checked><span></span></label></div>
     </div>
     <div class="lbl">מה רוצים בתמונה? <span class="r-later">כתבו או הקליטו חופשי – ה־AI יפזר לשדות</span></div>
     <details class="r-layout"><summary>ההרכב שנשלח לרינדור (נבנה אוטומטית מהמודל)</summary><pre id="rLayout" dir="ltr"></pre></details>
@@ -3498,6 +3513,8 @@ $('renderBtn').onclick = () => {
       st.last = null; q('#rOut').hidden = true; syncFlow();
     };
     syncFlow();
+    q('#rTechRow').hidden = mode === 'scene';
+    q('#rTechShow').onclick = () => { const t = techSheet(); if (t) openLightbox(t); };
     // the approved base goes back up as the image to edit: re-encoded so the request stays well under the upload limit
     async function shrinkForUpload(src) {
       const img = new Image(); img.src = src; await img.decode();
@@ -3544,8 +3561,9 @@ $('renderBtn').onclick = () => {
           const cv = padToRatio(captureCanvas(1536), z.w, z.h);
           let image = cv.toDataURL('image/webp', 0.95);
           if (!image.startsWith('data:image/webp')) image = cv.toDataURL('image/png');
-          body = { image, background: st.bg, description: describe(), structure: structureSummary(), size: `${z.w}x${z.h}`, lighting: lightingText(), ...briefBody() };
+          body = { image, background: st.bg, description: describe(), structure: [structureSummary(), profileNotes()].filter(Boolean).join('\n'), size: `${z.w}x${z.h}`, lighting: lightingText(), ...briefBody() };
           if (st.flow === 'two') body.stage = 'base';
+          if (q('#rTech').checked) { const t = techSheet(); if (t) body.tech = t; }
         }
         // up to 3 attempts: a result whose bin count does not match the model is rendered again
         const TRIES = 3; let r = null;
@@ -3667,6 +3685,99 @@ function fitSize(w, h) {
   return { w, h, note };
 }
 // put the captured model in the middle of a canvas of the requested ratio (transparent margins)
+// ---------- technical reference sheet: front + side orthographic views, colour-coded, with dimensions ----------
+// Sent with stage 1 (and the one-stage render) so the image model sees the true thickness and depth of every part.
+const TECH_COL = { profile:'#e8833a', unit:'#8fb3e0', board:'#c9a26b', other:'#c9ced3' };
+function techSheet() {
+  if (mode === 'scene') return null;
+  world.updateMatrixWorld(true);
+  const env = (o) => o.material === wallMat || o.material === floorMat || (o.material && o.material.isShadowMaterial);
+  const inUnit = (o) => { for (let p = o; p; p = p.parent) if (p.userData && p.userData.unitN) return true; return false; };
+  const mats = Object.fromEntries(Object.entries(TECH_COL).map(([k, c]) => [k, new THREE.MeshLambertMaterial({ color:new THREE.Color(c) })]));
+  const swapped = [], hidden = [], box = new THREE.Box3(), b2 = new THREE.Box3();
+  const parts = { profile:[], unit:[], board:[] };
+  world.traverse(o => {
+    if ((o.isSprite || o.isLine || o.isLineSegments) && o.visible) { hidden.push(o); o.visible = false; return; }
+    if (!o.isMesh) return;
+    if (env(o)) { if (o.visible) { hidden.push(o); o.visible = false; } return; }
+    let vis = true; for (let p = o; p; p = p.parent) if (!p.visible) vis = false;
+    if (!vis) return;
+    const kind = inUnit(o) ? 'unit' : o.material === profileMat ? 'profile' : o.material === plyMat ? 'board' : 'other';
+    swapped.push([o, o.material]); o.material = mats[kind];
+    b2.setFromObject(o); box.union(b2);
+    if (kind === 'profile') parts.profile.push(b2.clone()); if (kind === 'board') parts.board.push(b2.clone());
+  });
+  world.traverse(o => { if (o.userData && o.userData.unitN) { const b = new THREE.Box3().setFromObject(o); b.n = o.userData.unitN; parts.unit.push(b); } });
+  const restore = () => { swapped.forEach(([o, m]) => o.material = m); hidden.forEach(o => o.visible = true); Object.values(mats).forEach(m => m.dispose()); };
+  if (box.isEmpty()) { restore(); return null; }
+  const W = box.max.x - box.min.x, H = box.max.y - box.min.y, D = box.max.z - box.min.z, mm = (v) => Math.round(v * 1000);
+  const PH = 900, pad = 0.16, sc = PH * (1 - 2*pad) / H;
+  const fw = Math.max(320, W * sc / (1 - 2*pad)), sw = Math.max(320, D * sc / (1 - 2*pad));
+  const ML = 230, MR = 300;                         // room for the labels around the side view
+  const sheet = document.createElement('canvas'); sheet.width = Math.round(fw + ML + sw + MR + 40); sheet.height = PH + 120;
+  const g = sheet.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, sheet.width, sheet.height);
+  const oldBg = scene.background, oldPr = renderer.getPixelRatio(), cw = renderer.domElement.clientWidth, ch = renderer.domElement.clientHeight;
+  const oldTone = renderer.toneMapping, oldShadow = renderer.shadowMap.enabled;
+  scene.background = new THREE.Color('#ffffff'); renderer.toneMapping = THREE.NoToneMapping; renderer.shadowMap.enabled = false;
+  const amb = new THREE.AmbientLight(0xffffff, 2.2), key = new THREE.DirectionalLight(0xffffff, 1.2); key.position.set(3, 5, 4); scene.add(amb, key);
+  const cy = (box.min.y + box.max.y) / 2;
+  // view: 'front' looks along -z (u = x), 'side' looks from the right along -x (u = -z, the product's front on the left)
+  const view = (kind, pw, ox) => {
+    const halfH = PH / 2 / sc, halfW = pw / 2 / sc;
+    const cam = new THREE.OrthographicCamera(-halfW, halfW, halfH, -halfH, 0.01, 100);
+    const cxv = (box.min.x + box.max.x) / 2, czv = (box.min.z + box.max.z) / 2;
+    if (kind === 'front') cam.position.set(cxv, cy, box.max.z + 10); else cam.position.set(box.max.x + 10, cy, czv);
+    cam.lookAt(kind === 'front' ? new THREE.Vector3(cxv, cy, 0) : new THREE.Vector3(0, cy, czv)); cam.updateMatrixWorld();
+    renderer.setPixelRatio(1); renderer.setSize(Math.round(pw), PH, false); renderer.render(scene, cam);
+    g.drawImage(renderer.domElement, ox, 60);
+    // world → sheet pixels
+    return (x, y, z) => { const u = kind === 'front' ? x - cxv : czv - z; return [ox + pw/2 + u * sc, 60 + PH/2 - (y - cy) * sc]; };
+  };
+  let F, S;
+  try { F = view('front', fw, 20); S = view('side', sw, fw + 40 + ML); }
+  finally {
+    scene.background = oldBg; renderer.toneMapping = oldTone; renderer.shadowMap.enabled = oldShadow;
+    scene.remove(amb, key);
+    renderer.setPixelRatio(oldPr); renderer.setSize(cw, ch, false); restore(); renderer.render(scene, camera);
+  }
+  // annotations
+  g.strokeStyle = '#1b1f24'; g.fillStyle = '#1b1f24'; g.lineWidth = 2; g.font = '600 22px Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const arrow = (x0, y0, x1, y1, label, lx, ly) => {
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    for (const [a, b, c, d] of [[x0, y0, x1, y1], [x1, y1, x0, y0]]) { const an = Math.atan2(d - b, c - a); g.beginPath(); g.moveTo(a, b); g.lineTo(a + 12*Math.cos(an + 0.4), b + 12*Math.sin(an + 0.4)); g.moveTo(a, b); g.lineTo(a + 12*Math.cos(an - 0.4), b + 12*Math.sin(an - 0.4)); g.stroke(); }
+    const w = g.measureText(label).width + 12; g.fillStyle = '#fff'; g.fillRect(lx - w/2, ly - 15, w, 30); g.fillStyle = '#1b1f24'; g.fillText(label, lx, ly);
+  };
+  const callout = (px, py, tx, ty, label) => {
+    g.beginPath(); g.moveTo(px, py); g.lineTo(tx, ty); g.stroke(); g.beginPath(); g.arc(px, py, 5, 0, 7); g.fill();
+    g.textAlign = tx < px ? 'right' : 'left'; const w = g.measureText(label).width + 10;
+    g.fillStyle = '#fff'; g.fillRect(tx < px ? tx - w : tx, ty - 15, w, 30); g.fillStyle = '#1b1f24'; g.fillText(label, tx + (tx < px ? -5 : 5), ty); g.textAlign = 'center';
+  };
+  // front: width under, height on the left
+  { const [x0, yb] = F(box.min.x, box.min.y, 0), [x1] = F(box.max.x, box.min.y, 0), [, yt] = F(0, box.max.y, 0);
+    arrow(x0, yb + 34, x1, yb + 34, `${mm(W)} mm`, (x0 + x1)/2, yb + 34);
+    arrow(x0 - 34, yb, x0 - 34, yt, `${mm(H)} mm`, x0 - 34, (yb + yt)/2); }
+  // side: depth under
+  { const [x0, yb] = S(0, box.min.y, box.max.z), [x1] = S(0, box.min.y, box.min.z);
+    arrow(x0, yb + 34, x1, yb + 34, `${mm(D)} mm`, (x0 + x1)/2, yb + 34); }
+  // side: what each part is, with its real thickness
+  const ups = parts.profile.filter(b => b.max.y - b.min.y > 0.5 && b.max.z - b.min.z < 0.06);
+  if (ups.length) { const b = ups[0], [px, py] = S(0, (b.min.y + b.max.y)/2 + 0.2, (b.min.z + b.max.z)/2);
+    callout(px, py, px + 70, py - 60, `upright: ${mm(b.max.z - b.min.z)} x ${mm(b.max.x - b.min.x)} mm profile`); }
+  if (parts.unit.length && ['stand', 'wall', 'unit'].includes(mode)) { const b = parts.unit.reduce((a, c) => (MODELS[c.n].D > MODELS[a.n].D ? c : a)), [px, py] = S(0, (b.min.y + b.max.y)/2, (b.min.z + b.max.z)/2);
+    const [lx0] = S(0, 0, box.max.z);
+    callout(px, py, lx0 - 30, py - 40, `deepest tilt-bin unit: ${MODELS[b.n].D} mm`); }
+  if (parts.board.length) { const b = parts.board[0], [px, py] = S(0, b.max.y, (b.min.z + b.max.z)/2), [rx] = S(0, 0, box.min.z);
+    callout(px, py, rx + 40, py - 40, `base board (${mm(b.max.z - b.min.z)} mm)`); }
+  g.font = '700 24px Arial, sans-serif'; g.textAlign = 'left';
+  g.fillText('FRONT VIEW', 24, 30); g.fillText('SIDE VIEW (front of the product on the left)', fw + 44 + ML, 30);
+  // legend
+  g.font = '500 20px Arial, sans-serif'; let lx = 24; const ly = sheet.height - 26;
+  for (const [k, t] of [['profile', 'aluminium profile 30x30 mm'], ['unit', 'tilt-bin units'], ['board', 'base board'], ['other', 'other parts']]) {
+    g.fillStyle = TECH_COL[k]; g.fillRect(lx, ly - 11, 22, 22); g.fillStyle = '#1b1f24'; g.fillText(t, lx + 30, ly); lx += g.measureText(t).width + 70;
+  }
+  let u = sheet.toDataURL('image/webp', 0.9); if (!u.startsWith('data:image/webp')) u = sheet.toDataURL('image/png');
+  return u;
+}
 function padToRatio(src, w, h) {
   const r = w / h; let cw = src.width, ch = src.height;
   if (cw / ch > r) ch = Math.round(cw / r); else cw = Math.round(ch * r);
@@ -4088,7 +4199,7 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
-  'סצנה':'Scene', 'אין מה לבטל':'Nothing to undo', 'מה רוצים בתמונה?':'What do you want in the picture?', 'כתבו או הקליטו חופשי – ה־AI יפזר לשדות':'type or dictate freely – the AI sorts it into the fields',
+  'סצנה':'Scene', 'שרטוט מידות לעזר (מבט חזית וצד)':'Dimension drawing for reference (front and side views)', 'הצגה':'Show', 'אין מה לבטל':'Nothing to undo', 'מה רוצים בתמונה?':'What do you want in the picture?', 'כתבו או הקליטו חופשי – ה־AI יפזר לשדות':'type or dictate freely – the AI sorts it into the fields',
   'זה מה שהבנתי. אם זה בסדר, נמשיך. אם לא – תשנה מה שצריך, ולחץ המשך.':'This is what I understood. If it is right, we go on. If not – change what you need and press Continue.',
   '1. מה יש בתאים':'1. What is in the bins', '· הכי חשוב':'· most important', '3. מה ברקע':'3. Background', '2. רפרנס לתכולת התאים (לא חובה)':'2. Reference for the bin contents (optional)',
   '4. רפרנס לחדר / לחלל (לא חובה)':'4. Reference for the room / space (optional)', '5. מה עוד חשוב לשים לב':'5. What else matters', '· שלב 1':'· stage 1', '· שלב 2':'· stage 2', '· בשני השלבים':'· both stages',
