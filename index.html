@@ -142,6 +142,11 @@
   .lb-x { position:absolute; top:16px; right:16px; width:40px; height:40px; border-radius:50%; border:0; background:rgba(255,255,255,.14); color:#fff; font-size:18px; cursor:pointer; }
   .lb-x:hover { background:rgba(255,255,255,.26); }
   .lb-x:focus-visible, .lb-tools button:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+  .lb-acts { position:absolute; top:16px; left:16px; display:flex; gap:8px; flex-wrap:wrap; max-width:calc(100% - 90px); }
+  .lb-acts:empty { display:none; }
+  .lb-acts button { height:40px; padding:0 14px; border:0; border-radius:10px; background:#fff; color:#1b1f24; font-weight:600; font-size:14px; font-family:inherit; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.25); }
+  .lb-acts button:hover { background:#eef1f3; }
+  .lb-acts button:disabled { opacity:.6; cursor:default; }
   .lb-tools { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:6px; padding:6px; border-radius:12px; background:rgba(255,255,255,.12); backdrop-filter:blur(8px); color:#fff; }
   .lb-tools button { font:inherit; min-width:34px; height:32px; padding:0 10px; border:0; border-radius:8px; background:rgba(255,255,255,.14); color:#fff; cursor:pointer; font-size:15px; }
   .lb-tools button:hover { background:rgba(255,255,255,.26); }
@@ -162,9 +167,14 @@
   .pg-num span { font-size:30px; color:var(--pg-text); }
   .pg-line { margin:0; min-height:46px; text-align:center; font-size:15px; line-height:1.5; color:var(--pg-sub); text-wrap:pretty; transition:opacity 250ms ease; }
   @media (prefers-reduced-motion: reduce) { .pg-fill, .pg-line { transition:none; } }
+  .cfm-wrap { position:fixed; inset:0; z-index:80; background:rgba(12,16,20,.35); display:flex; align-items:center; justify-content:center; padding:16px; }
+  .cfm { background:#fff; border-radius:14px; padding:18px 18px 14px; width:min(420px, 100%); box-shadow:0 20px 60px rgba(0,0,0,.25); }
+  .cfm p { margin:0 0 14px; font-size:15px; line-height:1.5; }
+  .btn.danger { background:#b42318; color:#fff; border-color:#b42318; }
   .mrow { display:flex; gap:6px; align-items:center; margin-bottom:8px; }
   .mrow select { flex:1; min-width:0; height:38px; border:1px solid var(--line); border-radius:10px; padding:0 10px; font:inherit; background:#fff; }
   .mrow .btn { height:38px; padding:0 12px; white-space:nowrap; }
+  .mrow .btn.sm { height:34px; padding:0 10px; font-size:13px; }
   .mrow .sb { width:34px; height:34px; border:0; border-radius:8px; background:transparent; color:var(--muted); cursor:pointer; }
   .mrow .sb:hover { background:#eef1f3; color:var(--ink); }
   .types .tsub { display:block; font-size:12px; color:var(--muted); margin:8px 0 4px; }
@@ -3161,7 +3171,7 @@ function openDialog(html, onReady) {
   wrap._busy = false;                             // set while a render runs: the dialog must not close by accident
   const close = () => { if (wrap._onClose) { wrap._onClose(); wrap._onClose = null; } wrap.hidden = true; wrap.innerHTML = ''; wrap._busy = false; };
   wrap.onclick = (e) => { if (e.target !== wrap) return; if (wrap._busy) { wrap.firstElementChild.animate([{ transform:'scale(1)' }, { transform:'scale(1.015)' }, { transform:'scale(1)' }], 220); return; } close(); };
-  wrap.querySelectorAll('[data-close]').forEach(b => b.onclick = () => { if (wrap._busy && !confirm('הרינדור עדיין רץ. לסגור בכל זאת? התוצאה לא תוצג.')) return; close(); });
+  wrap.querySelectorAll('[data-close]').forEach(b => b.onclick = async () => { if (wrap._busy && !(await askConfirm('הרינדור עדיין רץ. לסגור בכל זאת? התוצאה לא תוצג.', 'לסגור'))) return; close(); });
   onReady && onReady(wrap.firstElementChild, close);
   const first = wrap.querySelector('input,select,button'); first && first.focus();
 }
@@ -3230,8 +3240,12 @@ function captureCanvas(maxSide = 2400) {
   const w = renderer.domElement.clientWidth, h = renderer.domElement.clientHeight;
   const pr = Math.min(3, maxSide / Math.max(w, h));
   const oldPr = renderer.getPixelRatio();
+  // editing helpers (selection outline, name tags, pink guides) must never reach the image sent to the AI
+  const helpers = [];
+  scene.traverse(o => { if (o.visible && (o.isSprite || ((o.isLine || o.isLineSegments) && (o.material === selMat || o.material === guideMat)))) { helpers.push(o); o.visible = false; } });
   renderer.setPixelRatio(pr); renderer.setSize(w, h, false);
   renderer.render(scene, camera);
+  helpers.forEach(o => o.visible = true);
   // crop to the model with a small margin
   const src = renderer.domElement, cw = src.width, ch = src.height;
   const tmp = document.createElement('canvas'); tmp.width = cw; tmp.height = ch;
@@ -3523,7 +3537,7 @@ $('renderBtn').onclick = () => {
       if (two && st.base) {
         bb.innerHTML = `<img src="${st.base.image}" alt="תמונת הבסיס המאושרת"><div class="t"><b>✓ בסיס מאושר</b><small>${st.base.size.replace('x', ' × ')} px · ${st.base.ok === true ? 'הבדיקה עברה' : st.base.ok === false ? 'אושר למרות פער בבדיקה' : 'בלי בדיקה'}</small>${bgChanged ? '<small style="color:#a3261d">הרקע השתנה אחרי האישור – כדי שייכנס צריך בסיס חדש</small>' : ''}</div><button class="btn" id="rBaseDl">הורדה (PNG)</button><button class="btn" id="rBaseReset">בסיס חדש</button>`;
         bb.querySelector('#rBaseDl').onclick = () => downloadPng(st.base.image, 'base', st.dpi);
-        bb.querySelector('img').onclick = () => openLightbox(st.base.image);
+        bb.querySelector('img').onclick = () => openLightbox(st.base.image, viewerActions(st.base.image, 'base', { base:st.base, final:null }));
         bb.querySelector('#rBaseReset').onclick = () => { st.base = null; RENDER_STATE.base = null; q('#rOut').hidden = true; q('#rApprove').hidden = true; syncFlow(); showSize(); };
       }
       q('#rApprove').hidden = !(two && !st.base && st.last);
@@ -3533,9 +3547,9 @@ $('renderBtn').onclick = () => {
       st.flow = b.dataset.v; card.querySelectorAll('#rFlow button').forEach(c => c.classList.toggle('on', c === b));
       st.last = null; q('#rOut').hidden = true; syncFlow(); showSize();
     });
-    q('#rApprove').onclick = () => {
+    q('#rApprove').onclick = async () => {
       const L = st.last; if (!L) return;
-      if (L.check?.ok === false && !confirm('הבדיקה מצאה פער בתמונה הזו. לאשר אותה כבסיס בכל זאת?')) return;
+      if (L.check?.ok === false && !(await askConfirm('הבדיקה מצאה פער בתמונה הזו. לאשר אותה כבסיס בכל זאת?', 'לאשר כבסיס'))) return;
       st.base = { image:L.image, structure:L.body.structure, description:L.body.description, size:L.body.size, bg:L.body.background, ok:L.check?.ok ?? null, sig:L.sig };
       RENDER_STATE.base = st.base; RENDER_STATE.final = null;
       st.last = null; q('#rOut').hidden = true; syncFlow();
@@ -3543,6 +3557,14 @@ $('renderBtn').onclick = () => {
     syncFlow();
     q('#rTechRow').hidden = mode === 'scene';
     q('#rTechShow').onclick = () => { const t = techSheet(); if (t) openLightbox(t); };
+    // buttons in the full-screen viewer: the image as PNG, and (in a scene, for admins) the scene with its images –
+    // a stage-2 image saves the approved base (stage 1) together with it
+    function viewerActions(src, kind, imgs) {
+      const a = [{ label:'הורדה (PNG)', fn:() => downloadPng(src, kind, st.dpi) }];
+      if (mode === 'scene' && isAdmin()) a.push({ label:imgs.final && imgs.base ? 'שמירת הסצנה (שלב א׳ + ב׳)' : imgs.base ? 'שמירת הסצנה (שלב א׳)' : 'שמירת הסצנה',
+        fn:() => askName('שמירת סצנה מוכנה', $('scnLib').value, (n) => saveScene('ready', n, imgs)) });
+      return a;
+    }
     // any result as a PNG with the chosen DPI – the stage-1 base too
     async function downloadPng(src, kind, dpi) {
       if (/^https?:/.test(src)) src = URL.createObjectURL(await (await fetch(src)).blob());
@@ -3617,7 +3639,11 @@ $('renderBtn').onclick = () => {
           : ck.ok === false ? `<div class="r-chk bad">⚠ התמונה לא תואמת למודל – לא לשימוש. ${ck.detail || ''}<br><small>במודל: ${ck.view || '?'} · בתמונה: ${ck.result || '?'}</small></div>`
           : body.structure ? `<div class="r-chk">בדיקת הספירה לא רצה (${ck.detail || 'לא ידוע'}) – בדקו את מספר התאים בעין.</div>` : '';
         out.innerHTML = `${chk}<img src="${r.image}" alt="רינדור ריאליסטי"><button class="r-fs" title="מסך מלא" aria-label="פתיחה במסך מלא"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>`;
-        out.querySelector('.r-fs').onclick = () => openLightbox(r.image);
+        const acts = viewerActions(r.image, body.stage === 'base' ? 'base' : 'realistic', body.stage === 'base'
+          ? { base:{ image:r.image, structure:body.structure, description:body.description, size:body.size, bg:body.background, ok:ck.ok ?? null, sig:st.last.sig }, final:null }
+          : { base:body.stage === 'edit' ? st.base : null, final:r.image });
+        out.querySelector('.r-fs').onclick = () => openLightbox(r.image, acts);
+        out.querySelector('img').onclick = () => openLightbox(r.image, acts);
         out.querySelector('img').ondblclick = () => openLightbox(r.image);
         go.disabled = false; $('dlg')._busy = false;
         if (st.flow === 'two' && !st.base) {          // stage 1 done: approve it, or render the base again
@@ -3639,12 +3665,15 @@ $('renderBtn').onclick = () => {
 };
 
 // ---------- full-screen viewer: zoom (wheel / buttons / pinch / double-click) and pan by dragging ----------
-function openLightbox(src) {
+function openLightbox(src, actions = []) {
   const lb = document.createElement('div'); lb.className = 'lb'; lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-label', 'תצוגה מלאה');
   lb.innerHTML = `<img class="lb-img" src="${src}" alt="רינדור ריאליסטי – תצוגה מלאה" draggable="false">
     <button class="lb-x" aria-label="סגירה">✕</button>
-    <div class="lb-tools" dir="ltr"><button data-z="-" aria-label="הקטנה">−</button><span class="lb-pct">100%</span><button data-z="+" aria-label="הגדלה">+</button><button data-z="fit" aria-label="התאמה למסך">התאמה</button></div>`;
+    <div class="lb-tools" dir="ltr"><button data-z="-" aria-label="הקטנה">−</button><span class="lb-pct">100%</span><button data-z="+" aria-label="הגדלה">+</button><button data-z="fit" aria-label="התאמה למסך">התאמה</button></div>
+    <div class="lb-acts"></div>`;
   document.body.appendChild(lb);
+  // actions shown over the image (download, save the scene …)
+  actions.forEach(a => { const b = document.createElement('button'); b.textContent = a.label; b.onclick = async () => { b.disabled = true; try { await a.fn(); } finally { b.disabled = false; } }; lb.querySelector('.lb-acts').appendChild(b); });
   const img = lb.querySelector('.lb-img'), pct = lb.querySelector('.lb-pct');
   let s = 1, tx = 0, ty = 0, moved = false;
   const pointers = new Map(); let pinch = null, drag = null;
@@ -3719,6 +3748,21 @@ function fitSize(w, h) {
   return { w, h, note };
 }
 // put the captured model in the middle of a canvas of the requested ratio (transparent margins)
+// ---------- in-page confirmation (window.confirm is blocked in some embedded views) ----------
+function askConfirm(msg, okText = 'אישור', danger = false) {
+  return new Promise((resolve) => {
+    const w = document.createElement('div'); w.className = 'cfm-wrap';
+    w.innerHTML = `<div class="cfm" role="alertdialog" aria-modal="true"><p></p><div class="dlg-actions"><button class="btn ${danger ? 'danger' : 'primary'}" data-ok>${okText}</button><button class="btn" data-no>ביטול</button></div></div>`;
+    w.querySelector('p').textContent = msg.replace(/"([^"]+)"/g, '"\u2068$1\u2069"');   // keep an English name in quotes in the right order inside Hebrew
+    const done = (v) => { w.remove(); removeEventListener('keydown', key, true); resolve(v); };
+    const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(false); } if (e.key === 'Enter') { e.preventDefault(); done(true); } };
+    w.querySelector('[data-ok]').onclick = () => done(true);
+    w.querySelector('[data-no]').onclick = () => done(false);
+    w.onclick = (e) => { if (e.target === w) done(false); };
+    addEventListener('keydown', key, true);
+    document.body.appendChild(w); w.querySelector('[data-ok]').focus();
+  });
+}
 // ---------- library: product models and saved scenes (shared on the server; changes are admin only) ----------
 let lib = { models:{}, scenes:{} };
 const RENDER_STATE = { base:null, final:null };    // the approved base and the last final render – kept between openings of the render window
@@ -3732,22 +3776,29 @@ async function persistLib(action, payload) {
   const { type, name, newName, data } = payload;
   if (action === 'save-model') ((lib.models[type] = lib.models[type] || {})[name] = { cfg:data, updated:new Date().toISOString() });
   if (action === 'delete-model') delete (lib.models[type] || {})[name];
+  if (action === 'rename-model' && lib.models[type] && lib.models[type][name]) { lib.models[type][newName] = lib.models[type][name]; delete lib.models[type][name]; }
   if (action === 'save-scene') lib.scenes[name] = { ...data, updated:new Date().toISOString() };
   if (action === 'delete-scene') delete lib.scenes[name];
   LS.set('rbt-library', lib);
 }
 const curModel = {};                                // type → name of the model last chosen in its panel
 function askName(title, value, cb) {
-  openDialog(`<h3>${title}</h3><label class="fld">שם<input id="libName" maxlength="80" value="${(value || '').replace(/"/g, '&quot;')}" dir="auto"></label>
-    <div class="dlg-err" id="libErr" hidden></div><div class="dlg-actions"><button class="btn primary" id="libOk">שמירה</button><button class="btn" data-close>ביטול</button></div>`, (card, close) => {
-    const inp = card.querySelector('#libName'); inp.focus(); inp.select();
-    const go = async () => {
-      const n = inp.value.trim(); if (!n) return;
-      const ok = card.querySelector('#libOk'); ok.disabled = true; ok.textContent = 'שומר…';
-      try { await cb(n); close(); } catch (e) { const er = card.querySelector('#libErr'); er.textContent = e.message; er.hidden = false; ok.disabled = false; ok.textContent = 'שמירה'; }
-    };
-    card.querySelector('#libOk').onclick = go; inp.onkeydown = (e) => { if (e.key === 'Enter') go(); };
-  });
+  const w = document.createElement('div'); w.className = 'cfm-wrap';
+  w.innerHTML = `<div class="cfm" role="dialog" aria-modal="true"><h3 style="margin:0 0 10px"></h3><label class="fld">שם<input id="libName" maxlength="80" dir="auto"></label>
+    <div class="dlg-err" id="libErr" hidden></div><div class="dlg-actions"><button class="btn primary" id="libOk">שמירה</button><button class="btn" data-no>ביטול</button></div></div>`;
+  w.querySelector('h3').textContent = title;
+  const inp = w.querySelector('#libName'); inp.value = value || '';
+  const close = () => { w.remove(); removeEventListener('keydown', key, true); };
+  const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+  const go = async () => {
+    const n = inp.value.trim(); if (!n) return;
+    const ok = w.querySelector('#libOk'); ok.disabled = true; ok.textContent = 'שומר…';
+    try { await cb(n); close(); } catch (e) { const er = w.querySelector('#libErr'); er.textContent = e.message; er.hidden = false; ok.disabled = false; ok.textContent = 'שמירה'; }
+  };
+  w.querySelector('#libOk').onclick = go; inp.onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  w.querySelector('[data-no]').onclick = close; w.onclick = (e) => { if (e.target === w) close(); };
+  addEventListener('keydown', key, true);
+  document.body.appendChild(w); inp.focus(); inp.select();
 }
 // ---- models: a row at the top of every product panel ----
 function applyModel(t, name) {
@@ -3766,27 +3817,43 @@ function renderModelRows() {
     let row = inner.querySelector(':scope > .mdlbox');
     if (!row) {
       row = document.createElement('div'); row.className = 'mdlbox';
-      row.innerHTML = `<div class="lbl">דגם</div><div class="mrow"><select aria-label="דגם"></select><button class="btn adm" data-a="save">שמור כדגם</button><button class="sb adm" data-a="del" title="מחיקת הדגם" aria-label="מחיקת הדגם">✕</button></div>`;
+      row.innerHTML = `<div class="lbl">דגם</div><div class="mrow"><select aria-label="דגם"></select><button class="btn adm" data-a="save">שמור כדגם</button><button class="sb adm" data-a="ren" title="שינוי שם הדגם" aria-label="שינוי שם הדגם">✎</button><button class="btn adm sm" data-a="upd" title="עדכון הדגם לפי ההגדרה שמוצגת עכשיו">עדכון</button><button class="sb adm" data-a="del" title="מחיקת הדגם" aria-label="מחיקת הדגם">✕</button></div>`;
       inner.prepend(row);
       const sel = row.querySelector('select');
       sel.onchange = () => { if (sel.value) applyModel(t, sel.value); else curModel[t] = null; };
       row.querySelector('[data-a=save]').onclick = () => askName('שמירת דגם', curModel[t] || '', async (n) => {
-        if (lib.models[t] && lib.models[t][n] && n !== curModel[t] && !confirm(`כבר יש דגם בשם "${n}". להחליף אותו?`)) throw new Error('בחרו שם אחר');
+        if (lib.models[t] && lib.models[t][n] && n !== curModel[t] && !(await askConfirm(`כבר יש דגם בשם "${n}". להחליף אותו?`, 'להחליף'))) throw new Error('בחרו שם אחר');
         await persistLib('save-model', { type:t, name:n, data:capCfg(t) }); curModel[t] = n;
         const it = mode === 'scene' && SCN.items.find(i => i.id === SCN.sel && i.type === t); if (it) { it.name = n; renderScene(); }
         renderLibUI(); toast(`הדגם "${n}" נשמר`);
       });
+      row.querySelector('[data-a=upd]').onclick = async () => {
+        const n = sel.value; if (!n) { toast('בחרו דגם לעדכון'); return; }
+        if (!(await askConfirm(`לעדכן את הדגם "${n}" לפי ההגדרה שמוצגת עכשיו?`, 'עדכון'))) return;
+        try { await persistLib('save-model', { type:t, name:n, data:capCfg(t) }); curModel[t] = n; renderLibUI(); toast(`הדגם "${n}" עודכן`); } catch (e) { toast(e.message); }
+      };
+      row.querySelector('[data-a=ren]').onclick = () => {
+        const old = sel.value; if (!old) { toast('בחרו דגם לשינוי שם'); return; }
+        askName('שינוי שם הדגם', old, async (n) => {
+          if (n === old) return;
+          if (lib.models[t] && lib.models[t][n]) throw new Error('כבר יש דגם בשם הזה');
+          await persistLib('rename-model', { type:t, name:old, newName:n });
+          if (curModel[t] === old) curModel[t] = n;
+          SCN.items.forEach(i => { if (i.type === t && i.name === old) i.name = n; });
+          renderLibUI(); if (mode === 'scene') renderScene(); toast(`השם שונה ל"${n}"`);
+        });
+      };
       row.querySelector('[data-a=del]').onclick = async () => {
         const n = sel.value; if (!n) { toast('בחרו דגם למחיקה'); return; }
-        if (!confirm(`למחוק את הדגם "${n}"?`)) return;
-        try { await persistLib('delete-model', { type:t, name:n }); curModel[t] = null; renderLibUI(); } catch (e) { toast(e.message); }
+        if (!(await askConfirm(`למחוק את הדגם "${n}"?`, 'מחיקה', true))) return;
+        try { await persistLib('delete-model', { type:t, name:n }); curModel[t] = null; renderLibUI(); toast(`הדגם "${n}" נמחק`); } catch (e) { toast(e.message); }
       };
     }
     const names = Object.keys(lib.models[t] || {}).sort((a, b) => a.localeCompare(b));
     const sel = row.querySelector('select');
     sel.innerHTML = `<option value="">— הגדרה חופשית —</option>` + names.map(n => `<option>${n.replace(/</g, '&lt;')}</option>`).join('');
     sel.value = curModel[t] && names.includes(curModel[t]) ? curModel[t] : '';
-    row.querySelector('[data-a=del]').hidden = !names.length;
+    row.querySelector('[data-a=del]').hidden = row.querySelector('[data-a=ren]').hidden = row.querySelector('[data-a=upd]').hidden = !names.length;
   });
 }
 // ---- models in the scene's "add product" list ----
@@ -3818,15 +3885,15 @@ async function uploadImage(src, kind) {
   if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
   return j.url;
 }
-async function saveScene(kind, name) {
+async function saveScene(kind, name, imgs = { base:RENDER_STATE.base, final:RENDER_STATE.final }) {
   const data = { kind, scene:sceneSnap(), camera:shotNow('') };
   if (kind === 'ready') {
     data.brief = { notes:renderNotes, fields:{ ...renderFields } }; data.light = { ...LIGHT };
     let warn = '';
     try {
-      const b = RENDER_STATE.base;
+      const b = imgs.base;
       if (b) { const url = await uploadImage(b.image, 'base'); if (url) data.base = { ...b, image:undefined, url }; }
-      if (RENDER_STATE.final) { const url = await uploadImage(RENDER_STATE.final, 'final'); if (url) data.final = { url }; }
+      if (imgs.final) { const url = await uploadImage(imgs.final, 'final'); if (url) data.final = { url }; }
     } catch (e) { warn = e.message; }
     await persistLib('save-scene', { name, data });
     toast(warn ? `הסצנה נשמרה בלי התמונות: ${warn}` : `הסצנה המוכנה "${name}" נשמרה${data.base || data.final ? ' עם התמונות' : ''}`);
@@ -3876,7 +3943,7 @@ function renderLibUI() {
   $('scnSaveReady').onclick = () => askName('שמירת סצנה מוכנה', $('scnLib').value, (n) => saveScene('ready', n));
   $('scnLibDel').onclick = async () => {
     const n = $('scnLib').value; if (!n) { toast('בחרו סצנה למחיקה'); return; }
-    if (!confirm(`למחוק את הסצנה "${n}"?`)) return;
+    if (!(await askConfirm(`למחוק את הסצנה "${n}"?`, 'מחיקה', true))) return;
     try { await persistLib('delete-scene', { name:n }); renderLibUI(); showSceneInfo(null); } catch (e) { toast(e.message); }
   };
 }
@@ -4439,7 +4506,7 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
-  'סצנה':'Scene', 'סצנות שמורות':'Saved scenes', '— פתיחת סצנה שמורה —':'— open a saved scene —', 'סצנה שמורה':'Saved scene', 'מחיקת הסצנה':'Delete the scene',
+  'סצנה':'Scene', 'שמירת הסצנה (שלב א׳ + ב׳)':'Save the scene (stage 1 + 2)', 'שמירת הסצנה (שלב א׳)':'Save the scene (stage 1)', 'שמירת הסצנה':'Save the scene', 'עדכון':'Update', 'בחרו דגם לעדכון':'Pick a model to update', 'עדכון הדגם לפי ההגדרה שמוצגת עכשיו':'Update the model to the setup shown now', 'שינוי שם הדגם':'Rename the model', 'בחרו דגם לשינוי שם':'Pick a model to rename', 'כבר יש דגם בשם הזה':'A model with this name already exists', 'אישור':'OK', 'מחיקה':'Delete', 'להחליף':'Replace', 'לסגור':'Close', 'לאשר כבסיס':'Approve as base', 'סצנות שמורות':'Saved scenes', '— פתיחת סצנה שמורה —':'— open a saved scene —', 'סצנה שמורה':'Saved scene', 'מחיקת הסצנה':'Delete the scene',
   'שמור סצנת בסיס':'Save base scene', 'שמור סצנה מוכנה':'Save ready scene', 'שמירת סצנת בסיס':'Save base scene', 'שמירת סצנה מוכנה':'Save ready scene', 'דגם':'Model', 'שמור כדגם':'Save as model',
   'מחיקת הדגם':'Delete the model', '— הגדרה חופשית —':'— free setup —', 'שמירת דגם':'Save model', 'שם':'Name', 'שמירה':'Save', 'שומר…':'Saving…', 'דגמים שמורים':'Saved models',
   'בסיס מאושר':'Approved base', 'תמונה סופית':'Final image', 'מוכנה':'ready', 'בסיס':'base', 'בחרו דגם למחיקה':'Pick a model to delete', 'בחרו סצנה למחיקה':'Pick a scene to delete', 'בחרו שם אחר':'Choose another name',
