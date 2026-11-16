@@ -110,7 +110,7 @@
   .tb.big:hover { background:#1f2932; }
   .tb.on { background:#e6ebef; color:var(--acc); }
   .preset { display:inline-flex; align-items:center; gap:4px; height:34px; padding:0 6px 0 4px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--muted); }
-  .preset select { font:inherit; font-size:13px; border:0; background:transparent; color:var(--ink); max-width:170px; cursor:pointer; }
+  .preset select { font:inherit; font-size:13px; border:0; background-color:transparent; color:var(--ink); max-width:170px; cursor:pointer; }
   .dlg { position:fixed; inset:0; background:rgba(20,26,32,.28); display:flex; align-items:center; justify-content:center; z-index:20; }
   .dlg-card { width:min(420px, calc(100vw - 32px)); max-height:calc(100vh - 40px); overflow:auto; background:#fff; border-radius:14px;
     padding:18px; box-shadow:0 20px 60px rgba(20,30,40,.25); direction:rtl; }
@@ -172,7 +172,14 @@
   .cfm p { margin:0 0 14px; font-size:15px; line-height:1.5; }
   .btn.danger { background:#b42318; color:#fff; border-color:#b42318; }
   .mrow { display:flex; gap:6px; align-items:center; margin-bottom:8px; }
-  .mrow select { flex:1; min-width:0; height:38px; border:1px solid var(--line); border-radius:10px; padding:0 10px; font:inherit; background:#fff; }
+  /* drop-downs: our own chevron, a little inside the field (left in Hebrew, right in English) */
+  select { -webkit-appearance:none; appearance:none; background-repeat:no-repeat; background-size:12px 12px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5l3.5 3.5 3.5-3.5' fill='none' stroke='%235b646c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-position:left 10px center; padding-left:30px !important; }
+  html[dir=ltr] select { background-position:right 10px center; padding-left:10px !important; padding-right:30px !important; }
+  #lockBtn.on { background:#1e6b3a; color:#fff; gap:6px; padding:0 10px; width:auto; }
+  #lockBtn.on span { font-size:13px; font-weight:700; }
+  .mrow select { flex:1; min-width:0; height:38px; border:1px solid var(--line); border-radius:10px; padding:0 10px; font:inherit; background-color:#fff; }
   .mrow .btn { height:38px; padding:0 12px; white-space:nowrap; }
   .mrow .btn.sm { height:34px; padding:0 10px; font-size:13px; }
   .mrow .sb { width:34px; height:34px; border:0; border-radius:8px; background:transparent; color:var(--muted); cursor:pointer; }
@@ -3145,6 +3152,10 @@ function renderPresetPicker() {
   document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
   $('lockBtn').hidden = !server;
   $('lockBtn').classList.toggle('on', server && !!adminKey());
+  // signed in: an open padlock with a check mark and the word "מנהל", in green – so it is obvious at a glance
+  $('lockBtn').innerHTML = adminKey()
+    ? '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.6-3 8.3-7 10-4-1.7-7-5.4-7-10V6z"/><path d="M8.6 12.2l2.4 2.4 4.4-4.6"/></svg><span>מנהל</span>'
+    : '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
   $('lockBtn').title = adminKey() ? 'מצב ניהול פעיל – לחיצה ליציאה' : 'כניסה למצב ניהול';
 }
 function selectPreset(name, applySettings = true) {
@@ -4506,7 +4517,7 @@ const EN = {
   'הורדה (PNG)':'Download (PNG)', 'הורדה (':'Download (', 'מסך מלא':'Full screen', 'פתיחה במסך מלא':'Open full screen',
   'תצוגה מלאה':'Full view', 'רינדור ריאליסטי – תצוגה מלאה':'Realistic render – full view', 'הקטנה':'Zoom out', 'הגדלה':'Zoom in', 'התאמה':'Fit', 'התאמה למסך':'Fit to screen',
   'פחות':'Fewer', 'יותר':'More', 'עומק הארון בסנטימטרים':'Cabinet depth in centimetres',
-  'סצנה':'Scene', 'שמירת הסצנה (שלב א׳ + ב׳)':'Save the scene (stage 1 + 2)', 'שמירת הסצנה (שלב א׳)':'Save the scene (stage 1)', 'שמירת הסצנה':'Save the scene', 'עדכון':'Update', 'בחרו דגם לעדכון':'Pick a model to update', 'עדכון הדגם לפי ההגדרה שמוצגת עכשיו':'Update the model to the setup shown now', 'שינוי שם הדגם':'Rename the model', 'בחרו דגם לשינוי שם':'Pick a model to rename', 'כבר יש דגם בשם הזה':'A model with this name already exists', 'אישור':'OK', 'מחיקה':'Delete', 'להחליף':'Replace', 'לסגור':'Close', 'לאשר כבסיס':'Approve as base', 'סצנות שמורות':'Saved scenes', '— פתיחת סצנה שמורה —':'— open a saved scene —', 'סצנה שמורה':'Saved scene', 'מחיקת הסצנה':'Delete the scene',
+  'סצנה':'Scene', 'מנהל':'Admin', 'שמירת הסצנה (שלב א׳ + ב׳)':'Save the scene (stage 1 + 2)', 'שמירת הסצנה (שלב א׳)':'Save the scene (stage 1)', 'שמירת הסצנה':'Save the scene', 'עדכון':'Update', 'בחרו דגם לעדכון':'Pick a model to update', 'עדכון הדגם לפי ההגדרה שמוצגת עכשיו':'Update the model to the setup shown now', 'שינוי שם הדגם':'Rename the model', 'בחרו דגם לשינוי שם':'Pick a model to rename', 'כבר יש דגם בשם הזה':'A model with this name already exists', 'אישור':'OK', 'מחיקה':'Delete', 'להחליף':'Replace', 'לסגור':'Close', 'לאשר כבסיס':'Approve as base', 'סצנות שמורות':'Saved scenes', '— פתיחת סצנה שמורה —':'— open a saved scene —', 'סצנה שמורה':'Saved scene', 'מחיקת הסצנה':'Delete the scene',
   'שמור סצנת בסיס':'Save base scene', 'שמור סצנה מוכנה':'Save ready scene', 'שמירת סצנת בסיס':'Save base scene', 'שמירת סצנה מוכנה':'Save ready scene', 'דגם':'Model', 'שמור כדגם':'Save as model',
   'מחיקת הדגם':'Delete the model', '— הגדרה חופשית —':'— free setup —', 'שמירת דגם':'Save model', 'שם':'Name', 'שמירה':'Save', 'שומר…':'Saving…', 'דגמים שמורים':'Saved models',
   'בסיס מאושר':'Approved base', 'תמונה סופית':'Final image', 'מוכנה':'ready', 'בסיס':'base', 'בחרו דגם למחיקה':'Pick a model to delete', 'בחרו סצנה למחיקה':'Pick a scene to delete', 'בחרו שם אחר':'Choose another name',
