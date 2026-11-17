@@ -505,6 +505,8 @@
       <div class="lbl">ידית</div>
       <div class="seg2" id="exSide"><button data-v="right">ידית מימין</button><button data-v="left" class="on">ידית משמאל</button></div>
       <label class="slide"><span>גובה ידית</span><input type="range" id="exHandle" min="-10" max="10" step="1"><b id="exHandleVal"></b></label>
+      <div class="lbl">גג ABS (הדופן תמיד שחורה)</div>
+      <div class="seg2" id="exTop"><button data-v="black" class="on">גג שחור</button><button data-v="white">גג לבן</button></div>
       <div class="slot"></div>
     </div></div>
   </div>
@@ -526,6 +528,26 @@
       <label class="slide"><span>גובה ידית</span><input type="range" id="ptHandle" min="100" max="130" step="1"><b id="ptHandleVal"></b></label>
       <div class="row"><span>בסיס מורחב (יציבות)</span><label class="sw"><input type="checkbox" id="ptWide"><span></span></label></div>
       <div class="use">כל הגלגלים עם מעצורים. בגובה 2 מ' מומלץ בסיס מורחב.</div>
+      <div class="lbl">גג ABS (הדופן תמיד שחורה)</div>
+      <div class="seg2" id="ptTop"><button data-v="black" class="on">גג שחור</button><button data-v="white">גג לבן</button></div>
+      <div class="slot"></div>
+    </div></div>
+  </div>
+
+  <div class="panel" id="pQuad" data-mode="quad" data-family="tilt">
+    <button class="head" aria-expanded="false">
+      <span class="ttl"><h1>מעמד 4 דפנות</h1><span class="sub" id="quSub">4 צדדים של רב תא סביב ליבת פרופילים · 160–200 ס"מ מעל הבסיס</span></span>
+      <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="body"><div class="inner">
+      <div class="lbl">רמות (בכל רמה – אותו דגם בארבעת הצדדים)</div>
+      <div class="comp" id="quComp"></div>
+      <div class="bar"><i id="quBar"></i></div>
+      <div class="use" id="quUse"></div>
+      <div class="lbl">בסיס</div>
+      <div class="seg2" id="quBase"><button data-v="wheels" class="on">גלגלים</button><button data-v="legs">רגליים</button></div>
+      <div class="lbl">גג ABS (הדופן תמיד שחורה)</div>
+      <div class="seg2" id="quTop"><button data-v="black" class="on">גג שחור</button><button data-v="white">גג לבן</button></div>
       <div class="slot"></div>
     </div></div>
   </div>
@@ -1759,6 +1781,11 @@ function renderWallComp() {
 // Closed double-sided cart: 30×30 profiles, white side panels, dark ABS top, casters with corner bumpers,
 // identical tilt-bin stacks back to back. The frame height follows the stack.
 const absMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#3a3d40'), roughness:0.55, clearcoat:0.25 });
+const absWhiteMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#f1f2f0'), roughness:0.5, clearcoat:0.25 });
+const absEdgeMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#1c1d1f'), roughness:0.55, clearcoat:0.2 });
+// ABS top: black or white surface, the edge is always black (box faces: +x −x +y −y +z −z)
+const absTopMats = (c) => [absEdgeMat, absEdgeMat, c === 'white' ? absWhiteMat : absMat, absEdgeMat, absEdgeMat, absEdgeMat];
+const absTopTxt = (c) => c === 'white' ? 'a white ABS top with a black edge band' : 'a black ABS top (black edge band)';
 const bumperMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#aeb4b9'), roughness:0.7 });
 const handleMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#d9dcdc'), roughness:0.35, clearcoat:0.4 });
 const EXV = {
@@ -1792,7 +1819,7 @@ function buildExcl(k) {
   for (const x of [xs[0], xs[xs.length - 1]]) pvc(4, yTopF - y0 - 2*P, D - 2*P, x + Math.sign(x)*(P/2 - 3), (y0 + yTopF)/2, 0);
   pvc(W - 2*P, yTopF - y0 - 2*P, 6, 0, (y0 + yTopF)/2, 0);
   pvc(W - 2*P, 4, D - 2*P, 0, y0 + P - 2, 0);
-  pvc(W + 8, EX_ABS, D + 8, 0, yTopF + EX_ABS/2, 0, absMat);
+  pvc(W + 8, EX_ABS, D + 8, 0, yTopF + EX_ABS/2, 0, absTopMats(S.top));
   // casters (all braked on the partition) + corner bumpers
   const wide = k === 'part' && S.wide, zc = wide ? D/2 + 70 : D/2 - 45;
   if (wide) for (const x of [xs[0], xs[xs.length - 1]]) bar(root, 2*zc + 60, 'z', x, y0 - P/2 + 2, 0);   // outrigger feet
@@ -1824,6 +1851,69 @@ function buildExcl(k) {
   return { group:g, drawers:list, rods:rodList, W, D, H, hy };
 }
 
+// ---------- מעמד 4 דפנות: four tilt-bin columns in a pinwheel around a core of 30 mm profiles ----------
+// Each level is one model on all four faces. Looking at any face: the front of one column, and on its left
+// the end of the next column (same model). Square base below (10 cm under the bins incl. castors / legs), ABS top.
+const QD = { comp:{ 4:9 }, base:'wheels', top:'black' };
+const QD_MIN = 1600, QD_MAX = 2000, QD_BOT = 100, QD_PLATE = 25;            // stack height from the base; under the bins
+const qdLevels = (c = QD.comp) => ORDER.flatMap(n => Array(c[n] || 0).fill(n)); // bottom first
+const qdSide = (n) => 600 + MODELS[n].D;                                    // the square a level takes
+function buildQuad() {
+  const S = QD, P = PROF, lv = qdLevels(S.comp);
+  const g = new THREE.Group(); const root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
+  const stack = stackHeight(S.comp), maxD = Math.max(...(lv.length ? lv : [4]).map(n => MODELS[n].D));
+  const side = 600 + maxD, B = side + 40, y0 = QD_BOT, yTop = y0 + stack, H = yTop + EX_ABS;
+  const pvc = (w, h, d, x, y, z, m = pvcMat) => { const o = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)); o.position.set(x, y, z); root.add(o); return o; };
+  // square base board + castors or legs (all 10 cm under the bins)
+  pvc(B, QD_PLATE, B, 0, y0 - QD_PLATE/2, 0);
+  const pb = y0 - QD_PLATE, cx = B/2 - 60, corners = [[-cx, cx], [cx, cx], [-cx, -cx], [cx, -cx]];
+  if (S.base === 'wheels') corners.forEach(([x, z], i) => caster(root, x, z, pb, i < 2));
+  else corners.forEach(([x, z]) => { bar(root, pb - 32, 'y', x, (pb + 32)/2, z); cap(root, 'y', x, 30.5, z); levelFoot(root, x, z, 29); });
+  // core: four 30 mm profiles behind the bins, full height (inside the smallest core = the deepest level)
+  const c0 = (600 - maxD) / 2 - P/2;
+  if (stack > 0) for (const x of [-c0, c0]) for (const z of [-c0, c0]) bar(root, stack, 'y', x, y0 + stack/2, z);
+  // ABS top on the top level
+  const topSide = lv.length ? qdSide(lv[lv.length - 1]) : side;
+  pvc(topSide + 8, EX_ABS, topSide + 8, 0, yTop + EX_ABS/2, 0, absTopMats(S.top));
+  // the units: per level, the column facing +z (front) spans x in [-c, -c + 600] with its back at z = c, c = (600 - D)/2,
+  // and the other three are the same column turned -90, -180, -270 degrees (pinwheel)
+  const list = [], rodList = [];
+  let y = y0;
+  for (const n of lv) {
+    const c = (600 - MODELS[n].D) / 2, px = -c + 300, pz = c;
+    for (let k = 0; k < 4; k++) {
+      const a = -k * Math.PI/2, cs = Math.cos(a), sn = Math.sin(a);
+      const u = makeUnit(n);
+      u.group.position.set((px*cs + pz*sn)*0.001, y*0.001, (-px*sn + pz*cs)*0.001); u.group.rotation.y = a;
+      g.add(u.group); list.push(...u.drawers); rodList.push(u.rod);
+    }
+    y += MODELS[n].H - RIM;
+  }
+  return { group:g, drawers:list, rods:rodList, W:B, D:B, H, side, levels:lv.length };
+}
+function renderQuad() {
+  const S = QD, box = $('quComp');
+  if (!THUMBS) { try { THUMBS = makeThumbs(); } catch (e) { THUMBS = {}; } }
+  box.innerHTML = '';
+  const used = stackHeight(S.comp);
+  for (const n of ORDER) {
+    const cnt = S.comp[n] || 0, add = used === 0 ? MODELS[n].H : MODELS[n].H - RIM;
+    const row = document.createElement('div'); row.className = 'ci';
+    row.title = `רב תא ${n}`;
+    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="cn" dir="ltr">#${n}</span><span class="ctl"><button aria-label="פחות">−</button><b>${cnt}</b><button aria-label="יותר">+</button></span>`;
+    const [minus, plus] = row.querySelectorAll('button');
+    minus.disabled = !(cnt > 0); plus.disabled = used + add > QD_MAX;
+    plus.title = plus.disabled ? 'מעל 200 ס"מ' : '';
+    minus.onclick = () => { S.comp[n] = cnt - 1; rebuild(true); };
+    plus.onclick = () => { S.comp[n] = cnt + 1; rebuild(true); };
+    box.appendChild(row);
+  }
+  $('quBar').style.width = Math.min(100, used / QD_MAX * 100) + '%';
+  const ok = used >= QD_MIN && used <= QD_MAX;
+  $('quUse').innerHTML = `גובה הרב תאים מעל הבסיס: <b>${(used/10).toFixed(1)}</b> ס"מ (טווח ${QD_MIN/10}–${QD_MAX/10})${ok ? '' : ' · <b style="color:#b3261e">מחוץ לטווח</b>'} · מתחת לתאים עוד 10 ס"מ`;
+  setSeg('quBase', S.base); setSeg('quTop', S.top || 'black');
+}
+
 function renderExcl(k) {
   const V = EXV[k], S = EXS[k], px = k === 'excl' ? 'ex' : 'pt', box = document.getElementById(px + 'Comp');
   if (!THUMBS) { try { THUMBS = makeThumbs(); } catch (e) { THUMBS = {}; } }
@@ -1852,7 +1942,7 @@ function renderExcl(k) {
 // Each item keeps its own copy of its product settings; the selected item is edited in its
 // product's own panel, which is borrowed into the scene panel while it is selected.
 // =====================================================================
-const TYPE_NAME = { unit:'רב תא', stand:'מעמד', excl:'עגלת רב-תא EXCLUSIVE', part:'מחיצת EXCLUSIVE מודולרית',
+const TYPE_NAME = { unit:'רב תא', stand:'מעמד', excl:'עגלת רב-תא EXCLUSIVE', part:'מחיצת EXCLUSIVE מודולרית', quad:'מעמד 4 דפנות',
   wall:'מתלה קיר', tena:'תא-נע DELUX', smart:'תא-נע SMART', tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים' };
 const SCN = { room:{ W:6000, D:5000, back:true, left:false, right:false }, items:[], sel:null, editType:null, next:1 };
 let SCENE_BUILD = false;
@@ -1862,6 +1952,7 @@ function capCfg(t) {
   if (t === 'stand') return { stand:{ ...stand }, comp:deep(comp) };
   if (t === 'wall') return { wall:deep(wall), wallComp:deep(wallComp) };
   if (t === 'excl' || t === 'part') return { exs:deep(EXS[t]) };
+  if (t === 'quad') return { qd:deep(QD) };
   if (t === 'tamb') return { tb:deep(TB) };
   if (t === 'mtamb') return { mt:deep(MT) };
   if (t === 'mdoor') return { md:deep(MD) };
@@ -1872,17 +1963,18 @@ function applyCfg(t, c) {
   else if (t === 'stand') { Object.assign(stand, c.stand); for (const k in comp) delete comp[k]; Object.assign(comp, deep(c.comp)); }
   else if (t === 'wall') { Object.assign(wall, deep(c.wall)); for (const k in wallComp) delete wallComp[k]; Object.assign(wallComp, deep(c.wallComp)); }
   else if (t === 'excl' || t === 'part') { for (const k in EXS[t]) delete EXS[t][k]; Object.assign(EXS[t], deep(c.exs)); }
+  else if (t === 'quad') { for (const k in QD) delete QD[k]; Object.assign(QD, { base:'wheels', top:'black' }, deep(c.qd)); }
   else if (t === 'tamb') { for (const k of ['comp', 'side', 'shelves', 'extra', 'items']) delete TB[k]; Object.assign(TB, deep(c.tb)); tbMigrate(TB); TB.closure = TB.closure || 'tambour'; TB.doors = TB.doors || [0, 0]; if (TB.acc === undefined) TB.acc = true; }
   else if (t === 'mtamb') Object.assign(MT, deep(c.mt));
   else if (t === 'mdoor') Object.assign(MD, deep(c.md));
   else { const v = t === 'smart' ? 'smart' : 'delux'; for (const k in TN[v]) delete TN[v][k]; Object.assign(TN[v], deep(c.tn)); tena = TN[v]; }
 }
-const capAll = () => ({ current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD) });
+const capAll = () => ({ current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD), qd:deep(QD) });
 function restoreAll(a) {
   applyCfg('unit', a); applyCfg('stand', a); applyCfg('wall', a);
   applyCfg('excl', { exs:a.exs.excl }); applyCfg('part', { exs:a.exs.part });
   applyCfg('smart', { tn:a.tn.smart }); applyCfg('tena', { tn:a.tn.delux }); applyCfg('tamb', { tb:a.tb });
-  if (a.mt) applyCfg('mtamb', { mt:a.mt }); if (a.md) applyCfg('mdoor', { md:a.md });
+  if (a.mt) applyCfg('mtamb', { mt:a.mt }); if (a.md) applyCfg('mdoor', { md:a.md }); if (a.qd) applyCfg('quad', { qd:a.qd });
 }
 // the selected item's settings live in the globals while it is being edited
 function syncUI(t) {
@@ -1890,6 +1982,7 @@ function syncUI(t) {
   setSeg('stType', stand.type); setSeg('stBase', stand.base); setSeg('stHeight', stand.height);
   setSeg('stHandle', stand.handle); setSeg('stBrake', stand.brake); syncWheelOpts();
   setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0');
+  setSeg('quBase', QD.base); setSeg('quTop', QD.top || 'black'); setSeg('exTop', EXS.excl.top || 'black'); setSeg('ptTop', EXS.part.top || 'black');
   setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; setSeg('mdColor', MD.color);
   $('ptWide').checked = !!EXS.part.wide; setSeg('exSide', EXS.excl.side || 'left'); setSeg('ptSide', EXS.part.side || 'left'); setSeg('ptCols', EXS.part.cols || 2);
   for (const v of ['delux', 'smart']) { const px = v === 'smart' ? 'sm' : 'tn';
@@ -1904,6 +1997,7 @@ function refreshEditor(t) {
     if (t === 'excl') $('exHandle').value = EXS.excl.handleOff/10; else $('ptHandle').value = EXS.part.handleH/10;
   } else if (t === 'tena' || t === 'smart') renderTena();
   else if (t === 'tamb') renderTamb();
+  else if (t === 'quad') renderQuad();
   else if (t === 'mtamb' || t === 'mdoor') renderMetal(t);
 }
 const panelOf = (t) => panels.find(p => p.dataset.mode === t);
@@ -1976,6 +2070,7 @@ function buildScene() {
     else if (it.type === 'stand') b = buildStand();
     else if (it.type === 'wall') { b = buildWall(); b.group.position.z = 0; }
     else if (it.type === 'excl' || it.type === 'part') b = buildExcl(it.type);
+    else if (it.type === 'quad') b = buildQuad();
     else if (METAL[it.type]) b = buildMetal(it.type);
     else { WING_GROUPS.clear(); b = buildTena(); }
     const inner = b.group, wrap = new THREE.Group();
@@ -2641,6 +2736,12 @@ function rebuild(keepCamera = false) {
     document.getElementById('dims').innerHTML = `${nm} · רוחב <b>${mode === 'tamb' ? TB_W/10 : 90}</b> · עומק <b>${D}</b> · גובה <b>195</b> ס"מ · ${col}`;
     if (mode === 'tamb') { renderTamb(); $('tbSub').textContent = '67 × 45 × 195 ס"מ · RAL 7035 · תריס עם מנעול'; }
     else renderMetal(mode);
+  } else if (mode === 'quad') {
+    const qb = buildQuad();
+    world.add(qb.group); drawers = qb.drawers; rods = qb.rods;
+    if (!keepCamera) frame(qb.W + 300, qb.H, true);
+    document.getElementById('dims').innerHTML = `מעמד 4 דפנות · <b>${qb.levels}</b> רמות · ${qb.levels * 4} יחידות רב תא · בסיס <b>${(qb.W/10).toFixed(1)}</b> × <b>${(qb.W/10).toFixed(1)}</b> · גובה כולל <b>${(qb.H/10).toFixed(1)}</b> ס"מ · ${QD.base === 'wheels' ? 'על גלגלים' : 'על רגליים'}`;
+    renderQuad();
   } else if (mode === 'excl' || mode === 'part') {
     const eb = buildExcl(mode);
     world.add(eb.group); drawers = eb.drawers; rods = eb.rods;
@@ -2676,7 +2777,7 @@ function rebuild(keepCamera = false) {
     renderComp();
   }
   // optional wall behind the product + floor (the wall rack has its own, with height above the floor)
-  const wallAllowed = !['wall', 'excl', 'scene'].includes(mode) && !(mode === 'stand' && stand.type === 'double');
+  const wallAllowed = !['wall', 'excl', 'quad', 'scene'].includes(mode) && !(mode === 'stand' && stand.type === 'double');
   document.getElementById('backWallRow').hidden = !wallAllowed;
   for (const id of ['rod', 'labelsOn']) document.getElementById(id).closest('.row').hidden = mode === 'mtamb' || mode === 'mdoor';
   if (wallAllowed && document.getElementById('backWall').checked) {
@@ -2842,6 +2943,10 @@ document.getElementById('wlElev').onchange = () => { clearTimeout(syncElev.t); r
 document.getElementById('exHandle').oninput = (e) => { EXS.excl.handleOff = +e.target.value * 10; rebuild(true); };
 document.getElementById('ptHandle').oninput = (e) => { EXS.part.handleH = +e.target.value * 10; rebuild(true); };
 segGroup('exSide', (v) => { EXS.excl.side = v; rebuild(true); });
+segGroup('exTop', (v) => { EXS.excl.top = v; rebuild(true); });
+segGroup('ptTop', (v) => { EXS.part.top = v; rebuild(true); });
+segGroup('quTop', (v) => { QD.top = v; rebuild(true); });
+segGroup('quBase', (v) => { QD.base = v; rebuild(true); });
 segGroup('ptCols', (v) => { EXS.part.cols = +v; rebuild(); });
 segGroup('ptSide', (v) => { EXS.part.side = v; rebuild(true); });
 document.getElementById('ptWide').onchange = (e) => { EXS.part.wide = e.target.checked; rebuild(true); };
@@ -3251,6 +3356,7 @@ function fileStem() {
   if (mode === 'tamb') return `secured-tilt-bin-cabinet-${TB.closure}`;
   if (mode === 'mtamb') return `tambour-metal-cabinet`;
   if (mode === 'mdoor') return `4-shelf-metal-cabinet-${MD.color}`;
+  if (mode === 'quad') return `four-sided-tilt-bin-stand-${Math.round(stackHeight(QD.comp)/10)}-${QD.base}`;
   if (mode === 'excl') return `exclusive-cart-${Math.round(exTotal('excl')/10)}`;
   if (mode === 'part') return `exclusive-partition-${Math.round(exTotal('part')/10)}`;
   if (mode === 'wall') return `wall-rack-${wall.height/10}`;
@@ -3370,7 +3476,7 @@ function describe() {
   const base = 'Wall-mounted tilt-bin storage unit: injection-moulded body in light grey RAL 7035 (matte, slightly satin), with clear transparent polystyrene tilt-out bins';
   const flags = [];
   if ($('backWall').checked && mode === 'part') flags.push('the end without the handle touches a plain light wall at a right angle, so the partition juts out from the wall into the room, smooth floor');
-  else if ($('backWall').checked && !['wall', 'excl'].includes(mode) && !(mode === 'stand' && stand.type === 'double')) flags.push('standing against a plain light wall on a smooth floor');
+  else if ($('backWall').checked && !['wall', 'excl', 'quad'].includes(mode) && !(mode === 'stand' && stand.type === 'double')) flags.push('standing against a plain light wall on a smooth floor');
   if ($('rod').checked) flags.push('a thin stainless steel security rod across the front');
   if ($('labelsOn').checked) flags.push('plain white paper labels in the label windows');
   if (METAL[mode]) {
@@ -3391,9 +3497,14 @@ function describe() {
     const ys = [...S.list].sort((a, b) => a - b).map(y => Math.round(y/10));
     return `${shell} Inside: ${ys.length} adjustable full-width steel shelves at ${ys.join(', ')} cm from the floor, on perforated uprights.${flags.filter(f => !/rod|label/.test(f)).length ? ' ' + flags.filter(f => !/rod|label/.test(f)).join('; ') + '.' : ''}`;
   }
+  if (mode === 'quad') {
+    const lv = qdLevels(), top = [...lv].reverse(), side = Math.max(600, ...lv.map(qdSide));
+    const runs = []; for (const n of top) { const r = runs[runs.length - 1]; r && r.n === n ? r.k++ : runs.push({ n, k:1 }); }
+    return `A four-sided tilt-bin tower (a free-standing square column, about ${side + 40} x ${side + 40} mm at the base, ${Math.round(QD_BOT + stackHeight(QD.comp) + EX_ABS)} mm high). It has ${lv.length} levels; every level is the same tilt-bin model on all four faces, so all four faces look identical. The four columns are arranged like a pinwheel around a central core: looking straight at any face you see the full 600 mm front of one column, and directly to its LEFT the narrow white end of the next column (which faces sideways). Levels from the top down: ${runs.map(r => r.k + ' x ' + r.n + '-drawer').join(', ')}. Behind the bins, hidden in the core, are four slim 30 x 30 mm aluminium profiles – only 3 cm wide – with no panels or frames around the outside. ${absTopTxt(QD.top)} covers the top. Below the bins: a flat white square base board ${QD.base === 'wheels' ? 'on four grey castors (two with brakes)' : 'on four short profile legs with levelling feet'}, together only 10 cm high${flags.length ? '; ' + flags.join('; ') : ''}.`;
+  }
   if (mode === 'excl' || mode === 'part') {
     const k = mode, H = exTotal(k), W = EXV[k].cols*600 + (EXV[k].cols + 1)*30, D = EXV[k].D;
-    return `A closed, double-sided mobile ${k === 'excl' ? 'tilt-bin cart' : 'room-divider partition with storage'} (${W} mm wide, ${D} mm deep, ${Math.round(H)} mm high): frame of 30x30 mm aluminium profiles in RAL 7035, white panels on the sides, a dark charcoal ABS worktop, grey castors${k === 'part' ? ' all with brakes' : ''} with round grey corner bumpers, a light grey tubular side handle; ${EXV[k].cols > 1 ? EXV[k].cols + ' columns of ' : ''}identical stacks of ${base.toLowerCase()} on both faces (largest at the bottom)${flags.length ? '; ' + flags.join('; ') : ''}.`;
+    return `A closed, double-sided mobile ${k === 'excl' ? 'tilt-bin cart' : 'room-divider partition with storage'} (${W} mm wide, ${D} mm deep, ${Math.round(H)} mm high): frame of 30x30 mm aluminium profiles in RAL 7035, white panels on the sides, ${absTopTxt(EXS[k].top)} as the worktop, grey castors${k === 'part' ? ' all with brakes' : ''} with round grey corner bumpers, a light grey tubular side handle; ${EXV[k].cols > 1 ? EXV[k].cols + ' columns of ' : ''}identical stacks of ${base.toLowerCase()} on both faces (largest at the bottom)${flags.length ? '; ' + flags.join('; ') : ''}.`;
   }
   if (mode === 'wall') return `A slim wall-mounted rack (600 mm wide, ${wall.height} mm high, only 8 mm deep: two 30 mm side rails with a slot and top/bottom bands with rounded inner corners, light grey-white) holding stacked ${base.toLowerCase()} (largest at the bottom)${wall.showWall ? ', mounted on a plain wall with its bottom ' + (wallElev()/10) + ' cm above the floor, floor visible' : ''}${flags.length ? '; ' + flags.join('; ') : ''}.`;
   if (isCab()) { const S = sizeDef();
@@ -4410,7 +4521,12 @@ const EN = {
   'סיבוב':'Rotate', 'זווית':'Angle', 'רוחב החדר במטרים':'Room width in metres', 'עומק החדר במטרים':'Room depth in metres',
   'קליק בוחר מוצר, קליק נוסף משחרר. גרירה מזיזה על הרצפה. חיצים: ס"מ בכל לחיצה לפי כיוון המוצר (Shift – 10 ס"מ). החזקת הלחצן השמאלי על המוצר + גלגלת: גובה מהרצפה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. Ctrl+Z מבטל. לחיצה כפולה פותחת מגירה.':'Click selects a product, another click releases it. Drag moves it on the floor. Arrows: 1 cm per press in the product\'s own directions (Shift – 10 cm). Hold the left button on the product + wheel: height above the floor. A product never goes into a wall or another product – it stops on contact. Pink line = lined up with another product. Ctrl+Z undoes. Double-click opens a bin.',
   'לרב תא בודד בוחרים את מספר התאים בלשונית "רב תא" לפני ההוספה.':'For a single tilt bin, choose the number of bins in the "Tilt bin" tab before adding it.',
-  'צמוד ל':'Touching the ', 'קיר אחורי':'back wall', 'קיר שמאלי':'left wall', 'קיר ימני':'right wall', 'ול':' and the ', 'מוצרים':'products', 'חדר':'room', "מ'":'m', 'עגלת רב-תא EXCLUSIVE':'Exclusive Tilt Bin cart', 'מחיצת EXCLUSIVE מודולרית':'Modular Exclusive Partition',
+  'צמוד ל':'Touching the ', 'קיר אחורי':'back wall', 'קיר שמאלי':'left wall', 'קיר ימני':'right wall', 'ול':' and the ', 'מוצרים':'products', 'חדר':'room', "מ'":'m', 'עגלת רב-תא EXCLUSIVE':'Exclusive Tilt Bin cart', 'מחיצת EXCLUSIVE מודולרית':'Modular Exclusive Partition', 'מעמד 4 דפנות':'Four-sided stand',
+  '4 צדדים של רב תא סביב ליבת פרופילים · 160–200 ס"מ מעל הבסיס':'4 sides of tilt bins around a profile core · 160–200 cm above the base',
+  'רמות (בכל רמה – אותו דגם בארבעת הצדדים)':'Levels (each level – the same model on all four sides)',
+  'גג ABS (הדופן תמיד שחורה)':'ABS top (the edge is always black)', 'גג שחור':'Black top', 'גג לבן':'White top',
+  'גובה הרב תאים מעל הבסיס:':'Tilt bin height above the base:', 'מחוץ לטווח':'out of range', 'מתחת לתאים עוד 10 ס"מ':'plus 10 cm under the bins',
+  'מעל 200 ס"מ':'over 200 cm', 'רמות':'levels', 'יחידות רב תא':'tilt bin units',
   'עגלה סגורה דו צדדית · רוחב 66 ס"מ · גובה 110–150 לפי ההרכב':'Closed double-sided cart · width 66 cm · height 110–150 by layout',
   'מחיצה ניידת עם אחסון משני הצדדים · 2 / 3 / 4 טורים · עד 210 ס"מ':'Mobile partition with storage on both sides · 2 / 3 / 4 columns · up to 210 cm',
   'טורים בכל צד':'Columns per side', 'הרכב (זהה בכל הטורים ובשני הצדדים)':'Layout (same in all columns and on both sides)',
@@ -4537,6 +4653,7 @@ const EN_EL = [
   ['#stBase button[data-v="wheels"]', 'With wheels'], ['#stBase button[data-v="legs"]', 'Without wheels'],
   ['#pUnit h1', 'TILT BIN'], ['#pStand h1', 'STANDING UNIT'], ['#pWall h1', 'WALL MOUNT UNIT'],
   ['#pTena h1', 'GONDOLA DELUX'], ['#pExcl h1', 'EXCLUSIVE TILT BIN CART'], ['#pPart h1', 'MODULAR EXCLUSIVE PARTITION'], ['#pTamb h1', 'SECURED TILT BIN METAL CABINET'], ['#pSmart h1', 'GONDOLA SMART'], ['.tab[data-f="tilt"]', 'TILT BIN FAMILY'],
+  ['#pQuad h1', 'FOUR-SIDED TILT BIN STAND'],
   ['#pMtamb h1', 'TAMBOUR METAL CABINET'], ['#pMdoor h1', '4-SHELF METAL CABINET'], ['.tab[data-f="metal"]', 'METAL CABINETS'],
   ['#mdColor button[data-v="blue"]', 'Blue'],
 ];
