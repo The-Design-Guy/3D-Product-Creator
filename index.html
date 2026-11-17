@@ -74,6 +74,7 @@
   .ci { display:flex; flex-direction:column; align-items:center; gap:4px; font-size:13px; padding:4px 0; border:1px solid #eef0f2; border-radius:9px; background:rgba(255,255,255,.6); }
   .ci img { display:block; width:100%; max-width:66px; height:40px; object-fit:contain; }
   .ci .n { color:var(--muted); }
+  .ci .cn { font-size:12px; font-weight:700; color:var(--ink); line-height:1; margin-top:-1px; }
   .ci .ctl { display:flex; align-items:center; gap:4px; direction:ltr; }
   .ci button { font:inherit; width:20px; height:20px; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer; color:var(--ink); line-height:1; padding:0; }
   .ci button:disabled { opacity:.35; cursor:default; }
@@ -1629,7 +1630,7 @@ function renderTena() {
         const add = used === 0 ? MODELS[n].H : MODELS[n].H - RIM;
         const row = document.createElement('div'); row.className = 'ci' + (ok || c ? '' : ' na');
         row.title = ok ? `רב תא ${n}` : `רב תא ${n} – ${tenaWhyNot(w.layer, n)}`;
-        row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="ctl"><button aria-label="פחות">−</button><b>${c}</b><button aria-label="יותר">+</button></span>`;
+        row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="cn" dir="ltr">#${n}</span><span class="ctl"><button aria-label="פחות">−</button><b>${c}</b><button aria-label="יותר">+</button></span>`;
         const [minus, plus] = row.querySelectorAll('button');
         minus.disabled = !(c > 0);
         plus.disabled = !ok || used + add > COL + 5;
@@ -1743,7 +1744,7 @@ function renderWallComp() {
   for (const n of ORDER) {
     const add = used === 0 ? MODELS[n].H : MODELS[n].H - RIM, cnt = c[n] || 0;
     const row = document.createElement('div'); row.className = 'ci'; row.title = `רב תא ${n}`;
-    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="ctl"><button aria-label="פחות">−</button><b>${cnt}</b><button aria-label="יותר">+</button></span>`;
+    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="cn" dir="ltr">#${n}</span><span class="ctl"><button aria-label="פחות">−</button><b>${cnt}</b><button aria-label="יותר">+</button></span>`;
     const [minus, plus] = row.querySelectorAll('button');
     minus.disabled = !(cnt > 0); plus.disabled = used + add > lim + 5;
     minus.onclick = () => { c[n] = Math.max(0, cnt - 1); rebuild(true); };
@@ -1834,7 +1835,7 @@ function renderExcl(k) {
     const less = cnt > 0 ? used - stackHeight({ ...S.comp, [n]:cnt - 1 }) : 0;
     const row = document.createElement('div'); row.className = 'ci' + (ok ? '' : ' na');
     row.title = ok ? `רב תא ${n}` : `רב תא ${n} – לא במוצר הזה`;
-    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="ctl"><button aria-label="פחות">−</button><b>${ok ? cnt : '–'}</b><button aria-label="יותר">+</button></span>`;
+    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="cn" dir="ltr">#${n}</span><span class="ctl"><button aria-label="פחות">−</button><b>${ok ? cnt : '–'}</b><button aria-label="יותר">+</button></span>`;
     const [minus, plus] = row.querySelectorAll('button');
     minus.disabled = !ok || !(cnt > 0) || H - less < V.minH;
     plus.disabled = !ok || H + add > V.maxH;
@@ -2390,7 +2391,7 @@ function buildMetal(k) {
     tbMigrate(TB);
     TB.items.forEach((it, i) => {
       if (it.t === 'shelf') { shelf(it.y, i); return; }
-      const zFront = D/2 - 34 - 50;               // 5 cm behind the tambour, so the bin handles don't hit it
+      const zFront = D/2 - 34 - 130;              // 13 cm behind the tambour, so the bin handles don't hit it
       for (const p of binsLayout(it).parts) {
         if (p.type === 'shelf') shelf(p.y);
         else {
@@ -2478,7 +2479,7 @@ function renderTamb() {
     const ok = TB_MODELS.includes(n), cnt = it.comp[n] || 0;
     const row = document.createElement('div'); row.className = 'ci' + (ok ? '' : ' na');
     row.title = ok ? `רב תא ${n}` : `רב תא ${n} – לא בארון הזה`;
-    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="ctl"><button aria-label="פחות">−</button><b>${ok ? cnt : '–'}</b><button aria-label="יותר">+</button></span>`;
+    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="cn" dir="ltr">#${n}</span><span class="ctl"><button aria-label="פחות">−</button><b>${ok ? cnt : '–'}</b><button aria-label="יותר">+</button></span>`;
     const [minus, plus] = row.querySelectorAll('button');
     const fits = ok && binsLayout({ ...it, comp:{ ...it.comp, [n]:cnt + 1 } }).h <= tbCeil() - tbFloor();
     minus.disabled = !ok || cnt <= 0; plus.disabled = !fits;
@@ -2880,7 +2881,7 @@ function renderComp() {
     const row = document.createElement('div'); row.className = 'ci';
     const ok = allowed(n);
     row.title = `רב תא ${n}`;
-    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n} תאים`}</span><span class="ctl"><button aria-label="פחות">−</button><b>${ok ? (c[n] || 0) : '–'}</b><button aria-label="יותר">+</button></span>`;
+    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n} תאים`}</span><span class="cn" dir="ltr">#${n}</span><span class="ctl"><button aria-label="פחות">−</button><b>${ok ? (c[n] || 0) : '–'}</b><button aria-label="יותר">+</button></span>`;
     if (!ok) { row.classList.add('na'); row.title = `רב תא ${n} – לא אפשרי בדו צדדי: הבסיס לא עמוק מספיק`; }
     const [minus, plus] = row.querySelectorAll('button');
     minus.disabled = !ok || !(c[n] > 0);
@@ -3383,7 +3384,7 @@ function describe() {
     if (mode === 'tamb') {
       tbMigrate(TB);
       const it = TB.items[0], top = ORDER.filter(n => it.comp[n] > 0).reverse();
-      const zs = top.length ? [`one single 600 mm wide column of tilt bin units stacked directly on top of each other, nested, with no shelves at all, filling the 630 mm inner width (from the top down: ${top.map(n => it.comp[n] + ' x ' + n + '-drawer').join(', ')}), ${TB.align === 'front' ? 'pushed forward so the fronts of all units line up flush with each other, about 5 cm behind the tambour' : 'pushed back against the back wall of the cabinet'}`] : [];
+      const zs = top.length ? [`one single 600 mm wide column of tilt bin units stacked directly on top of each other, nested, with no shelves at all, filling the 630 mm inner width (from the top down: ${top.map(n => it.comp[n] + ' x ' + n + '-drawer').join(', ')}), ${TB.align === 'front' ? 'pushed forward so the fronts of all units line up flush with each other, about 13 cm behind the tambour' : 'pushed back against the back wall of the cabinet'}`] : [];
       const peg = cl === 'doors' ? ` The inside of each door is a perforated metal pegboard panel${TB.acc ? ' holding hooks, small blue plastic baskets, a hammer, screwdrivers and pliers' : ' (empty)'}.` : '';
       return `${shell} Every tilt bin unit has an injection-moulded light grey RAL 7035 body with clear transparent tilt-out bins. Inside, from the bottom: ${zs.join('; ') || 'empty'}.${peg}${flags.length ? ' ' + flags.join('; ') + '.' : ''}`;
     }
@@ -4575,7 +4576,7 @@ const mo = new MutationObserver((list) => {
   observe();
 });
 const observe = () => mo.observe(document.body, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:ATTRS });
-function setLang(l) {
+function setLang(l, byUser) {
   LANG = l; try { localStorage.setItem('rbt-lang', l); } catch {}
   document.documentElement.lang = l; document.documentElement.dir = l === 'en' ? 'ltr' : 'rtl';
   document.title = l === 'en' ? 'Tilt bin – 3D model' : 'רב תא – מודל תלת־ממדי';
@@ -4585,6 +4586,22 @@ function setLang(l) {
   else { mo.disconnect(); location.hash === '#en' ? (location.hash = '') : 0; location.reload(); return; }   // back to Hebrew: reload the original page
   rebuild(true);                                          // redraw generated parts (wing tags, panels, framing side)
   if (spreadTarget > 0.5) setSpread(true);
+  if (byUser && innerWidth >= 640) panelSwap();
+}
+// the side panel moved from the right (Hebrew) to the left (English): slide the view by the panel's width
+// so the products and the scene sit in the free part of the screen, keeping the current angle and zoom
+function panelSwap() {
+  // mirror the products' place on screen around the middle (left of centre in Hebrew → right of centre in English)
+  const box = new THREE.Box3().setFromObject(world); if (box.isEmpty()) return;
+  const c = box.getCenter(new THREE.Vector3()), r = canvas.getBoundingClientRect();
+  const sx = (c.clone().project(camera).x + 1) / 2 * r.width;
+  const px = r.width - 2 * sx;                                   // + = the products move right
+  const fwd = new THREE.Vector3(); camera.getWorldDirection(fwd);
+  const depth = Math.max(0.1, c.clone().sub(camera.position).dot(fwd));
+  const perPx = 2 * depth * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / r.height;
+  const shift = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).multiplyScalar(-px * perPx);
+  camera.position.add(shift); controls.target.add(shift); controls.update();
+  if (lastAuto) lastAuto.target.add(shift);
 }
 const dirSign = () => (LANG === 'en' ? -1 : 1);           // the side panel sits left in English: push the model right
 
@@ -4731,7 +4748,7 @@ $('sceneBtn').onclick = () => { const h = $('pScene').querySelector('.head'); if
 const clock = new THREE.Clock();
 rebuild();
 if (LANG === 'en') setLang('en');
-$('langBtn').onclick = () => setLang(LANG === 'en' ? 'he' : 'en');
+$('langBtn').onclick = () => setLang(LANG === 'en' ? 'he' : 'en', true);
 renderer.setAnimationLoop(() => {
   const dt = Math.min(0.1, clock.getDelta());               // time-based, same speed on any screen
   stepRods(1 - Math.exp(-dt*6.5));
