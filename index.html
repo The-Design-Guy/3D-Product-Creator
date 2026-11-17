@@ -40,7 +40,9 @@
   .chev { flex:none; color:var(--muted); transition:transform .25s ease; transform:rotate(0deg); }
   .panel.open > .head .chev { transform:rotate(180deg); }
   .body { display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s ease; }
-  .panel.open .body { grid-template-rows:1fr; }
+  .panel.open .body, #scnEdit .body { grid-template-rows:1fr; }
+  #scnEdit .body > .inner { padding-top:8px; }
+  body.voice-on .hint { display:none; }
   .body > .inner { overflow:hidden; min-height:0; }
   .panel.open .body > .inner { padding-top:8px; }
   .lbl { font-size:12px; color:var(--muted); margin:12px 0 6px; }
@@ -113,6 +115,58 @@
   .preset { display:inline-flex; align-items:center; gap:4px; height:34px; padding:0 6px 0 4px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--muted); }
   .preset select { font:inherit; font-size:13px; border:0; background-color:transparent; color:var(--ink); max-width:170px; cursor:pointer; }
   .dlg { position:fixed; inset:0; background:rgba(20,26,32,.28); display:flex; align-items:center; justify-content:center; z-index:20; }
+  body.scn-full:not(.scn-drawer) .side { display:none !important; }
+  body.scn-full.scn-drawer .side { box-shadow:0 18px 50px rgba(0,0,0,.18); border-radius:14px; background:rgba(246,248,249,.97); padding:8px; z-index:30; }
+  .scnfab { position:fixed; top:calc(var(--hh) + 16px); right:16px; z-index:31; display:flex; gap:8px; }
+  html[dir=ltr] .scnfab { right:auto; left:16px; }
+  body.scn-drawer .scnfab { right:482px; }
+  html[dir=ltr] body.scn-drawer .scnfab { right:auto; left:482px; }
+  .scnfab .tb { box-shadow:0 6px 18px rgba(0,0,0,.12); background:#fff; }
+  .scnfab .tb.big { background:var(--acc); color:#fff; }
+  .scnfab .tb.on { background:#e8edf1; }
+  .itembar { position:fixed; z-index:25; display:flex; gap:4px; padding:4px; background:rgba(255,255,255,.95); border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.14); transform:translate(-50%, -100%); direction:ltr; }
+  .itembar button { width:36px; height:36px; border:1px solid transparent; border-radius:9px; background:none; cursor:pointer; color:var(--ink); font-size:16px; display:flex; align-items:center; justify-content:center; }
+  .itembar button:hover { background:#f0f3f5; }
+  .itembar button.on { background:var(--acc); color:#fff; }
+  .itempop { position:fixed; top:calc(var(--hh) + 64px); right:16px; width:min(440px, calc(100vw - 32px)); max-height:calc(100vh - var(--hh) - var(--fh) - 90px); overflow:auto; z-index:29; background:rgba(255,255,255,.98); border:1px solid var(--line); border-radius:14px; box-shadow:0 18px 50px rgba(0,0,0,.16); padding:12px 14px; }
+  html[dir=ltr] .itempop { right:auto; left:16px; }
+  .itempop .ipx { position:sticky; top:0; float:left; z-index:2; }
+  html[dir=ltr] .itempop .ipx { float:right; }
+  .vmic { position:fixed; z-index:40; width:58px; height:58px; border-radius:50%; border:0; background:var(--acc); color:#fff; box-shadow:0 10px 28px rgba(0,0,0,.25); cursor:grab; display:flex; align-items:center; justify-content:center; touch-action:none; }
+  .vmic.on { background:#c62828; animation:aipulse 1.2s infinite; }
+  .vmic.busy { background:#5b646c; }
+  .vbar { position:fixed; left:0; right:0; bottom:calc(var(--fh) + 8px); z-index:35; pointer-events:none; }
+  .vbar canvas { display:block; width:100%; height:90px; }
+  .vbar .vst { text-align:center; font-size:12px; font-weight:800; letter-spacing:.12em; color:#2b3035; margin-top:-6px; }
+  .vbar .vres { pointer-events:auto; margin:8px auto 0; width:fit-content; max-width:min(860px, calc(100vw - 32px)); display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.96); border:1px solid var(--line); border-radius:12px; padding:6px 8px 6px 12px; box-shadow:0 8px 24px rgba(0,0,0,.12); font-size:14px; }
+  .vbar .vres:empty, .vbar .vres.empty { display:none; }
+  .dlg-card.wide { width:min(880px, calc(100vw - 32px)) !important; }
+  .adtabs { display:flex; gap:4px; border-bottom:1px solid var(--line); margin:4px 0 12px; }
+  .adtabs button { font:inherit; font-size:14px; padding:8px 14px; border:0; border-bottom:2px solid transparent; background:none; cursor:pointer; color:var(--muted); }
+  .adtabs button.on { color:var(--ink); border-bottom-color:var(--ink); font-weight:700; }
+  .adgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(124px, 1fr)); gap:8px; max-height:60vh; overflow:auto; padding:2px; }
+  .adcard { font:inherit; display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:6px; border:1px solid var(--line); border-radius:10px; background:#fff; cursor:pointer; color:var(--ink); text-align:center; }
+  .adcard:hover { border-color:var(--ink); background:#f7f9fa; }
+  .adcard .adimg { display:block; aspect-ratio:4/3; border-radius:7px; background:#f2f4f5; overflow:hidden; }
+  .adcard .adimg img { width:100%; height:100%; object-fit:contain; display:block; }
+  .adcard .adname { font-size:13px; font-weight:700; line-height:1.25; }
+  .adcard small { font-size:11px; color:var(--muted); }
+  .adempty { grid-column:1/-1; color:var(--muted); font-size:13px; padding:20px 4px; text-align:center; }
+  .adpeek { position:fixed; z-index:60; width:340px; aspect-ratio:4/3; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 14px 40px rgba(0,0,0,.18); pointer-events:none; overflow:hidden; }
+  .adpeek img { width:100%; height:100%; object-fit:contain; display:block; }
+  .draftbar { margin:8px 0; padding:8px; border:1px dashed #9aa3ab; border-radius:10px; background:#f6f8f9; font-size:13px; color:var(--muted); }
+  .draftbar .pair { margin-top:6px; }
+  .aibox { position:relative; }
+  .aibox textarea { width:100%; min-height:96px; resize:vertical; font:inherit; font-size:14px; padding:10px 44px 10px 10px; border:1px solid var(--line); border-radius:10px; box-sizing:border-box; }
+  html[dir=rtl] .aibox textarea { padding:10px 10px 10px 44px; }
+  .aibox .aimic { position:absolute; top:8px; left:8px; width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:#fff; cursor:pointer; font-size:15px; }
+  html[dir=ltr] .aibox .aimic { left:auto; right:8px; }
+  .aibox .aimic.on { background:#c62828; color:#fff; border-color:#c62828; animation:aipulse 1.2s infinite; }
+  @keyframes aipulse { 50% { box-shadow:0 0 0 6px rgba(198,40,40,.18); } }
+  .aiplan { margin-top:10px; padding:10px; border-radius:10px; background:#f3f6f8; font-size:13px; }
+  .aiplan h4 { margin:0 0 6px; font-size:14px; }
+  .aiplan ul { margin:6px 0 0; padding-inline-start:18px; }
+  .aiplan li { margin:3px 0; }
   .dlg-card { width:min(420px, calc(100vw - 32px)); max-height:calc(100vh - 40px); overflow:auto; background:#fff; border-radius:14px;
     padding:18px; box-shadow:0 20px 60px rgba(20,30,40,.25); direction:rtl; }
   .dlg-card h3 { margin:0 0 6px; font-size:17px; letter-spacing:.01em; }
@@ -312,6 +366,9 @@
   .pad { position:fixed; bottom:calc(var(--fh) + 64px); left:50%; transform:translateX(-50%); display:grid; grid-template-columns:repeat(3, 44px); gap:6px; z-index:12; direction:ltr; }
   .pad button { width:44px; height:44px; border-radius:10px; border:1px solid var(--line); background:rgba(255,255,255,.85); font-size:16px; cursor:pointer; color:var(--ink); touch-action:none; }
   .pad button:active { background:var(--acc); color:#fff; }
+  .pad button { display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1; gap:2px; }
+  .pad button small { font-size:11px; font-weight:700; color:var(--muted); }
+  .pad button:active small { color:#fff; }
   .hint { position:fixed; bottom:calc(var(--fh) + 14px); left:50%; transform:translateX(-50%); font-size:12px; color:var(--muted);
     background:rgba(255,255,255,.75); padding:6px 12px; border-radius:20px; border:1px solid var(--line); white-space:nowrap; }
   .note { font-size:11px; color:#8a6d3b; margin-top:10px; line-height:1.5; }
@@ -404,9 +461,8 @@
       </div>
       <div class="pair" style="margin-top:10px">
         <button class="btn primary" id="scnAdd">+ הוסף מוצר</button>
-        <button class="btn" id="scnTpl">תבנית: 2 מחיצות מהקיר</button>
+        <button class="btn" id="scnAI">🎙 בנייה בקול (AI)</button>
       </div>
-      <div class="types" id="scnTypes" hidden></div>
       <div class="lbl">סצנות שמורות</div>
       <div class="mrow"><select id="scnLib" aria-label="סצנה שמורה"><option value="">— פתיחת סצנה שמורה —</option></select><button class="sb adm" id="scnLibDel" title="מחיקת הסצנה" aria-label="מחיקת הסצנה">✕</button></div>
       <div class="pair adm"><button class="btn" id="scnSaveBase">שמור סצנת בסיס</button><button class="btn" id="scnSaveReady">שמור סצנה מוכנה</button></div>
@@ -419,7 +475,7 @@
           <label class="slide"><span>גובה</span><input type="range" id="camH" min="0.2" max="6" step="0.05"><b id="camHVal"></b></label>
         </div>
         <div class="row"><span>ישר אנכית (קירות ועמודים ישרים)</span><label class="sw"><input type="checkbox" id="camStraight" checked><span></span></label></div>
-        <div class="use">תנועה חופשית: W A S D או החצים להליכה, Q / E למטה ולמעלה, Shift מהר, גרירה להסתכלות, גלגלת קדימה ואחורה.</div>
+        <div class="use">תנועה חופשית: W A S D או החצים להליכה, Q / E וגלגלת – עדשה (זום פנימה / החוצה), + / − גובה, Shift מהר, גרירה להסתכלות.</div>
         <div class="pair" style="margin-top:6px"><button class="btn" id="camSave">📷 שמור צילום</button><span></span></div>
         <div class="slist" id="camShots" style="margin-top:6px"></div>
       </div>
@@ -427,6 +483,8 @@
       <div class="slist" id="scnList"></div>
       <div id="scnSel" hidden>
         <div class="lbl"><b id="scnSelName"></b> <span class="use" id="scnTouch"></span></div>
+        <div class="pair" id="scnSelActs"><button class="btn" id="scnDup">⧉ שכפול</button><button class="btn" id="scnEditBtn">✎ עריכה</button></div>
+        <div class="draftbar" id="scnDraftActs" hidden><span>טיוטה – ערכו את המוצר ואז הוסיפו אותו</span><div class="pair"><button class="btn primary" data-draft="ok">✓ הוסף לסצנה</button><button class="btn" data-draft="no">ביטול</button></div></div>
         <div class="pair">
           <div class="pair tight">
             <label class="fld">X (ס"מ)<input class="num" type="number" id="scnX" step="1"></label>
@@ -435,9 +493,11 @@
           <div><div class="lbl">סיבוב</div>
             <div class="rot" id="scnRot"><button data-r="-90">⟲ 90°</button><button data-r="-15">−15°</button><input class="num" type="number" id="scnR" step="1" aria-label="זווית"><button data-r="15">+15°</button><button data-r="90">90° ⟳</button></div></div>
         </div>
-        <div class="use">קליק בוחר מוצר, קליק נוסף משחרר. גרירה מזיזה על הרצפה. חיצים: ס"מ בכל לחיצה לפי כיוון המוצר (Shift – 10 ס"מ). החזקת הלחצן השמאלי על המוצר + גלגלת: גובה מהרצפה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. Ctrl+Z מבטל. לחיצה כפולה פותחת מגירה.</div>
+        <div class="use">קליק בוחר מוצר. קליק על תא, דלת או תריס של המוצר הבחור פותח וסוגר אותם. ✥ מפעיל הזזה: גרירה על הרצפה, חיצים – ס"מ לפי כיוון המוצר (Shift – 10 ס"מ), החזקת הלחצן על המוצר + גלגלת – גובה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. קליק על הרצפה משחרר. Ctrl+Z מבטל.</div>
         <div class="use" id="scnEditHint" hidden>לרב תא בודד בוחרים את מספר התאים בלשונית "רב תא" לפני ההוספה.</div>
+        <label class="fld" style="display:block;margin-top:8px">תוכן התאים ברינדור (למוצר הזה)<textarea id="scnContents" rows="2" style="width:100%;box-sizing:border-box;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px" placeholder="למשל: ברגים ירוקים, אומים קטנים"></textarea></label>
         <div id="scnEdit"></div>
+        <div class="draftbar" id="scnDraftActs2" hidden><div class="pair"><button class="btn primary" data-draft="ok">✓ הוסף לסצנה</button><button class="btn" data-draft="no">ביטול</button></div></div>
       </div>
       <div class="slot"></div>
     </div></div>
@@ -712,9 +772,27 @@
   <button class="tb big" id="renderBtn" title="RENDER REALISTIC PHOTO?" aria-label="רינדור ריאליסטי"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg><span>Render</span></button>
   <button class="tb" id="lockBtn" hidden aria-label="מצב ניהול"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
 </div>
+<div class="scnfab" id="scnFab" hidden>
+  <button class="tb big" id="fabAdd" title="הוספת מוצר לסצנה"><span>＋ הוסף</span></button>
+  <button class="tb" id="fabSet" title="הגדרות הסצנה: חדר, קירות, סצנות שמורות, מצלמה"><span>⚙ סצנה</span></button>
+</div>
+<div class="itembar" id="itemBar" hidden>
+  <button data-ia="move" title="הזזה – גרירה על הרצפה, חיצים, גלגלת עם לחיצה לגובה" aria-label="הזזה"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg></button>
+  <button data-ia="edit" title="עריכה" aria-label="עריכה">✎</button>
+  <button data-ia="dup" title="שכפול" aria-label="שכפול">⧉</button>
+  <button data-ia="del" title="מחיקה" aria-label="מחיקה">✕</button>
+</div>
+<div class="itempop" id="itemPop" hidden><button class="sb ipx" id="itemPopX" title="סגירה" aria-label="סגירה">✕</button></div>
+<button class="vmic" id="vMic" hidden title="פקודה קולית – לחיצה מתחילה ולחיצה נוספת מסיימת. אפשר לגרור את הכפתור." aria-label="פקודה קולית"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+<div class="vbar" id="vBar" hidden>
+  <canvas id="vWave"></canvas>
+  <div class="vst" id="vStatus"></div>
+  <div class="vres"><span id="vText"></span><button class="btn" id="vUndo" hidden>↶ בטל</button><button class="sb" id="vClose" title="סגירה" aria-label="סגירה">✕</button></div>
+</div>
 <div class="pad" id="pad" hidden aria-label="תנועה">
-  <button data-k="q" aria-label="למטה">▼</button><button data-k="w" aria-label="קדימה">▲</button><button data-k="e" aria-label="למעלה">⤒</button>
-  <button data-k="a" aria-label="שמאלה">◀</button><button data-k="s" aria-label="אחורה">▼</button><button data-k="d" aria-label="ימינה">▶</button>
+  <button data-k="q" aria-label="זום פנימה (עדשה)" title="זום פנימה">⊕<small>Q</small></button><button data-k="w" aria-label="קדימה" title="קדימה">▲<small>W</small></button><button data-k="e" aria-label="זום החוצה (עדשה)" title="זום החוצה">⊖<small>E</small></button>
+  <button data-k="a" aria-label="שמאלה" title="שמאלה">◀<small>A</small></button><button data-k="s" aria-label="אחורה" title="אחורה">▼<small>S</small></button><button data-k="d" aria-label="ימינה" title="ימינה">▶<small>D</small></button>
+  <button data-k="+" aria-label="למעלה" title="גובה למעלה">⤒<small>+</small></button><span></span><button data-k="-" aria-label="למטה" title="גובה למטה">⤓<small>−</small></button>
 </div>
 <div class="lightpop" id="lightPop" hidden role="dialog" aria-label="תאורה"></div>
 <div class="dlg" id="dlg" hidden></div>
@@ -2054,7 +2132,8 @@ function buildScene() {
   if (sel) sel.cfg = capCfg(sel.type);           // edits made in the panel go into the selected item
   const saved = capAll();
   const list = [], rodList = [];
-  ITEM_GROUPS.clear();
+  const wasOpen = new Map([...ITEM_DRAWERS].map(([id, ds]) => [id, ds.map(d => d.userData.target > 0.1 || d.userData.pending)]));
+  ITEM_GROUPS.clear(); ITEM_DRAWERS.clear(); ITEM_PARTS.clear();
   const R = SCN.room, W = R.W/1000, D = R.D/1000;
   const fl = new THREE.Mesh(new THREE.PlaneGeometry(W, D), floorMat); fl.rotation.x = -Math.PI/2; fl.receiveShadow = true; world.add(fl);
   const wh = 2.8;
@@ -2072,7 +2151,11 @@ function buildScene() {
     else if (it.type === 'excl' || it.type === 'part') b = buildExcl(it.type);
     else if (it.type === 'quad') b = buildQuad();
     else if (METAL[it.type]) b = buildMetal(it.type);
-    else { WING_GROUPS.clear(); b = buildTena(); }
+    else { WING_GROUPS.clear(); SLD = null; b = buildTena(); b.sld = SLD; }
+    if (it.draft) ghost(b.group);
+    ITEM_DRAWERS.set(it.id, it.hidden ? [] : b.drawers);
+    ITEM_PARTS.set(it.id, { slats:b.slats || null, doors:b.doors || null, sld:b.sld || null });
+    const wo = wasOpen.get(it.id); if (wo && wo.length === b.drawers.length) b.drawers.forEach((d, i) => { if (wo[i]) { d.userData.target = d.userData.angle = d.userData.open; d.rotation.x = d.userData.open; } });
     const inner = b.group, wrap = new THREE.Group();
     wrap.add(inner);
     const box = new THREE.Box3().setFromObject(inner), c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
@@ -2087,6 +2170,7 @@ function buildScene() {
   SCENE_BUILD = false;
   restoreAll(saved);
   if (sel) { applyCfg(sel.type, sel.cfg); }
+  bindParts(sel);
   drawers = list; rods = rodList;
   showItemSelection();
 }
@@ -2114,6 +2198,7 @@ function showItemSelection() {
 
 // ---------- panel ----------
 function renderScene() {
+  queueMicrotask(sceneChrome);
   const R = SCN.room;
   $('scnW').value = R.W/1000; $('scnD').value = R.D/1000;
   ['back', 'left', 'right'].forEach(k => $('scnWall').querySelector(`[data-v="${k}"]`).classList.toggle('on', R[k]));
@@ -2121,35 +2206,76 @@ function renderScene() {
   if (!SCN.items.length) box.innerHTML = '<div class="use">הסצנה ריקה. הוסף מוצר או בחר תבנית.</div>';
   SCN.items.forEach(it => {
     const row = document.createElement('div'); row.className = 'srow' + (it.id === SCN.sel ? ' on' : '') + (it.hidden ? ' off' : '');
-    row.innerHTML = `<button class="sname">${it.name}</button>
+    row.innerHTML = `<button class="sname">${it.name}${it.draft ? ' <small>(טיוטה)</small>' : ''}</button>
       <button class="sb" data-a="dup" title="שכפול" aria-label="שכפול">⧉</button>
       <button class="sb" data-a="hide" title="${it.hidden ? 'הצגה' : 'הסתרה'}" aria-label="${it.hidden ? 'הצגה' : 'הסתרה'}">${it.hidden ? '◌' : '●'}</button>
       <button class="sb" data-a="del" title="מחיקה" aria-label="מחיקה">✕</button>`;
     row.querySelector('.sname').onclick = () => selectItem(it.id === SCN.sel ? null : it.id);
-    row.querySelector('[data-a="dup"]').onclick = () => {
-      const c = { ...deep({ type:it.type, cfg:it.id === SCN.sel ? capCfg(it.type) : it.cfg, rot:it.rot }), id:SCN.next++, name:it.name.replace(/ \d+$/, '') + ' ' + (SCN.next - 1) };
-      SCN.items.push(c); rebuild(true); selectItem(c.id);
-    };
+    row.querySelector('[data-a="dup"]').onclick = () => dupItem(it);
     row.querySelector('[data-a="hide"]').onclick = () => { it.hidden = !it.hidden; rebuild(true); };
     row.querySelector('[data-a="del"]').onclick = () => { if (SCN.sel === it.id) selectItem(null, true); SCN.items = SCN.items.filter(x => x !== it); rebuild(true); };
     box.appendChild(row);
   });
   const it = SCN.items.find(i => i.id === SCN.sel);
   $('scnSel').hidden = !it;
+  $('scnDraftActs').hidden = $('scnDraftActs2').hidden = !(it && it.draft); $('scnSelActs').hidden = !it || !!it.draft;
   if (it) {
     $('scnSelName').textContent = it.name;
+    const ct = $('scnContents'); if (document.activeElement !== ct) ct.value = it.contents || '';
+    ct.oninput = () => { it.contents = ct.value; };
     $('scnX').value = Math.round((it.x + R.W/2000) * 100); $('scnZ').value = Math.round((it.z + R.D/2000) * 100); $('scnR').value = Math.round(((it.rot % 360) + 360) % 360);
     const tw = touchWall(it); $('scnTouch').textContent = tw.length ? 'צמוד ל' + tw.map(w => ({ back:'קיר אחורי', left:'קיר שמאלי', right:'קיר ימני' })[w]).join(' ול') : '';
   }
   $('dims').innerHTML = `סצנה · <b>${SCN.items.filter(i => !i.hidden).length}</b> מוצרים · חדר <b>${R.W/1000}</b> × <b>${R.D/1000}</b> מ'`;
 }
+// the moving parts (tambour, doors, sliding doors) of the selected product follow its panel and clicks
+const ITEM_DRAWERS = new Map(), ITEM_PARTS = new Map();
+function bindParts(it) {
+  const P = it && ITEM_PARTS.get(it.id);
+  TAMB = P ? P.slats : null; DOORS = P ? P.doors : null; SLD = P ? P.sld : null;
+  if (SLD && (it.type === 'tena' || it.type === 'smart')) SLD.st = TN[it.type === 'smart' ? 'smart' : 'delux'].slide;
+}
+// a draft (just picked from "add product") shows faded until it is added; leaving it adds it
+const ghostCache = new Map();
+function ghost(g) {
+  g.traverse(o => {
+    if (!o.isMesh) return;
+    const f = (m) => { if (!ghostCache.has(m)) { const c = m.clone(); c.transparent = true; c.opacity = Math.min(m.opacity ?? 1, 0.38); c.depthWrite = false; ghostCache.set(m, c); } return ghostCache.get(m); };
+    o.material = Array.isArray(o.material) ? o.material.map(f) : f(o.material); o.castShadow = false;
+  });
+}
+function addDraft(type, cfg, name) {
+  const it = { id:SCN.next++, type, cfg:deep(cfg), rot:0, name, draft:true };
+  SCN.items.push(it); rebuild(true); selectItem(it.id);
+  requestAnimationFrame(() => $('scnSel').scrollIntoView({ behavior:'smooth', block:'start' }));
+}
+function draftDone(ok) {
+  const it = SCN.items.find(i => i.id === SCN.sel && i.draft); if (!it) return;
+  if (ok) { it.draft = false; it.cfg = capCfg(it.type); rebuild(true); renderScene(); toast(`${it.name} נוסף לסצנה`); }
+  else { SCN.items = SCN.items.filter(x => x !== it); selectItem(null, true); rebuild(true); }
+}
+// duplicate: right next to the original (or wherever there is room)
+function dupItem(it) {
+  const c = { ...deep({ type:it.type, cfg:it.id === SCN.sel ? capCfg(it.type) : it.cfg, rot:it.rot, y:it.y || 0 }), id:SCN.next++, name:it.name.replace(/ \d+$/, '') + ' ' + (SCN.next - 1) };
+  c.hx = it.hx; c.hz = it.hz; c.h = it.h;
+  if (it.x !== undefined && it.hx !== undefined) {
+    const { ex, ez } = extents(it);
+    for (const [dx, dz] of [[2*ex + 0.05, 0], [-(2*ex + 0.05), 0], [0, 2*ez + 0.05], [0, -(2*ez + 0.05)]])
+      if (!collides(c, it.x + dx, it.z + dz, yOf(it))) { c.x = it.x + dx; c.z = it.z + dz; break; }
+  }
+  delete c.hx; delete c.hz; delete c.h;
+  SCN.items.push(c); rebuild(true); selectItem(c.id);
+}
 function selectItem(id, noRebuild) {
   const prev = SCN.items.find(i => i.id === SCN.sel);
   if (prev) prev.cfg = capCfg(prev.type);
+  if (prev && prev.draft && prev.id !== id) { prev.draft = false; toast(`${prev.name} נוסף לסצנה`); setTimeout(() => rebuild(true), 0); }
   SCN.sel = id;
   const it = SCN.items.find(i => i.id === id);
   SCN.editType = it ? it.type : null;
   if (it) { applyCfg(it.type, it.cfg); syncUI(it.type); tenaOpenWing = null; }
+  if (mode === 'scene') bindParts(it);
+  if (SCN.selPrev !== id) { SCN.move = false; SCN.pop = !!(it && it.draft); } SCN.selPrev = id;
   borrowBody(it && it.type);
   if (it) refreshEditor(it.type);
   renderScene(); showItemSelection();
@@ -2177,9 +2303,11 @@ function sceneTemplate(name) {
   }
 }
 function initScenePanel() {
-  $('scnAdd').onclick = () => $('scnTypes').hidden = !$('scnTypes').hidden;
-  renderSceneTypes();
-  $('scnTpl').onclick = () => sceneTemplate('partitions');
+  $('scnAdd').onclick = () => openAddDialog();
+  $('scnAI').onclick = () => openSceneAI();
+  $('scnDup').onclick = () => { const it = SCN.items.find(i => i.id === SCN.sel); if (it) dupItem(it); };
+  $('scnEditBtn').onclick = () => { const e = $('scnEdit'); e.scrollIntoView({ behavior:'smooth', block:'start' }); e.animate([{ background:'#eef4ff' }, { background:'transparent' }], 900); };
+  document.querySelectorAll('[data-draft]').forEach(b => b.onclick = () => draftDone(b.dataset.draft === 'ok'));
   $('scnW').onchange = (e) => { SCN.room.W = Math.max(2000, Math.min(100000, Math.round(+e.target.value * 1000) || 6000)); SCN.items.forEach(snapItem); rebuild(); };
   $('scnD').onchange = (e) => { SCN.room.D = Math.max(2000, Math.min(100000, Math.round(+e.target.value * 1000) || 5000)); SCN.items.forEach(snapItem); rebuild(); };
   $('scnWall').querySelectorAll('button').forEach(b => b.onclick = () => { SCN.room[b.dataset.v] = !SCN.room[b.dataset.v]; SCN.items.forEach(snapItem); rebuild(true); });
@@ -2254,8 +2382,8 @@ function guideSnap(it, snap) {
 // undo (Ctrl+Z) for placing products in the scene
 const sceneUndo = [];
 function pushUndo(it) {
-  const last = sceneUndo[sceneUndo.length - 1], st = { id:it.id, x:it.x, z:it.z, y:yOf(it), rot:it.rot };
-  if (last && last.id === st.id && last.x === st.x && last.z === st.z && last.y === st.y && last.rot === st.rot) return;
+  const last = sceneUndo[sceneUndo.length - 1], st = { id:it.id, x:it.x, z:it.z, y:yOf(it), rot:it.rot, t:Date.now() };
+  if (last && last.id === st.id && last.x === st.x && last.z === st.z && last.y === st.y && last.rot === st.rot) { last.t = st.t; return; }
   sceneUndo.push(st); if (sceneUndo.length > 200) sceneUndo.shift();
 }
 function undoScene() {
@@ -2268,7 +2396,12 @@ function undoScene() {
 const typing = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || document.activeElement.isContentEditable;
 addEventListener('keydown', (e) => {
   if (mode !== 'scene' || typing() || !$('dlg').hidden || document.querySelector('.lb')) return;
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undoScene(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    const v = VOICE.undo[VOICE.undo.length - 1], m = sceneUndo[sceneUndo.length - 1];
+    if (v && (!m || v.t > m.t)) voiceUndo(); else undoScene();
+    return;
+  }
   const it = SCN.items.find(i => i.id === SCN.sel); if (!it) return;
   if (e.key === 'Escape') { selectItem(null); return; }
   const dir = { ArrowRight:[1, 0], ArrowLeft:[-1, 0], ArrowUp:[0, -1], ArrowDown:[0, 1] }[e.key]; if (!dir) return;
@@ -2300,7 +2433,8 @@ canvas.addEventListener('pointerdown', (e) => {
   let g = hits[0].object; while (g && !g.userData.itemId) g = g.parent;
   if (!g) return;
   const it = SCN.items.find(i => i.id === g.userData.itemId);
-  if (SCN.sel !== it.id) { selectItem(it.id); return; }   // first click selects; dragging a selected product moves it
+  if (SCN.sel !== it.id) { selectItem(it.id); SCN.justSel = true; return; }   // first click selects
+  if (!SCN.move) return;                                   // dragging moves the product only in move mode (✥)
   if (!dragRay.ray.intersectPlane(floorPlane, fHit)) return;
   sdrag = { it, dx: it.x - fHit.x, dz: it.z - fHit.z, sx: e.clientX, sy: e.clientY, moved:false };
   clearTimeout(deselT);
@@ -2318,12 +2452,11 @@ let deselT = 0;
 addEventListener('pointerup', () => {
   if (!sdrag) return;
   const was = sdrag; sdrag = null; controls.enabled = true; canvas.style.cursor = '';
-  // a plain click on the product that is already selected releases it (unless it turns out to be a double click)
-  if (!was.moved) deselT = setTimeout(() => { if (SCN.sel === was.it.id) selectItem(null); }, 280);
+  if (was.moved) renderScene();
 });
 // in a scene a single click selects; a double click opens a bin
 canvas.addEventListener('dblclick', (e) => {
-  if (mode !== 'scene') return;
+  if (mode !== 'scene' || true) return;           // a single click opens bins now
   clearTimeout(deselT);
   dragRay.setFromCamera(pointerNDC(e), camera);
   const hit = dragRay.intersectObjects(drawers, true)[0]; if (!hit) return;
@@ -2340,7 +2473,7 @@ function describeScene() {
     applyCfg(it.type, it.id === SCN.sel ? capCfg(it.type) : it.cfg);
     mode = it.type; const d = describe(); mode = m;
     const tw = touchWall(it), facing = ({ 0:'facing the camera/room', 90:'turned 90 degrees, its long side running away from the back wall', 180:'facing the back wall', 270:'turned 90 degrees, its long side running away from the back wall' })[Math.round(((it.rot % 360) + 360) % 360 / 90) * 90 % 360];
-    lines.push(`${k + 1}. ${d} Position: ${Math.round((it.x + R.W/2000)*100)} cm from the left side, ${Math.round((it.z + R.D/2000)*100)} cm from the back; ${facing}${tw.length ? '; touching the ' + tw.join(' and ') + ' wall' : ''}${yOf(it) > 0.005 ? `; raised ${Math.round(yOf(it)*100)} cm above the floor${restsOn(it) ? ', resting on top of product ' + (SCN.items.filter(i => !i.hidden).indexOf(restsOn(it)) + 1) : ' (wall-mounted / floating exactly at that height)'}` : ''}.`);
+    lines.push(`${k + 1}. ${d}${it.contents ? ` INSIDE ITS BINS: ${it.contents}.` : ''} Position: ${Math.round((it.x + R.W/2000)*100)} cm from the left side, ${Math.round((it.z + R.D/2000)*100)} cm from the back; ${facing}${tw.length ? '; touching the ' + tw.join(' and ') + ' wall' : ''}${yOf(it) > 0.005 ? `; raised ${Math.round(yOf(it)*100)} cm above the floor${restsOn(it) ? ', resting on top of product ' + (SCN.items.filter(i => !i.hidden).indexOf(restsOn(it)) + 1) : ' (wall-mounted / floating exactly at that height)'}` : ''}.`);
   });
   restoreAll(saved);
   const sel = SCN.items.find(i => i.id === SCN.sel); if (sel) applyCfg(sel.type, sel.cfg);
@@ -2378,7 +2511,8 @@ const TB = { items:[{ t:'bins', y:TBX.BASE, comp:{ 5:TB5_FULL }, side:'center', 
 const MT = { list:evenShelves(4), open:0, target:0 };
 const MD = { list:evenShelves(4), color:'7035', doors:[0, 0] };
 const METAL = { tamb:TB, mtamb:MT, mdoor:MD };
-const metalState = () => METAL[mode];
+const editKey = () => mode === 'scene' ? SCN.editType : mode;          // the product being edited (in a scene: the selected one)
+const metalState = () => METAL[editKey()];
 const closureOf = (k) => k === 'mtamb' ? 'tambour' : k === 'mdoor' ? 'doors' : TB.closure;
 const depthOf = (k) => closureOf(k) === 'doors' ? 400 : 450;
 const tbFloor = () => TBX.BASE;
@@ -2646,7 +2780,7 @@ function stepMetal(k) {
 let tdrag = null, shdrag = null;
 const shelfY = (S, i) => S.items ? S.items[i].y : S.list[i];
 canvas.addEventListener('pointerdown', (e) => {
-  const S = metalState(); if (!S || e.button !== 0) return;
+  const S = metalState(); if (!S || e.button !== 0 || mode === 'scene') return;
   dragRay.setFromCamera(pointerNDC(e), camera);
   const blockers = [...(TAMB ? TAMB.meshes : []), ...(DOORS ? DOORS.meshes : [])];
   const shelfM = SHELVES ? SHELVES.meshes : [];
@@ -2701,7 +2835,7 @@ function doorClick(ray) {
   const hit = ray.intersectObjects(DOORS.meshes, true)[0]; if (!hit) return false;
   const d = DOORS.list.find(x => x.meshes.includes(hit.object)); if (!d) return false;
   S.doors[d.idx] = S.doors[d.idx] > 0.5 ? 0 : 1;
-  syncDoorBtns(mode === 'tamb' ? 'tb' : 'md', S);
+  syncDoorBtns(editKey() === 'tamb' ? 'tb' : 'md', S);
   return true;
 }
 
@@ -2799,6 +2933,7 @@ function rebuild(keepCamera = false) {
     }
   }
   scene.add(world);
+  sceneChrome();
   rods.forEach(r => r.visible = rodOn());
   applyOpenAll();
   refreshLabels();
@@ -2849,7 +2984,9 @@ panels.forEach(p => p.querySelector('.head').onclick = () => {
     const s = SCN.items.find(i => i.id === SCN.sel); if (s) s.cfg = capCfg(s.type);
     SCN.sel = null; SCN.editType = null; releaseBody(); if (FREE.on) setFree(false); $('pad').hidden = true;
   }
+  if (p.dataset.mode === 'scene') prevMode = mode;
   mode = p.dataset.mode; RENDER_STATE.base = RENDER_STATE.final = null;   // a new view needs a new base
+  document.body.classList.remove('scn-drawer');
   panels.forEach(x => { const on = x === p; x.classList.toggle('open', on); x.querySelector('.head').setAttribute('aria-expanded', on); });
   placeShared();
   rebuild();
@@ -3048,7 +3185,7 @@ function makeCellButtons(n) {
 }
 function applyOpenAll(e) {
   const on = document.getElementById('openAll').checked;
-  const S = METAL[mode];
+  const S = mode === 'scene' ? null : METAL[mode];
   // on a rebuild only opening is applied; closing needs the switch itself
   if (S && (on || e)) { if (TAMB) S.target = on ? TBX.MAXO : 0; if (DOORS) { S.doors = on ? [1, 1] : [0, 0]; syncDoorBtns(mode === 'tamb' ? 'tb' : 'md', S); } }   // open the tambour / doors too
   if (isCab() && mode !== 'scene' && slideOn() && (on || e)) { tena.slide.open = on ? [1, 0, 1, 0] : [0, 0, 0, 0]; if (SLD) SLD.st = tena.slide; syncSlideBtns(); }
@@ -3073,7 +3210,7 @@ const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
 let down = null;
 canvas.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
 canvas.addEventListener('pointerup', e => {
-  if (mode === 'scene') return;               // scene: click selects, double click opens
+  if (mode === 'scene') { sceneClick(e); return; }
   if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
   const r = canvas.getBoundingClientRect();
   mouse.set((e.clientX - r.left)/r.width*2 - 1, -(e.clientY - r.top)/r.height*2 + 1);
@@ -3094,6 +3231,31 @@ canvas.addEventListener('pointerup', e => {
   toggleDrawer(o);
 });
 
+// scene: a click on the selected product opens / closes what was clicked; a click on nothing releases it
+function sceneClick(e) {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5 || FREE.on && FREE.lookMoved) return;
+  if (SCN.justSel) { SCN.justSel = false; return; }
+  const r = canvas.getBoundingClientRect();
+  mouse.set((e.clientX - r.left)/r.width*2 - 1, -(e.clientY - r.top)/r.height*2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const ih = ray.intersectObjects([...ITEM_GROUPS.values()].filter(g => g.visible), true)[0];
+  if (!ih) { if (SCN.sel !== null && !SCN.move) selectItem(null); return; }
+  let g = ih.object; while (g && !g.userData.itemId) g = g.parent;
+  if (!g || g.userData.itemId !== SCN.sel || SCN.move) return;
+  const dr = ITEM_DRAWERS.get(SCN.sel) || [];
+  const hit = ray.intersectObjects(dr, true)[0];
+  const dh = DOORS ? ray.intersectObjects(DOORS.meshes, true)[0] : null;
+  if (dh && (!hit || dh.distance < hit.distance)) { doorClick(ray); return; }
+  const sh = SLD && SLD.list.some(d => d.g.visible) ? ray.intersectObjects(SLD.meshes, true)[0] : null;
+  if (sh && (!hit || sh.distance < hit.distance)) { const d = SLD.list.find(x => x.g.children.includes(sh.object)); if (d) toggleSlide(d.idx); return; }
+  if (TAMB) {
+    const th = ray.intersectObjects(TAMB.meshes, true)[0];
+    if (th && (!hit || th.distance < hit.distance)) { const S = metalState(); S.target = S.target > TBX.MAXO/2 ? 0 : TBX.MAXO; const sl = $(editKey() === 'tamb' ? 'tbOpen' : 'mtOpen'); if (sl) sl.value = Math.round(S.target / TBX.MAXO * 100); return; }
+  }
+  if (!hit) return;
+  let o = hit.object; while (o && !dr.includes(o)) o = o.parent;
+  if (o) toggleDrawer(o);
+}
 function resize() {
   const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight;
   renderer.setSize(w, h, false);
@@ -3176,7 +3338,7 @@ function captureFamily() {
     wall: { ...wall }, wallComp: JSON.parse(JSON.stringify(wallComp)),
     tn: JSON.parse(JSON.stringify(TN)), spread: spreadTarget > 0.5, wing: tenaOpenWing,
     scene: (() => { const s = SCN.items.find(i => i.id === SCN.sel); if (s) s.cfg = capCfg(s.type);
-      return { room:deep(SCN.room), next:SCN.next, shots:deep(SCN.shots || []), items:SCN.items.map(({ id, type, cfg, x, z, y, rot, hidden, name }) => deep({ id, type, cfg, x, z, y:y || 0, rot, hidden:!!hidden, name })) }; })(),
+      return { room:deep(SCN.room), next:SCN.next, shots:deep(SCN.shots || []), items:SCN.items.map(({ id, type, cfg, x, z, y, rot, hidden, name, contents }) => deep({ id, type, cfg, x, z, y:y || 0, rot, hidden:!!hidden, name, contents:contents || '' })) }; })(),
     backWall: $('backWall').checked,
     rod: $('rod').checked, labels: $('labelsOn').checked, openAll: $('openAll').checked,
     open: drawers.map((d, i) => (d.userData.target > 0.1 || d.userData.pending) ? i : -1).filter(i => i >= 0),
@@ -3954,6 +4116,506 @@ function addModelItem(t, name) {
   const it = { id:SCN.next++, type:t, cfg:deep(m.cfg), rot:0, name };
   SCN.items.push(it); rebuild(true); selectItem(it.id);
 }
+// =====================================================================
+// Scene on the full screen: the panel is hidden (⚙ opens it as a drawer), "+ הוסף" floats on top,
+// a small bar over the selected product (move / edit / duplicate / delete), its settings in a floating card,
+// and a microphone button that can be dragged anywhere: speak, and the scene changes.
+// =====================================================================
+let prevMode = 'unit';
+const selHome = document.createComment('scnSel');
+function sceneChrome() {
+  const full = mode === 'scene' && innerWidth >= 640;
+  document.body.classList.toggle('scn-full', full);
+  if (!full) document.body.classList.remove('scn-drawer');
+  $('scnFab').hidden = !full; $('vMic').hidden = mode !== 'scene';
+  $('fabSet').classList.toggle('on', document.body.classList.contains('scn-drawer'));
+  $('sceneBtn').classList.toggle('on', mode === 'scene');
+  const sel = $('scnSel');
+  if (!selHome.parentNode) sel.parentNode.insertBefore(selHome, sel);
+  const it = mode === 'scene' ? SCN.items.find(i => i.id === SCN.sel) : null;
+  const inPop = full && !document.body.classList.contains('scn-drawer');
+  if (inPop && sel.parentNode !== $('itemPop')) $('itemPop').appendChild(sel);
+  if (!inPop && sel.parentNode === $('itemPop')) selHome.parentNode.insertBefore(sel, selHome.nextSibling);
+  $('itemPop').hidden = !(inPop && it && (SCN.pop || it.draft));
+  $('itemBar').hidden = !(mode === 'scene' && it);
+  $('itemBar').querySelector('[data-ia="move"]').classList.toggle('on', !!SCN.move);
+  $('itemBar').querySelector('[data-ia="edit"]').classList.toggle('on', !!SCN.pop);
+  if (!$('vMic').hidden && !$('vMic').style.left) placeMic();
+}
+// the item bar floats just above the selected product
+const _ib = new THREE.Box3(), _iv = new THREE.Vector3();
+function placeItemBar() {
+  const bar = $('itemBar'); if (bar.hidden) return;
+  const g = ITEM_GROUPS.get(SCN.sel); if (!g) { bar.hidden = true; return; }
+  _ib.setFromObject(g); _iv.set((_ib.min.x + _ib.max.x)/2, _ib.max.y, (_ib.min.z + _ib.max.z)/2).project(camera);
+  const r = canvas.getBoundingClientRect();
+  if (_iv.z > 1) { bar.style.visibility = 'hidden'; return; }
+  bar.style.visibility = '';
+  bar.style.left = Math.max(90, Math.min(r.width - 90, (_iv.x + 1)/2 * r.width)) + r.left + 'px';
+  bar.style.top = Math.max(r.top + 56, (1 - _iv.y)/2 * r.height + r.top - 40) + 'px';
+}
+function initSceneChrome() {
+  $('fabAdd').onclick = () => openAddDialog();
+  $('fabSet').onclick = () => { document.body.classList.toggle('scn-drawer'); sceneChrome(); };
+  $('itemPopX').onclick = () => { SCN.pop = false; sceneChrome(); };
+  $('itemBar').querySelectorAll('[data-ia]').forEach(b => b.onclick = () => {
+    const it = SCN.items.find(i => i.id === SCN.sel); if (!it) return;
+    const a = b.dataset.ia;
+    if (a === 'move') { SCN.move = !SCN.move; toast(SCN.move ? 'מצב הזזה: גוררים את המוצר, חיצים לס"מ, החזקה + גלגלת לגובה' : 'מצב הזזה כבוי'); }
+    if (a === 'edit') SCN.pop = !SCN.pop;
+    if (a === 'dup') { dupItem(it); return; }
+    if (a === 'del') { SCN.items = SCN.items.filter(x => x !== it); selectItem(null, true); rebuild(true); return; }
+    sceneChrome();
+  });
+  initMic();
+  addEventListener('resize', () => { sceneChrome(); placeMic(); });
+}
+// ---- the microphone button: drag it anywhere (the place is remembered); a click starts / stops listening ----
+function placeMic(x, y) {
+  const b = $('vMic'), s = 58;
+  if (x === undefined) { const p = LS.get('rbt-mic-pos', null); x = p ? p.x * innerWidth : innerWidth - s - 28; y = p ? p.y * innerHeight : innerHeight - s - 110; }
+  x = Math.max(6, Math.min(innerWidth - s - 6, x)); y = Math.max(6, Math.min(innerHeight - s - 6, y));
+  b.style.left = x + 'px'; b.style.top = y + 'px';
+  return { x, y };
+}
+function initMic() {
+  const b = $('vMic'); let d = null;
+  b.addEventListener('pointerdown', (e) => { d = { sx:e.clientX, sy:e.clientY, x:b.offsetLeft, y:b.offsetTop, moved:false }; b.setPointerCapture(e.pointerId); });
+  b.addEventListener('pointermove', (e) => {
+    if (!d) return; const dx = e.clientX - d.sx, dy = e.clientY - d.sy;
+    if (!d.moved && Math.hypot(dx, dy) < 6) return;
+    d.moved = true; b.style.cursor = 'grabbing'; placeMic(d.x + dx, d.y + dy);
+  });
+  b.addEventListener('pointerup', () => {
+    if (!d) return; const was = d; d = null; b.style.cursor = '';
+    if (was.moved) { LS.set('rbt-mic-pos', { x:b.offsetLeft / innerWidth, y:b.offsetTop / innerHeight }); return; }
+    voiceToggle();
+  });
+  $('vClose').onclick = () => { if (VOICE.on) { VOICE.cancel = true; Mic.stop(); } voiceUI('hide'); };
+  $('vUndo').onclick = () => voiceUndo();
+}
+// ---- listening: a full-width line with the voice moving along it (as in the reference), then "understanding…" ----
+const VOICE = { on:false, busy:false, text:'', partial:'', bars:[], last:0, raf:0, undo:[], cancel:false };
+function voiceUI(state, msg) {
+  const bar = $('vBar'), st = $('vStatus'), res = bar.querySelector('.vres'), mic = $('vMic');
+  mic.classList.toggle('on', state === 'listen'); mic.classList.toggle('busy', state === 'think');
+  document.body.classList.toggle('voice-on', state !== 'hide');
+  if (state === 'hide') { bar.hidden = true; cancelAnimationFrame(VOICE.raf); VOICE.raf = 0; return; }
+  bar.hidden = false;
+  st.textContent = state === 'listen' ? 'מקשיב…' : state === 'think' ? 'מבין…' : '';
+  $('vText').textContent = msg || '';
+  $('vUndo').hidden = state !== 'done' || !VOICE.undo.length;
+  res.classList.toggle('empty', !msg && state !== 'done');
+  if (state === 'listen' || state === 'think') { if (!VOICE.raf) drawWave(); }
+}
+function drawWave() {
+  const cv = $('vWave'), x = cv.getContext('2d'), dpr = Math.min(2, devicePixelRatio || 1);
+  const W = cv.clientWidth, H = cv.clientHeight;
+  if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
+  const now = performance.now(), STEP = 5;
+  if (now - VOICE.last > 34) {                           // a new bar every ~34 ms, the old ones move to the left
+    VOICE.last = now;
+    let lv = 0;
+    if (VOICE.on) { const w = Mic.wave(64, now / 1000); lv = Math.sqrt(w.reduce((a, v) => a + v*v, 0) / w.length); lv = Math.min(1, lv * 2.2); }
+    VOICE.bars.push(lv); if (VOICE.bars.length > W / STEP + 2) VOICE.bars.shift();
+  }
+  const mid = H / 2;
+  x.fillStyle = 'rgba(43,48,53,.55)';
+  for (let px = 0; px < W; px += 6) x.fillRect(px, mid - 0.75, 3, 1.5);            // dotted line across the screen
+  x.fillStyle = '#2b3035';
+  for (let i = VOICE.bars.length - 1, k = 0; i >= 0; i--, k++) {
+    const v = VOICE.bars[i]; if (v < 0.03) continue;
+    const h = Math.max(3, v * (H - 10)), px = W - 18 - k * STEP;
+    if (px < 0) break;
+    x.globalAlpha = Math.min(1, 0.35 + v * 1.2); x.fillRect(px, mid - h/2, 2.4, h);
+  }
+  x.globalAlpha = 1;
+  if (VOICE.busy) {                                      // understanding: a soft light running along the line
+    const t = (now / 900) % 1, gx = W * t, gr = x.createLinearGradient(gx - 160, 0, gx + 160, 0);
+    gr.addColorStop(0, 'rgba(43,48,53,0)'); gr.addColorStop(0.5, 'rgba(43,48,53,.9)'); gr.addColorStop(1, 'rgba(43,48,53,0)');
+    x.fillStyle = gr; x.fillRect(gx - 160, mid - 1.5, 320, 3);
+  }
+  VOICE.raf = (VOICE.on || VOICE.busy || VOICE.bars.some(v => v > 0.03)) && !$('vBar').hidden ? requestAnimationFrame(drawWave) : 0;
+}
+async function voiceToggle() {
+  if (VOICE.busy) return;
+  if (VOICE.on) { Mic.stop(); return; }
+  const kind = await micReady;
+  if (!kind) { openSceneAI(); return; }                 // no speech recognition here: type it instead
+  VOICE.on = true; VOICE.cancel = false; VOICE.text = ''; VOICE.partial = ''; VOICE.bars = [];
+  Mic.on({
+    partial:(t) => { VOICE.partial = t; $('vText').textContent = (VOICE.text + ' ' + t).trim(); $('vBar').querySelector('.vres').classList.remove('empty'); },
+    final:(t) => { VOICE.text = (VOICE.text + ' ' + t).trim(); VOICE.partial = ''; $('vText').textContent = VOICE.text; },
+    state:(on) => { if (!on && VOICE.on) { VOICE.on = false; voiceDone(); } },
+    error:(er) => { if (er === 'not-allowed') toast('אין גישה למיקרופון'); },
+  });
+  voiceUI('listen');
+  try { await Mic.start(); } catch (e) { VOICE.on = false; voiceUI('hide'); toast('לא הצלחתי להפעיל את המיקרופון'); }
+}
+async function voiceDone() {
+  const text = (VOICE.text + ' ' + VOICE.partial).trim();
+  if (VOICE.cancel || !text) { voiceUI('hide'); return; }
+  VOICE.busy = true; voiceUI('think', text);
+  try {
+    const r = await api('/api/scene', scenePayload(text));
+    const n = executeOps(r.ops || []);
+    VOICE.busy = false;
+    voiceUI('done', n ? (r.understood || 'בוצע') : (r.understood ? r.understood + ' – לא היה מה לשנות' : 'לא הבנתי מה לעשות. נסו שוב.'));
+  } catch (e) { VOICE.busy = false; voiceUI('done', e.message); }
+}
+// what the AI gets: the room, the products (with their bins, side by side), the saved models
+function binFaces(it) {
+  const ds = ITEM_DRAWERS.get(it.id) || [], a = THREE.MathUtils.degToRad(it.rot || 0);
+  const f = new THREE.Vector3(Math.sin(a), 0, Math.cos(a)), fr = new THREE.Vector3(f.z, 0, -f.x);
+  world.updateMatrixWorld(true);
+  const faces = {}, p = new THREE.Vector3(), n = new THREE.Vector3();
+  for (const d of ds) {
+    d.getWorldPosition(p); d.getWorldDirection(n); n.y = 0; if (n.lengthSq() < 1e-6) continue; n.normalize();
+    const dot = n.dot(f), face = dot > 0.7 ? 'front' : dot < -0.7 ? 'back' : n.dot(fr) > 0 ? 'right' : 'left';
+    const right = new THREE.Vector3(n.z, 0, -n.x);
+    (faces[face] = faces[face] || []).push({ d, y:p.y, u:p.dot(right) });
+  }
+  const out = {};
+  for (const [k, list] of Object.entries(faces)) {
+    list.sort((a, b) => b.y - a.y);
+    const rows = [];
+    for (const e of list) { const r = rows.find(r => Math.abs(r.y - e.y) < 0.03); r ? r.list.push(e) : rows.push({ y:e.y, list:[e] }); }
+    rows.sort((a, b) => b.y - a.y); rows.forEach(r => r.list.sort((a, b) => a.u - b.u));
+    out[k] = rows.map(r => r.list.map(e => e.d));
+  }
+  return out;
+}
+function cfgComp(t, c) {
+  if (!c) return null;
+  if (t === 'excl' || t === 'part') return c.exs && c.exs.comp;
+  if (t === 'quad') return c.qd && c.qd.comp;
+  if (t === 'tamb') return c.tb && c.tb.items && c.tb.items[0] && c.tb.items[0].comp;
+  if (t === 'stand') return c.comp && c.stand && c.comp[c.stand.type + '-' + c.stand.height];
+  if (t === 'wall') return c.wallComp && c.wall && c.wallComp[c.wall.height];
+  return null;
+}
+function scenePayload(text) {
+  const sel = SCN.items.find(i => i.id === SCN.sel); if (sel) sel.cfg = capCfg(sel.type);
+  const R = SCN.room;
+  const items = SCN.items.filter(i => !i.hidden && i.x !== undefined).map(i => {
+    const e = extents(i), faces = binFaces(i), cfg = i.cfg || {};
+    return { id:i.id, name:i.name, type:i.type, kind:TYPE_NAME[i.type], selected:i.id === SCN.sel,
+      x_cm:Math.round((i.x + R.W/2000) * 100), z_cm:Math.round((i.z + R.D/2000) * 100), rot:i.rot, width_cm:Math.round(e.ex * 200), depth_cm:Math.round(e.ez * 200),
+      comp:cfgComp(i.type, cfg), cols:i.type === 'part' ? cfg.exs && cfg.exs.cols : undefined, top:(cfg.exs || cfg.qd || {}).top,
+      bins_per_row_by_face:Object.fromEntries(Object.entries(faces).map(([k, rows]) => [k, rows.map(r => r.length)])),
+      has_doors:i.type === 'mdoor' || (i.type === 'tena' && !!(cfg.tn && cfg.tn.slide && cfg.tn.slide.on)), has_tambour:i.type === 'tamb' || i.type === 'mtamb',
+      contents:i.contents || '' };
+  });
+  const models = Object.fromEntries(Object.entries(lib.models).map(([t, ms]) => [t, Object.keys(ms)]));
+  return { text, room:{ width_cm:R.W/10, depth_cm:R.D/10, walls:{ back:R.back, left:R.left, right:R.right } }, selected:SCN.sel, items, models };
+}
+// carry out the actions; one undo step for all of them
+function sceneState() { return { snap:sceneSnap(), sel:SCN.sel, t:Date.now() }; }
+function restoreState(st) {
+  releaseBody(); SCN.sel = null; SCN.editType = null;
+  SCN.room = deep(st.snap.room); SCN.items = deep(st.snap.items); SCN.next = Math.max(SCN.next, st.snap.next || 0);
+  rebuild(true);
+  if (st.sel && SCN.items.some(i => i.id === st.sel)) selectItem(st.sel); else renderScene();
+}
+function voiceUndo() {
+  const st = VOICE.undo.pop(); if (!st) return;
+  restoreState(st); toast('בוטל'); voiceUI('done', 'השינוי האחרון בוטל');
+}
+function executeOps(ops) {
+  if (!ops.length) return 0;
+  VOICE.undo.push(sceneState()); if (VOICE.undo.length > 30) VOICE.undo.shift();
+  const sel0 = SCN.items.find(i => i.id === SCN.sel); if (sel0) sel0.cfg = capCfg(sel0.type);
+  const W2 = SCN.room.W/2000, D2 = SCN.room.D/2000, added = [], rows = [], post = [];
+  let lastAdded = null, done = 0;
+  const target = (o) => SCN.items.find(i => i.id === (o.target ?? (lastAdded ? lastAdded.id : SCN.sel)));
+  for (const o of ops) {
+    const it = target(o);
+    switch (o.op) {
+      case 'clear': selectItem(null, true); SCN.items = []; done++; break;
+      case 'room': if (o.room) { const R = SCN.room, r = o.room;
+        R.W = Math.max(2000, Math.min(100000, Math.round(r.width_m * 1000) || R.W)); R.D = Math.max(2000, Math.min(100000, Math.round(r.depth_m * 1000) || R.D));
+        R.back = !!r.back; R.left = !!r.left; R.right = !!r.right; done++; } break;
+      case 'add': {
+        if (!o.type || !TYPE_NAME[o.type]) break;
+        const cfg = cfgFromPlan({ type:o.type, saved_model:o.saved_model || '', settings:o.settings || {} }), n = o.count || 1, grp = [];
+        for (let i = 0; i < n; i++) {
+          const a = { id:SCN.next++, type:o.type, cfg:deep(cfg), rot:o.rot || 0, name:(o.name || o.saved_model || TYPE_NAME[o.type]) + (n > 1 ? ' ' + (i + 1) : ''),
+            x:o.x_cm === null ? undefined : o.x_cm/100 - W2, z:o.z_cm === null ? undefined : o.z_cm/100 - D2 };
+          SCN.items.push(a); grp.push(a); added.push(a); lastAdded = a;
+        }
+        grp.row = o.row; rows.push(grp); done++; break; }
+      case 'delete': if (it) { if (SCN.sel === it.id) selectItem(null, true); SCN.items = SCN.items.filter(x => x !== it); done++; } break;
+      case 'set': if (it) {
+        const cfg = it.id === SCN.sel ? capCfg(it.type) : it.cfg;
+        it.cfg = cfgFromPlan({ type:it.type, settings:o.settings || {}, saved_model:'', base:cfg });
+        if (it.id === SCN.sel) { applyCfg(it.type, it.cfg); syncUI(it.type); }
+        done++; } break;
+      case 'contents': if (it) { it.contents = o.text || ''; done++; } break;
+      default: post.push(o);
+    }
+  }
+  rebuild(true);                                               // sizes of new products are known now
+  for (const g of rows) for (let i = 1; i < g.length; i++) {
+    const a = g[i - 1], b = g[i], ea = extents(a), eb = extents(b);
+    if (g.row === 'z') { b.x = a.x; b.z = a.z + ea.ez + eb.ez + 0.05; } else { b.x = a.x + ea.ex + eb.ex + 0.05; b.z = a.z; }
+  }
+  let again = false;
+  for (const a of added) { if (a.x === undefined) continue; snapItem(a); if (collides(a, a.x, a.z, yOf(a))) { a.x = a.z = undefined; again = true; } }
+  if (again || rows.length) rebuild(true);
+  // moves, turns, copies, selection, bins and doors on the built scene
+  for (const o of post) {
+    const it = target(o); if (!it) continue;
+    switch (o.op) {
+      case 'move': nudge(it, (o.dx_cm || 0)/100, (o.dz_cm || 0)/100, (o.dy_cm || 0)/100); snapItem(it); placeGroup(it); done++; break;
+      case 'move_to': { const was = [it.x, it.z]; if (o.x_cm !== null) it.x = o.x_cm/100 - W2; if (o.z_cm !== null) it.z = o.z_cm/100 - D2; snapItem(it); if (collides(it, it.x, it.z, yOf(it))) { [it.x, it.z] = was; toast('אין שם מקום – המוצר נשאר במקומו'); } placeGroup(it); done++; break; }
+      case 'rotate': case 'rotate_to': { const was = it.rot; it.rot = (((o.op === 'rotate' ? it.rot + (o.deg || 0) : (o.rot ?? it.rot)) % 360) + 360) % 360; snapItem(it); if (collides(it, it.x, it.z, yOf(it))) { it.rot = was; toast('אין מקום לסובב שם'); } placeGroup(it); done++; break; }
+      case 'duplicate': for (let i = 0; i < (o.count || 1); i++) dupItem(it); done++; break;
+      case 'select': selectItem(it.id); done++; break;
+      case 'bins': {
+        const faces = binFaces(it), b = o.bins || { all:true, face:'all', rows:[], cols:[], random:0 }, open = o.open !== false;
+        const pickIdx = (n, list) => !list || !list.length ? [...Array(n).keys()] : list.map(k => k < 0 ? n + k : k - 1).filter(k => k >= 0 && k < n);
+        let sel = [];
+        for (const [fk, frows] of Object.entries(faces)) {
+          if (!b.all && b.face !== 'all' && b.face !== fk) continue;
+          for (const ri of b.all ? [...frows.keys()] : pickIdx(frows.length, b.rows)) { const row = frows[ri]; for (const ci of b.all ? [...row.keys()] : pickIdx(row.length, b.cols)) sel.push(row[ci]); }
+        }
+        if (b.random > 0) sel = sel.sort(() => Math.random() - 0.5).slice(0, b.random);
+        sel.forEach(d => open ? openDrawer(d) : closeDrawer(d)); if (sel.length) done++; break; }
+      case 'doors': case 'tambour': {
+        if (SCN.sel !== it.id) selectItem(it.id);
+        const open = o.open !== false;
+        if (o.op === 'tambour' && (it.type === 'tamb' || it.type === 'mtamb')) { METAL[it.type].target = open ? TBX.MAXO : 0; done++; }
+        else if (it.type === 'mdoor') { const w = o.which || 'all'; MD.doors = [w === 'right' ? MD.doors[0] : +open, w === 'left' ? MD.doors[1] : +open]; syncDoorBtns('md', MD); done++; }
+        else if (it.type === 'tena' && tena.slide && tena.slide.on) { tena.slide.open = open ? [1, 0, 1, 0] : [0, 0, 0, 0]; if (SLD) SLD.st = tena.slide; syncSlideBtns(); done++; }
+        else if (it.type === 'tamb' || it.type === 'mtamb') { METAL[it.type].target = open ? TBX.MAXO : 0; done++; }
+        break; }
+    }
+  }
+  renderScene();
+  if (!done) VOICE.undo.pop();
+  return done;
+}
+// ---------- "add product": a popup with the products and the saved models, a picture on hover ----------
+function buildType(t) {                           // the 3D product of type t from the current settings
+  if (t === 'unit') { const u = makeUnit(current); return { group:u.group, drawers:u.drawers, rods:[u.rod] }; }
+  if (t === 'stand') return buildStand();
+  if (t === 'wall') { const b = buildWall(); b.group.position.z = 0; return b; }
+  if (t === 'excl' || t === 'part') return buildExcl(t);
+  if (t === 'quad') return buildQuad();
+  if (METAL[t]) return buildMetal(t);
+  return buildTena();
+}
+let PT = null;                                     // a small renderer of its own for the product pictures
+const THUMB_CACHE = new Map();
+function productThumb(type, cfg) {
+  const key = type + JSON.stringify(cfg);
+  if (THUMB_CACHE.has(key)) return THUMB_CACHE.get(key);
+  if (!PT) {
+    const r = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:true });
+    r.setPixelRatio(1); r.setSize(480, 360, false);
+    r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.9;
+    const sc = new THREE.Scene(), pm = new THREE.PMREMGenerator(r);
+    sc.environment = pm.fromScene(new RoomEnvironment(r), 0.04).texture; sc.environmentIntensity = 0.8;
+    sc.add(new THREE.HemisphereLight(0xffffff, 0xa9b0b6, 0.4));
+    const dl = new THREE.DirectionalLight(0xffffff, 2.0); dl.position.set(-1, 2, 1.2); sc.add(dl);
+    PT = { r, sc, cam:new THREE.PerspectiveCamera(28, 4/3, 0.01, 60) };
+  }
+  // build with these settings, then put every setting back as it was
+  const sel = mode === 'scene' ? SCN.items.find(i => i.id === SCN.sel) : null;
+  if (sel) sel.cfg = capCfg(sel.type);
+  const saved = capAll(), sld = SLD, wg = new Map(WING_GROUPS), wf = new Map(WING_FRAMES), tn = tena;
+  let b;
+  try { SCENE_BUILD = true; applyCfg(type, cfg); b = buildType(type); }
+  finally {
+    SCENE_BUILD = false; restoreAll(saved); if (sel) applyCfg(sel.type, sel.cfg); else tena = tn;
+    SLD = sld; WING_GROUPS.clear(); wg.forEach((v, k) => WING_GROUPS.set(k, v)); WING_FRAMES.clear(); wf.forEach((v, k) => WING_FRAMES.set(k, v));
+  }
+  const g = b.group; PT.sc.add(g);
+  const box = new THREE.Box3().setFromObject(g), c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
+  const cam = PT.cam, t = Math.tan(THREE.MathUtils.degToRad(cam.fov/2));
+  const dist = Math.max(sz.y / 2 / t, Math.max(sz.x, sz.z) / 2 / t / cam.aspect) * 1.12 + Math.max(sz.x, sz.z) / 2;
+  cam.position.copy(c).addScaledVector(new THREE.Vector3(-0.55, 0.32, 1).normalize(), dist); cam.lookAt(c);
+  PT.r.render(PT.sc, cam);
+  const url = PT.r.domElement.toDataURL('image/png');
+  PT.sc.remove(g); g.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); });
+  THUMB_CACHE.set(key, url);
+  return url;
+}
+function openAddDialog() {
+  const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  openDialog(`
+    <h3>הוספת מוצר לסצנה</h3>
+    <div class="adtabs"><button data-tab="types" class="on">מוצרים</button><button data-tab="models">מוצרים ששמרתי</button></div>
+    <div class="adgrid" id="adGrid"></div>
+    <div class="dlg-actions"><button class="btn" data-close>סגירה</button></div>`, (card, close) => {
+    card.classList.add('wide');
+    const grid = card.querySelector('#adGrid');
+    let peek = null, tab = 'types', queue = [];
+    const hover = matchMedia('(hover:hover)').matches;
+    const hidePeek = () => { if (peek) { peek.remove(); peek = null; } };
+    $('dlg')._onClose = () => { hidePeek(); queue = []; };
+    const list = () => tab === 'types'
+      ? Object.entries(TYPE_NAME).map(([t, n]) => ({ t, cfg:capCfg(t), name:n, sub:'' }))
+      : Object.entries(lib.models).flatMap(([t, ms]) => TYPE_NAME[t] ? Object.keys(ms).sort((a, b) => a.localeCompare(b)).map(n => ({ t, cfg:ms[n].cfg, name:n, sub:TYPE_NAME[t], model:true })) : []);
+    const draw = () => {
+      card.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+      const items = list(); grid.innerHTML = ''; queue = [];
+      if (!items.length) { grid.innerHTML = '<div class="adempty">עדיין אין מוצרים שמורים. שומרים דגם מהשורה "דגם" בפאנל של כל מוצר.</div>'; return; }
+      items.forEach(p => {
+        const b = document.createElement('button'); b.className = 'adcard';
+        b.innerHTML = `<span class="adimg"></span><span class="adname">${esc(p.name)}</span>${p.sub ? `<small>${esc(p.sub)}</small>` : ''}`;
+        const im = b.querySelector('.adimg');
+        queue.push(() => { try { p.url = productThumb(p.t, p.cfg); im.innerHTML = `<img src="${p.url}" alt="${esc(p.name)}">`; } catch (e) { console.warn(e); } });
+        b.onclick = () => { hidePeek(); close();
+          addDraft(p.t, p.cfg, p.model ? p.name : TYPE_NAME[p.t] + ' ' + (SCN.items.filter(i => i.type === p.t).length + 1)); };
+        if (hover) {
+          b.onmouseenter = () => { if (!p.url) return; hidePeek(); peek = document.createElement('div'); peek.className = 'adpeek'; peek.innerHTML = `<img src="${p.url}" alt="">`; document.body.appendChild(peek); };
+          b.onmousemove = (e) => { if (!peek) return; const w = 340, h = 255, x = e.clientX + 18 + w > innerWidth ? e.clientX - w - 18 : e.clientX + 18, y = Math.min(innerHeight - h - 8, Math.max(8, e.clientY - h/2)); peek.style.left = x + 'px'; peek.style.top = y + 'px'; };
+          b.onmouseleave = hidePeek;
+        }
+        grid.appendChild(b);
+      });
+      // pictures one by one, so the popup opens at once
+      const q = queue; const next = () => { if (q !== queue || !q.length) return; q.shift()(); setTimeout(next, 0); }; setTimeout(next, 30);
+    };
+    card.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; hidePeek(); draw(); });
+    draw();
+  });
+}
+
+// ---------- build the scene by voice: words → /api/scene → "this is what I understood" → add ----------
+const nearest = (v, list) => list.reduce((a, b) => Math.abs(b - v) < Math.abs(a - v) ? b : a);
+function cfgFromPlan(p) {
+  const saved = p.saved_model && lib.models[p.type] && lib.models[p.type][p.saved_model];
+  const cfg = p.base ? deep(p.base) : saved ? deep(saved.cfg) : deep(capCfg(p.type)), st = p.settings || {};
+  const comp = (ok) => st.comp ? Object.fromEntries(st.comp.filter(c => c.count > 0 && (!ok || ok.includes(c.model))).map(c => [c.model, Math.min(30, c.count)])) : null;
+  const set = (o, k, v) => { if (v !== null && v !== undefined) o[k] = v; };
+  switch (p.type) {
+    case 'unit': if (st.unit_bins) cfg.current = st.unit_bins; break;
+    case 'stand': {
+      set(cfg.stand, 'type', st.stand_type); set(cfg.stand, 'base', st.base);
+      if (st.height_cm) cfg.stand.height = nearest(st.height_cm * 10, [1160, 1800, 2000]);
+      const c = comp(cfg.stand.type === 'double' ? [3, 4, 5, 6, 9] : null); if (c) cfg.comp[cfg.stand.type + '-' + cfg.stand.height] = c; break; }
+    case 'excl': case 'part': { const c = comp(EXV[p.type].models); if (c) cfg.exs.comp = c; set(cfg.exs, 'top', st.top); if (p.type === 'part') set(cfg.exs, 'cols', st.cols); break; }
+    case 'quad': { const c = comp(); if (c) cfg.qd.comp = c; set(cfg.qd, 'base', st.base); set(cfg.qd, 'top', st.top); break; }
+    case 'wall': { if (st.height_cm) cfg.wall.height = nearest(st.height_cm * 10, [600, 1200, 2000]); const c = comp(); if (c) cfg.wallComp[cfg.wall.height] = c; break; }
+    case 'tena': set(cfg.tn, 'size', st.tena_size); if (st.doors !== null && st.doors !== undefined) cfg.tn.slide = { ...(cfg.tn.slide || { open:[0, 0, 0, 0] }), on:!!st.doors }; break;
+    case 'tamb': { const c = comp(TB_MODELS); if (c) cfg.tb.items = [{ t:'bins', y:TBX.BASE, comp:c, side:'center', noSep:[...ORDER] }]; set(cfg.tb, 'align', st.align); break; }
+    case 'mdoor': set(cfg.md, 'color', st.md_color); break;
+  }
+  return cfg;
+}
+function opLines(ops) {
+  const nm = (o) => { const it = SCN.items.find(i => i.id === (o.target ?? SCN.sel)); return it ? `"${it.name.replace(/</g, '&lt;')}"` : 'המוצר'; };
+  return ops.map(o => {
+    switch (o.op) {
+      case 'add': return planLines({ items:[{ ...o, count:o.count || 1, x_cm:o.x_cm ?? 0, z_cm:o.z_cm ?? 0 }] });
+      case 'move': return `<li>הזזת ${nm(o)}${o.dx_cm ? ` ${Math.abs(o.dx_cm)} ס"מ ${o.dx_cm > 0 ? 'ימינה' : 'שמאלה'}` : ''}${o.dz_cm ? ` ${Math.abs(o.dz_cm)} ס"מ ${o.dz_cm > 0 ? 'קדימה' : 'אחורה'}` : ''}${o.dy_cm ? ` ${Math.abs(o.dy_cm)} ס"מ ${o.dy_cm > 0 ? 'למעלה' : 'למטה'}` : ''}</li>`;
+      case 'move_to': return `<li>הזזת ${nm(o)} למיקום ${Math.round(o.x_cm ?? 0)}, ${Math.round(o.z_cm ?? 0)} ס"מ</li>`;
+      case 'rotate': return `<li>סיבוב ${nm(o)} ב־${Math.abs(o.deg || 0)}° ${(o.deg || 0) > 0 ? 'ימינה' : 'שמאלה'}</li>`;
+      case 'rotate_to': return `<li>סיבוב ${nm(o)} ל־${o.rot}°</li>`;
+      case 'delete': return `<li>מחיקת ${nm(o)}</li>`;
+      case 'duplicate': return `<li>שכפול ${nm(o)}${o.count > 1 ? ' × ' + o.count : ''}</li>`;
+      case 'set': return `<li>שינוי הגדרות של ${nm(o)}</li>`;
+      case 'bins': return `<li>${o.open === false ? 'סגירת' : 'פתיחת'} תאים ב־${nm(o)}</li>`;
+      case 'doors': return `<li>${o.open === false ? 'סגירת' : 'פתיחת'} דלתות ב־${nm(o)}</li>`;
+      case 'tambour': return `<li>${o.open === false ? 'סגירת' : 'פתיחת'} התריס ב־${nm(o)}</li>`;
+      case 'contents': return `<li>תוכן התאים ב־${nm(o)}: ${(o.text || '').replace(/</g, '&lt;')}</li>`;
+      case 'select': return `<li>בחירת ${nm(o)}</li>`;
+      case 'room': return `<li>החדר: ${o.room ? o.room.width_m + ' × ' + o.room.depth_m + " מ'" : ''}</li>`;
+      case 'clear': return `<li><b>ריקון הסצנה</b></li>`;
+    }
+    return '';
+  }).join('');
+}
+function planLines(plan) {
+  const S = (st) => {
+    const o = [];
+    if (st.stand_type) o.push(st.stand_type === 'double' ? 'דו צדדי' : 'חד צדדי');
+    if (st.base) o.push(st.base === 'wheels' ? 'על גלגלים' : 'על רגליים');
+    if (st.height_cm) o.push(`גובה ${st.height_cm} ס"מ`);
+    if (st.cols) o.push(`${st.cols} טורים`);
+    if (st.tena_size) o.push(`${st.tena_size} כנפיים`);
+    if (st.doors) o.push('עם דלתות הזזה');
+    if (st.unit_bins) o.push(`${st.unit_bins} תאים`);
+    if (st.top) o.push(st.top === 'white' ? 'גג לבן' : 'גג שחור');
+    if (st.md_color) o.push(st.md_color === 'blue' ? 'כחול' : 'RAL 7035');
+    if (st.align) o.push(st.align === 'front' ? 'יישור קדמי' : 'יישור אחורי');
+    if (st.comp && st.comp.length) o.push(st.comp.filter(c => c.count > 0).map(c => `${c.count} × #${c.model}`).join(' + '));
+    return o.join(' · ');
+  };
+  return plan.items.map(p => `<li><b>${p.count > 1 ? p.count + ' × ' : ''}${TYPE_NAME[p.type]}</b>${p.saved_model ? ` – הדגם "${p.saved_model.replace(/</g, '&lt;')}"` : ''}${S(p.settings || {}) ? ' · ' + S(p.settings || {}) : ''} · <span class="use">מיקום ${Math.round(p.x_cm)}, ${Math.round(p.z_cm)} ס"מ${p.rot ? ` · סיבוב ${p.rot}°` : ''}</span></li>`).join('');
+}
+function applyPlan(plan) {
+  if (plan.clear_scene) { selectItem(null, true); SCN.items = []; }
+  if (plan.room) {
+    const R = SCN.room, r = plan.room;
+    R.W = Math.max(2000, Math.min(100000, Math.round(r.width_m * 1000) || R.W)); R.D = Math.max(2000, Math.min(100000, Math.round(r.depth_m * 1000) || R.D));
+    R.back = !!r.back; R.left = !!r.left; R.right = !!r.right;
+  }
+  const W2 = SCN.room.W/2000, D2 = SCN.room.D/2000, made = [];
+  for (const p of plan.items) {
+    const cfg = cfgFromPlan(p), group = [];
+    for (let i = 0; i < p.count; i++) {
+      const it = { id:SCN.next++, type:p.type, cfg:deep(cfg), rot:p.rot || 0,
+        name:(p.name || TYPE_NAME[p.type]) + (p.count > 1 ? ' ' + (i + 1) : ''), x:p.x_cm/100 - W2, z:p.z_cm/100 - D2 };
+      SCN.items.push(it); group.push(it); made.push(it);
+    }
+    group.note = p.note;
+    made.groups = (made.groups || []).concat([group]);
+  }
+  selectItem(null, true); rebuild(true);                     // sizes are known now
+  for (const g of made.groups || []) for (let i = 1; i < g.length; i++) {          // copies side by side
+    const a = g[i - 1], b = g[i], ea = extents(a), eb = extents(b);
+    if (g.note === 'row-z') { b.x = a.x; b.z = a.z + ea.ez + eb.ez + 0.05; } else { b.x = a.x + ea.ex + eb.ex + 0.05; b.z = a.z; }
+  }
+  let again = false;
+  for (const it of made) { snapItem(it); if (collides(it, it.x, it.z, yOf(it))) { it.x = it.z = undefined; again = true; } }
+  rebuild(true);
+  if (again) made.forEach(snapItem);
+  renderScene();
+  toast(`נוספו ${made.length} מוצרים לסצנה`);
+}
+function openSceneAI() {
+  openDialog(`
+    <h3>בנייה בקול</h3>
+    <p class="dlg-sub">אמרו או כתבו מה לעשות בסצנה – להוסיף, להזיז, לסובב, לשנות הגדרות, לפתוח תאים ודלתות. למשל: "שתי מחיצות של 3 טורים בניצב לקיר האחורי, ובאמצע מעמד 4 דפנות עם גג לבן".</p>
+    <div class="aibox"><textarea id="aiText" placeholder="מה להוסיף לסצנה?"></textarea><button class="aimic" id="aiMic" title="הקלטה" aria-label="הקלטה">🎙</button></div>
+    <div class="use" id="aiPartial"></div>
+    <div class="aiplan" id="aiPlan" hidden></div>
+    <div class="dlg-err" id="aiErr" hidden></div>
+    <div class="dlg-actions">
+      <button class="btn primary" id="aiGo">המשך</button>
+      <button class="btn primary" id="aiAdd" hidden>✓ אישור</button>
+      <button class="btn" id="aiBack" hidden>תיקון</button>
+      <button class="btn" data-close>ביטול</button>
+    </div>`, (card, close) => {
+    const q = (x) => card.querySelector(x), ta = q('#aiText'), mic = q('#aiMic');
+    let plan = null;
+    const show = (v) => { q('#aiPlan').hidden = !v; q('#aiAdd').hidden = q('#aiBack').hidden = !v; q('#aiGo').hidden = !!v; ta.disabled = !!v; };
+    Mic.on({ partial:(t) => q('#aiPartial').textContent = t, final:(t) => { ta.value = (ta.value.trim() + ' ' + t.trim()).trim(); q('#aiPartial').textContent = ''; },
+      state:(on) => mic.classList.toggle('on', !!on), error:() => {} });
+    micReady.then(kind => { mic.hidden = !kind; });
+    mic.onclick = () => { if (Mic.listening) { Mic.stop(); return; } Mic.start().catch(() => mic.classList.remove('on')); };
+    $('dlg')._onClose = () => { if (Mic.listening) Mic.stop(); };
+    q('#aiGo').onclick = async () => {
+      if (Mic.listening) await Mic.stop();
+      const text = ta.value.trim(); if (!text) { ta.focus(); return; }
+      const go = q('#aiGo'); go.disabled = true; go.textContent = 'מבין…'; q('#aiErr').hidden = true;
+      try {
+        const r = await api('/api/scene', scenePayload(text));
+        plan = r;
+        if (!plan || !(plan.ops || []).length) throw new Error('לא הבנתי מה לעשות. נסו לנסח שוב.');
+        q('#aiPlan').innerHTML = `<h4>זה מה שהבנתי. אם זה בסדר – אשרו. אם לא – תקנו ונסו שוב.</h4><div>${(plan.understood || '').replace(/</g, '&lt;')}</div><ul>${opLines(plan.ops)}</ul>`;
+        show(true);
+      } catch (e) { const er = q('#aiErr'); er.textContent = e.message; er.hidden = false; }
+      finally { go.disabled = false; go.textContent = 'המשך'; }
+    };
+    q('#aiBack').onclick = () => { show(false); ta.focus(); };
+    q('#aiAdd').onclick = () => { close(); const n = executeOps(plan.ops); toast(n ? 'בוצע' : 'לא היה מה לשנות'); };
+  });
+}
 function renderSceneTypes() {
   const box = $('scnTypes'); if (!box) return;
   const models = Object.entries(lib.models).flatMap(([t, ms]) => TYPE_NAME[t] ? Object.keys(ms).sort((a, b) => a.localeCompare(b)).map(n => [t, n]) : []);
@@ -3965,7 +4627,7 @@ function renderSceneTypes() {
 function sceneSnap() {
   const s = SCN.items.find(i => i.id === SCN.sel); if (s) s.cfg = capCfg(s.type);
   return { room:deep(SCN.room), next:SCN.next, shots:deep(SCN.shots || []),
-    items:SCN.items.map(({ id, type, cfg, x, z, y, rot, hidden, name }) => deep({ id, type, cfg, x, z, y:y || 0, rot, hidden:!!hidden, name })) };
+    items:SCN.items.map(({ id, type, cfg, x, z, y, rot, hidden, name, contents }) => deep({ id, type, cfg, x, z, y:y || 0, rot, hidden:!!hidden, name, contents:contents || '' })) };
 }
 async function uploadImage(src, kind) {
   if (!src) return null;
@@ -4511,7 +5173,7 @@ const EN = {
   'אפשר גם לגרור את התריס על המודל – שתי הכנפיים זזות יחד. המדפים על חורים כל 25 מ"מ.':'You can also drag the tambour on the model – both halves move together. Shelves sit on holes every 25 mm.',
   'ארון תריס לרב תא · רוחב':'Tilt Bin Tambour Cabinet · width', 'מצלמה':'Camera', 'סיבוב סביב':'Orbit', 'תנועה חופשית':'Free movement', 'עדשה':'Lens',
   'ישר אנכית (קירות ועמודים ישרים)':'Straight verticals (walls and columns stay upright)',
-  'תנועה חופשית: W A S D או החצים להליכה, Q / E למטה ולמעלה, Shift מהר, גרירה להסתכלות, גלגלת קדימה ואחורה.':'Free movement: W A S D or arrows to walk, Q / E down and up, Shift faster, drag to look around, wheel forward and back.',
+  'תנועה חופשית: W A S D או החצים להליכה, Q / E וגלגלת – עדשה (זום פנימה / החוצה), + / − גובה, Shift מהר, גרירה להסתכלות.':'Free movement: W A S D or arrows to walk, Q / E and the wheel – lens (zoom in / out), + / − height, Shift faster, drag to look around.',
   '📷 שמור צילום':'📷 Save shot', 'שמירת צילום':'Save shot', 'שם הצילום':'Shot name', 'למשל: כניסה, מבט על, תקריב עגלה':'e.g. entrance, top view, cart close-up',
   'אין עדיין צילומים שמורים.':'No saved shots yet.', 'עדכון לזווית הנוכחית':'Update to the current view', 'עודכן:':'Updated:', 'נשמר צילום:':'Shot saved:', 'צילום':'Shot',
   'תנועה':'Movement', 'למטה':'Down', 'קדימה':'Forward', 'למעלה':'Up', 'שמאלה':'Left', 'אחורה':'Back', 'ימינה':'Right', 'כמה מוצרים בתמונה אחת · מיקום חופשי בחדר':'Several products in one image · free placement in a room',
@@ -4519,9 +5181,25 @@ const EN = {
   '+ הוסף מוצר':'+ Add product', 'תבנית: 2 מחיצות מהקיר':'Template: 2 partitions from the wall', 'מוצרים בסצנה':'Products in the scene',
   'הסצנה ריקה. הוסף מוצר או בחר תבנית.':'The scene is empty. Add a product or pick a template.', 'שכפול':'Duplicate', 'הסתרה':'Hide', 'הצגה':'Show', 'מחיקה':'Delete',
   'סיבוב':'Rotate', 'זווית':'Angle', 'רוחב החדר במטרים':'Room width in metres', 'עומק החדר במטרים':'Room depth in metres',
-  'קליק בוחר מוצר, קליק נוסף משחרר. גרירה מזיזה על הרצפה. חיצים: ס"מ בכל לחיצה לפי כיוון המוצר (Shift – 10 ס"מ). החזקת הלחצן השמאלי על המוצר + גלגלת: גובה מהרצפה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. Ctrl+Z מבטל. לחיצה כפולה פותחת מגירה.':'Click selects a product, another click releases it. Drag moves it on the floor. Arrows: 1 cm per press in the product\'s own directions (Shift – 10 cm). Hold the left button on the product + wheel: height above the floor. A product never goes into a wall or another product – it stops on contact. Pink line = lined up with another product. Ctrl+Z undoes. Double-click opens a bin.',
+  'קליק בוחר מוצר. קליק על תא, דלת או תריס של המוצר הבחור פותח וסוגר אותם. ✥ מפעיל הזזה: גרירה על הרצפה, חיצים – ס"מ לפי כיוון המוצר (Shift – 10 ס"מ), החזקת הלחצן על המוצר + גלגלת – גובה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. קליק על הרצפה משחרר. Ctrl+Z מבטל.':'Click selects a product. Clicking a bin, door or tambour of the selected product opens / closes it. ✥ turns on moving: drag on the floor, arrows – 1 cm in the product\'s own directions (Shift – 10 cm), hold the button on the product + wheel – height. A product never goes into a wall or another product – it stops on contact. Pink line = lined up with another product. Click the floor to release. Ctrl+Z undoes.',
   'לרב תא בודד בוחרים את מספר התאים בלשונית "רב תא" לפני ההוספה.':'For a single tilt bin, choose the number of bins in the "Tilt bin" tab before adding it.',
   'צמוד ל':'Touching the ', 'קיר אחורי':'back wall', 'קיר שמאלי':'left wall', 'קיר ימני':'right wall', 'ול':' and the ', 'מוצרים':'products', 'חדר':'room', "מ'":'m', 'עגלת רב-תא EXCLUSIVE':'Exclusive Tilt Bin cart', 'מחיצת EXCLUSIVE מודולרית':'Modular Exclusive Partition', 'מעמד 4 דפנות':'Four-sided stand',
+  '＋ הוסף':'＋ Add', '⚙ סצנה':'⚙ Scene', 'הוספת מוצר לסצנה':'Add a product to the scene', 'הגדרות הסצנה: חדר, קירות, סצנות שמורות, מצלמה':'Scene settings: room, walls, saved scenes, camera',
+  'הזזה – גרירה על הרצפה, חיצים, גלגלת עם לחיצה לגובה':'Move – drag on the floor, arrows, hold + wheel for height', 'הזזה':'Move', 'מחיקה':'Delete', 'סגירה':'Close',
+  'פקודה קולית – לחיצה מתחילה ולחיצה נוספת מסיימת. אפשר לגרור את הכפתור.':'Voice command – click to start, click again to finish. You can drag the button.', 'פקודה קולית':'Voice command',
+  'מקשיב…':'LISTENING…', 'מבין…':'UNDERSTANDING…', '↶ בטל':'↶ Undo', 'בוטל':'Undone', 'השינוי האחרון בוטל':'The last change was undone', 'בוצע':'Done',
+  'לא הבנתי מה לעשות. נסו שוב.':'I did not understand what to do. Please try again.', 'לא היה מה לשנות':'nothing to change', 'אין גישה למיקרופון':'No access to the microphone',
+  'לא הצלחתי להפעיל את המיקרופון':'Could not start the microphone', 'מצב הזזה כבוי':'Move mode off',
+  'מצב הזזה: גוררים את המוצר, חיצים לס"מ, החזקה + גלגלת לגובה':'Move mode: drag the product, arrows for cm, hold + wheel for height',
+  'תוכן התאים ברינדור (למוצר הזה)':'Bin contents in the render (this product)', 'למשל: ברגים ירוקים, אומים קטנים':'e.g. green screws, small nuts',
+  'אין שם מקום – המוצר נשאר במקומו':'No room there – the product stays put', 'אין מקום לסובב שם':'No room to turn it there', 'אישור':'Confirm',
+  'זה מה שהבנתי. אם זה בסדר – אשרו. אם לא – תקנו ונסו שוב.':'This is what I understood. If it is right – confirm. If not – edit and try again.', 'לא הבנתי מה לעשות. נסו לנסח שוב.':'I did not understand what to do. Please rephrase.', 'בנייה בקול (AI)':'Build by voice (AI)', 'בנייה בקול':'Build by voice', 'שכפול':'Duplicate', 'עריכה':'Edit',
+  'טיוטה – ערכו את המוצר ואז הוסיפו אותו':'Draft – set the product up, then add it', 'הוסף לסצנה':'Add to scene', 'טיוטה':'draft',
+  'הוספת מוצר לסצנה':'Add a product to the scene', 'מוצרים ששמרתי':'My saved products', 'נוסף לסצנה':'added to the scene',
+  'עדיין אין מוצרים שמורים. שומרים דגם מהשורה "דגם" בפאנל של כל מוצר.':'No saved products yet. Save one from the "Model" row in any product panel.',
+  'מה להוסיף לסצנה?':'What should go into the scene?', 'המשך':'Continue', 'תיקון':'Edit', 'מבין…':'Understanding…',
+  'זה מה שהבנתי. אם זה בסדר – הוסיפו. אם לא – תקנו ונסו שוב.':'This is what I understood. If it is right – add it. If not – edit and try again.',
+  'לא הבנתי מה להוסיף. נסו לנסח שוב.':'I did not understand what to add. Please rephrase.', 'מיקום':'position',
   '4 צדדים של רב תא סביב ליבת פרופילים · 160–200 ס"מ מעל הבסיס':'4 sides of tilt bins around a profile core · 160–200 cm above the base',
   'רמות (בכל רמה – אותו דגם בארבעת הצדדים)':'Levels (each level – the same model on all four sides)',
   'גג ABS (הדופן תמיד שחורה)':'ABS top (the edge is always black)', 'גג שחור':'Black top', 'גג לבן':'White top',
@@ -4774,8 +5452,13 @@ function stepFree(dt) {
   if (k.has('s') || k.has('arrowdown')) go(fwd, -v);
   if (k.has('d') || k.has('arrowright')) go(right, v);
   if (k.has('a') || k.has('arrowleft')) go(right, -v);
-  if (k.has('e') || k.has('pageup')) go(new THREE.Vector3(0, 1, 0), v);
-  if (k.has('q') || k.has('pagedown')) go(new THREE.Vector3(0, 1, 0), -v);
+  if (k.has('+') || k.has('=') || k.has('pageup')) go(new THREE.Vector3(0, 1, 0), v);
+  if (k.has('-') || k.has('_') || k.has('pagedown')) go(new THREE.Vector3(0, 1, 0), -v);
+  // Q / E: the lens (zoom in / out) – the camera stays where it is
+  if (k.has('q') || k.has('e')) {
+    const mm = Math.max(16, Math.min(85, mmFromFov(camera.fov) * Math.exp((k.has('q') ? 1 : -1) * dt * (k.has('shift') ? 1.6 : 0.6))));
+    camera.fov = fovFromMm(mm); camera.updateProjectionMatrix(); moved = true;
+  }
   camera.position.y = Math.max(0.15, camera.position.y);
   if (moved) { clearTimeout(stepFree.t); stepFree.t = setTimeout(syncCamUI, 120); }
 }
@@ -4784,7 +5467,7 @@ addEventListener('keydown', (e) => {
   if (!FREE.on || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
   const key = e.key.toLowerCase();
   if (key.startsWith('arrow') && mode === 'scene' && SCN.sel) return;   // the arrows move the selected product
-  if (['w','a','s','d','q','e','arrowup','arrowdown','arrowleft','arrowright','pageup','pagedown','shift'].includes(key)) { FREE.keys.add(key); e.preventDefault(); }
+  if (['w','a','s','d','q','e','+','=','-','_','arrowup','arrowdown','arrowleft','arrowright','pageup','pagedown','shift'].includes(key)) { FREE.keys.add(key); e.preventDefault(); }
 });
 addEventListener('keyup', (e) => FREE.keys.delete(e.key.toLowerCase()));
 addEventListener('blur', () => FREE.keys.clear());
@@ -4802,8 +5485,9 @@ canvas.addEventListener('pointermove', (e) => {
 canvas.addEventListener('pointerup', () => { FREE.look = null; });
 canvas.addEventListener('wheel', (e) => {
   if (!FREE.on) return; e.preventDefault();
-  const d = new THREE.Vector3(); camera.getWorldDirection(d); if (FREE.straight) { d.y = 0; d.normalize(); }
-  camera.position.addScaledVector(d, -Math.sign(e.deltaY) * 0.35); camera.position.y = Math.max(0.15, camera.position.y); syncCamUI();
+  // the wheel is the lens too (like Q / E)
+  const mm = Math.max(16, Math.min(85, mmFromFov(camera.fov) * Math.exp(-Math.sign(e.deltaY) * 0.08)));
+  camera.fov = fovFromMm(mm); camera.updateProjectionMatrix(); syncCamUI();
 }, { passive:false });
 // on-screen pad (touch screens)
 function initPad() {
@@ -4859,9 +5543,13 @@ function initCamPanel() {
   initPad(); renderShots(); syncCamUI();
 }
 
-initScenePanel();
+initScenePanel(); initSceneChrome();
 initCamPanel();
-$('sceneBtn').onclick = () => { const h = $('pScene').querySelector('.head'); if (mode !== 'scene') h.click(); else { $('pScene').classList.add('open'); } };
+$('sceneBtn').onclick = () => {
+  if (mode !== 'scene') { $('pScene').querySelector('.head').click(); return; }
+  // in the scene the button leaves it, back to the product shown before
+  const back = panels.find(p => p.dataset.mode === (prevMode && prevMode !== 'scene' ? prevMode : 'unit')); if (back) back.querySelector('.head').click();
+};
 const clock = new THREE.Clock();
 rebuild();
 if (LANG === 'en') setLang('en');
@@ -4876,6 +5564,7 @@ renderer.setAnimationLoop(() => {
   drawers.forEach(d => { const u = d.userData; u.angle += (u.target - u.angle) * kd; d.rotation.x = u.angle; });
   stepFree(dt);
   if (!FREE.on) controls.update();
+  placeItemBar();
   renderer.render(scene, camera);
 });
 window.__ready = true;
