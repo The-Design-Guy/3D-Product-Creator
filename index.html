@@ -2390,7 +2390,7 @@ function buildMetal(k) {
     tbMigrate(TB);
     TB.items.forEach((it, i) => {
       if (it.t === 'shelf') { shelf(it.y, i); return; }
-      const zFront = D/2 - 34;                    // just behind the tambour
+      const zFront = D/2 - 34 - 50;               // 5 cm behind the tambour, so the bin handles don't hit it
       for (const p of binsLayout(it).parts) {
         if (p.type === 'shelf') shelf(p.y);
         else {
@@ -3383,7 +3383,7 @@ function describe() {
     if (mode === 'tamb') {
       tbMigrate(TB);
       const it = TB.items[0], top = ORDER.filter(n => it.comp[n] > 0).reverse();
-      const zs = top.length ? [`one single 600 mm wide column of tilt bin units stacked directly on top of each other, nested, with no shelves at all, filling the 630 mm inner width (from the top down: ${top.map(n => it.comp[n] + ' x ' + n + '-drawer').join(', ')}), ${TB.align === 'front' ? 'pushed forward so the fronts of all units are flush with the front of the cabinet, just behind the tambour' : 'pushed back against the back wall of the cabinet'}`] : [];
+      const zs = top.length ? [`one single 600 mm wide column of tilt bin units stacked directly on top of each other, nested, with no shelves at all, filling the 630 mm inner width (from the top down: ${top.map(n => it.comp[n] + ' x ' + n + '-drawer').join(', ')}), ${TB.align === 'front' ? 'pushed forward so the fronts of all units line up flush with each other, about 5 cm behind the tambour' : 'pushed back against the back wall of the cabinet'}`] : [];
       const peg = cl === 'doors' ? ` The inside of each door is a perforated metal pegboard panel${TB.acc ? ' holding hooks, small blue plastic baskets, a hammer, screwdrivers and pliers' : ' (empty)'}.` : '';
       return `${shell} Every tilt bin unit has an injection-moulded light grey RAL 7035 body with clear transparent tilt-out bins. Inside, from the bottom: ${zs.join('; ') || 'empty'}.${peg}${flags.length ? ' ' + flags.join('; ') + '.' : ''}`;
     }
