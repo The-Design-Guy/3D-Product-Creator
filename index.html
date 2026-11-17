@@ -531,15 +531,15 @@
 
   <div class="panel" id="pTamb" data-mode="tamb" data-family="tilt">
     <button class="head" aria-expanded="false">
-      <span class="ttl"><h1>ארון מתכת מאובטח לרב תא</h1><span class="sub" id="tbSub">90 × 45 × 195 ס"מ · RAL 7035 · תריס עם מנעול</span></span>
+      <span class="ttl"><h1>ארון מתכת מאובטח לרב תא</h1><span class="sub" id="tbSub">67 × 45 × 195 ס"מ · RAL 7035 · תריס עם מנעול</span></span>
       <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <div class="body"><div class="inner">
-      <div class="lbl">סוג סגירה</div>
-      <div class="seg2" id="tbClose"><button data-v="tambour" class="on">תריס · עומק 45</button><button data-v="doors">שתי דלתות · עומק 40</button></div>
-      <div class="lbl">פנים הארון (מלמעלה למטה)</div>
+      <div hidden><div class="seg2" id="tbClose"><button data-v="tambour" class="on">תריס</button></div><button id="tbAddShelf"></button><button id="tbAddBins"></button></div>
+      <div class="lbl">רבי תאים בארון (מונחים זה על זה, הגדול למטה)</div>
       <div class="zones" id="tbZones"></div>
-      <div class="pair"><button class="btn" id="tbAddShelf">+ מדף</button><button class="btn" id="tbAddBins">+ אזור רב תאים</button></div>
+      <div class="lbl">יישור בעומק הארון</div>
+      <div class="seg2" id="tbAlign"><button data-v="back" class="on">יישור אחורי</button><button data-v="front">יישור קדמי</button></div>
       <div class="bar"><i id="tbBar"></i></div>
       <div class="use" id="tbUse"></div>
       <div id="tbTambSec">
@@ -548,9 +548,9 @@
           <button class="btn" id="tbToggle">פתיחה / סגירה</button>
           <label class="slide"><span>פתוח</span><input type="range" id="tbOpen" min="0" max="100" step="1"></label>
         </div>
-        <div class="use">אפשר גם לגרור את התריס על המודל – שתי הכנפיים זזות יחד. המדפים על חורים כל 25 מ"מ.</div>
+        <div class="use">אפשר גם לגרור את התריס על המודל – שתי הכנפיים זזות יחד. </div>
       </div>
-      <div id="tbDoorSec" hidden>
+      <div id="tbDoorSec" hidden style="display:none">
         <div class="lbl">דלתות (לחיצה על דלת פותחת / סוגרת אותה)</div>
         <div class="pair"><button class="btn" id="tbDoorR">דלת ימין</button><button class="btn" id="tbDoorL">דלת שמאל</button></div>
         <div class="row"><span>אביזרים על הלוח המחורר בדלתות</span><label class="sw"><input type="checkbox" id="tbAcc" checked><span></span></label></div>
@@ -2276,7 +2276,9 @@ const pegTex = (() => {                       // perforated tool panel on the in
 })();
 const TBX = { W:900, D:450, H:1950, BASE:70, TOP:60, SIDE:20, BACK:12, PITCH:25, SHELF:25, MAXO:400 };
 const evenShelves = (n) => Array.from({ length:n }, (_, i) => TBX.BASE + Math.round((TBX.H - TBX.TOP - TBX.BASE) * (i + 1) / (n + 1) / TBX.PITCH) * TBX.PITCH);
-const TB = { items:[{ t:'bins', y:TBX.BASE, comp:{ 4:2, 5:3, 6:3 }, side:'left', noSep:[] }, { t:'shelf', y:1595 }], open:0, target:0, closure:'tambour', doors:[0, 0], acc:true };
+const TB_W = 670;                               // tilt-bin cabinet: 630 inside (one column of 600 mm bins) + 2 × 20 sides
+const TB5_FULL = Math.floor((TBX.H - TBX.TOP - TBX.BASE - MODELS[5].H) / (MODELS[5].H - RIM)) + 1;   // default: the cabinet full of tilt bin 5
+const TB = { items:[{ t:'bins', y:TBX.BASE, comp:{ 5:TB5_FULL }, side:'center', noSep:[2, 3, 4, 5, 6, 9] }], open:0, target:0, closure:'tambour', doors:[0, 0], acc:false, align:'back' };
 const MT = { list:evenShelves(4), open:0, target:0 };
 const MD = { list:evenShelves(4), color:'7035', doors:[0, 0] };
 const METAL = { tamb:TB, mtamb:MT, mdoor:MD };
@@ -2333,12 +2335,21 @@ function freeSpot(items, i, y, h = itemH(items[i])) {
   }
   return best;
 }
-function tbMigrate(T) {                          // settings saved before the zones existed
-  if (T.items) return T;
+// the tilt-bin cabinet now holds one stack of bins standing on each other (no shelves, tambour only)
+function tbNormalize(T) {
+  const comp = {};
+  (T.items || []).filter(it => it.t === 'bins').forEach(it => { for (const n in it.comp) if (TB_MODELS.includes(+n)) comp[n] = (comp[n] || 0) + (it.comp[n] || 0); });
+  const it = { t:'bins', y:TBX.BASE, comp, side:'center', noSep:[...ORDER] };
+  for (const n of [...ORDER].reverse()) while ((it.comp[n] || 0) > 0 && binsLayout(it).h > tbCeil() - tbFloor()) it.comp[n]--;   // drop small ones from the top if it no longer fits
+  T.items = [it]; T.closure = 'tambour'; T.doors = [0, 0]; T.acc = false; T.align = T.align === 'front' ? 'front' : 'back';
+  return T;
+}
+function tbMigrate(T) {
+  if (T.items) return tbNormalize(T);
   const comp = T.comp || { 4:2, 5:3, 6:3 }, items = [{ t:'bins', y:TBX.BASE, comp:{ ...comp }, side:T.side || 'left', noSep:T.shelves === 'none' ? [...ORDER] : [] }];
   const plan = tbPlan(comp, T.shelves || 'groups', T.extra ?? 1);
   plan.items.filter(p => p.extra).forEach(p => items.push({ t:'shelf', y:p.y }));
-  T.items = items; delete T.comp; delete T.side; delete T.shelves; delete T.extra; return T;
+  T.items = items; delete T.comp; delete T.side; delete T.shelves; delete T.extra; return tbNormalize(T);
 }
 let TAMB = null, DOORS = null, SHELVES = null;    // movable parts of the cabinet on screen
 function placeSlats(slats, o, zf, hw) {
@@ -2352,7 +2363,7 @@ const DOOR_OPEN = THREE.MathUtils.degToRad(105);
 function buildMetal(k) {
   const S = METAL[k], closure = closureOf(k);
   const g = new THREE.Group(); const root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
-  const { W, H, BASE, TOP, SIDE, BACK } = TBX, D = depthOf(k);
+  const { H, BASE, TOP, SIDE, BACK } = TBX, D = depthOf(k), W = k === 'tamb' ? TB_W : TBX.W;
   const mat = k === 'mdoor' && S.color === 'blue' ? steelBlueCab : steel7035;
   const box = (w, h, d, x, y, z, m = mat, par = root) => { const o = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)); o.position.set(x, y, z); par.add(o); return o; };
   // body
@@ -2379,10 +2390,13 @@ function buildMetal(k) {
     tbMigrate(TB);
     TB.items.forEach((it, i) => {
       if (it.t === 'shelf') { shelf(it.y, i); return; }
-      const cx = (it.side === 'right' ? 1 : -1) * (inW/2 - 300);
+      const zFront = D/2 - 34;                    // just behind the tambour
       for (const p of binsLayout(it).parts) {
         if (p.type === 'shelf') shelf(p.y);
-        else { const u = makeUnit(p.n); u.group.position.set(cx*0.001, p.y*0.001, zBack*0.001); g.add(u.group); list.push(...u.drawers); rodList.push(u.rod); }
+        else {
+          const z = TB.align === 'front' ? zFront - MODELS[p.n].D : zBack;
+          const u = makeUnit(p.n); u.group.position.set(0, p.y*0.001, z*0.001); g.add(u.group); list.push(...u.drawers); rodList.push(u.rod);
+        }
       }
     });
   } else S.list.forEach((y, i) => shelf(y, i));
@@ -2456,76 +2470,30 @@ function buildTamb() { return buildMetal('tamb'); }
 // ---------- panels ----------
 function renderTamb() {
   tbMigrate(TB);
-  const box = $('tbZones');
+  const box = $('tbZones'), it = TB.items[0];
   if (!THUMBS) { try { THUMBS = makeThumbs(); } catch (e) { THUMBS = {}; } }
   box.innerHTML = '';
-  const order = TB.items.map((it, i) => ({ it, i })).sort((a, b) => b.it.y - a.it.y);   // top of the cabinet first
-  const gapRow = (from, to) => { if (to - from >= 60) { const d = document.createElement('div'); d.className = 'zfree'; d.textContent = `פנוי ${Math.round((to - from)/10)} ס"מ`; box.appendChild(d); } };
-  let above = tbCeil();
-  order.forEach(({ it, i }, k) => {
-    gapRow(it.y + itemH(it), above); above = it.y;
-    const el = document.createElement('div'); el.className = 'zone' + (it.t === 'bins' ? ' bins' : '');
-    const nm = it.t === 'shelf' ? 'מדף' : 'רב תאים';
-    el.innerHTML = `<div class="zh"><span class="zt">${nm}</span>
-      <button class="sb" data-a="up" aria-label="למעלה" title="למעלה">▲</button><button class="sb" data-a="down" aria-label="למטה" title="למטה">▼</button>
-      <input class="num" type="number" step="2.5" value="${(it.y/10).toFixed(1)}" aria-label="גובה מהרצפה בס&quot;מ" style="width:74px"><span class="use" style="margin:0 2px">ס"מ</span>
-      <button class="sb" data-a="del" aria-label="הסרה" title="הסרה">✕</button></div>`;
-    const [up, down] = el.querySelectorAll('[data-a=up],[data-a=down]');
-    const move = (y) => { const f = freeSpot(TB.items, i, y); if (f !== null) { it.y = f; rebuild(true); } };
-    // ▲ / ▼ swaps with the neighbour (keeping the gap between them); with no neighbour it goes to the top / bottom
-    const swap = (lo, hi) => {                       // lo is below hi: after the swap hi is below
-      const gap = hi.y - (lo.y + itemH(lo)), y0 = lo.y;
-      hi.y = y0; lo.y = snapUp(y0 + itemH(hi) + gap);
-      const li = TB.items.indexOf(lo), f = freeSpot(TB.items, li, lo.y); if (f !== null) lo.y = f;
-      rebuild(true);
-    };
-    up.onclick = () => { const nb = order[k - 1]; nb ? swap(it, nb.it) : move(tbCeil()); };
-    down.onclick = () => { const nb = order[k + 1]; nb ? swap(nb.it, it) : move(tbFloor()); };
-    up.disabled = k === 0 && it.y + itemH(it) >= tbCeil() - 20; down.disabled = k === order.length - 1 && it.y <= tbFloor();
-    el.querySelector('input').onchange = (e) => move(+e.target.value * 10);
-    el.querySelector('[data-a=del]').onclick = () => { TB.items.splice(i, 1); rebuild(true); };
-    if (it.t === 'bins') {
-      const L = binsLayout(it);
-      const comp = document.createElement('div'); comp.className = 'comp';
-      for (const n of ORDER) {
-        const ok = TB_MODELS.includes(n), cnt = it.comp[n] || 0;
-        const row = document.createElement('div'); row.className = 'ci' + (ok ? '' : ' na');
-        row.title = ok ? `רב תא ${n}` : `רב תא ${n} – עמוק מדי לארון`;
-        row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="ctl"><button aria-label="פחות">−</button><b>${ok ? cnt : '–'}</b><button aria-label="יותר">+</button></span>`;
-        const [minus, plus] = row.querySelectorAll('button');
-        const trial = { ...it, comp:{ ...it.comp, [n]:cnt + 1 } }, spot = ok ? freeSpot(TB.items, i, it.y, Math.max(binsLayout(trial).h, 40)) : null;
-        minus.disabled = !ok || cnt <= 0; plus.disabled = spot === null;
-        plus.title = spot === null ? 'אין מקום – פנו גובה בארון' : '';
-        minus.onclick = () => { it.comp[n] = cnt - 1; rebuild(true); };
-        plus.onclick = () => { it.comp[n] = cnt + 1; it.y = spot; rebuild(true); };
-        comp.appendChild(row);
-      }
-      el.appendChild(comp);
-      const side = document.createElement('div'); side.className = 'seg2';
-      side.innerHTML = `<button data-v="right">צמוד לימין</button><button data-v="left">צמוד לשמאל</button>`;
-      [...side.children].forEach(b => { b.classList.toggle('on', b.dataset.v === it.side); b.onclick = () => { it.side = b.dataset.v; rebuild(true); }; });
-      el.appendChild(side);
-      if (L.groups.length > 1) {
-        const seps = document.createElement('div'); seps.className = 'seps';
-        seps.innerHTML = '<span>מדף מעל:</span>' + L.groups.slice(0, -1).map(n => `<label><input type="checkbox" data-n="${n}" ${(it.noSep || []).includes(n) ? '' : 'checked'}> רב תא ${n}</label>`).join('');
-        seps.querySelectorAll('input').forEach(c => c.onchange = () => {
-          const n = +c.dataset.n; it.noSep = (it.noSep || []).filter(x => x !== n); if (!c.checked) it.noSep.push(n);
-          const f = freeSpot(TB.items, i, it.y); if (f === null) { if (c.checked) it.noSep.push(n); toast('אין מקום למדף נוסף'); renderTamb(); return; }
-          it.y = f; rebuild(true);
-        });
-        el.appendChild(seps);
-      }
-    }
-    box.appendChild(el);
-  });
-  gapRow(tbFloor(), above);
-  const used = TB.items.reduce((a, it) => a + itemH(it), 0), lim = tbCeil() - tbFloor();
+  const comp = document.createElement('div'); comp.className = 'comp';
+  for (const n of ORDER) {
+    const ok = TB_MODELS.includes(n), cnt = it.comp[n] || 0;
+    const row = document.createElement('div'); row.className = 'ci' + (ok ? '' : ' na');
+    row.title = ok ? `רב תא ${n}` : `רב תא ${n} – לא בארון הזה`;
+    row.innerHTML = `<span class="n">${THUMBS[n] ? `<img src="${THUMBS[n]}" alt="רב תא ${n}">` : `${n}`}</span><span class="ctl"><button aria-label="פחות">−</button><b>${ok ? cnt : '–'}</b><button aria-label="יותר">+</button></span>`;
+    const [minus, plus] = row.querySelectorAll('button');
+    const fits = ok && binsLayout({ ...it, comp:{ ...it.comp, [n]:cnt + 1 } }).h <= tbCeil() - tbFloor();
+    minus.disabled = !ok || cnt <= 0; plus.disabled = !fits;
+    plus.title = ok && !fits ? 'אין מקום – הארון מלא' : '';
+    minus.onclick = () => { it.comp[n] = cnt - 1; rebuild(true); };
+    plus.onclick = () => { it.comp[n] = cnt + 1; rebuild(true); };
+    comp.appendChild(row);
+  }
+  box.appendChild(comp);
+  const used = binsLayout(it).h, lim = tbCeil() - tbFloor();
   $('tbBar').style.width = Math.min(100, used / lim * 100) + '%';
-  $('tbUse').innerHTML = `גובה תפוס: <b>${Math.round(used/10)}</b> מתוך <b>${Math.round(lim/10)}</b> ס"מ · גוררים מדף על המודל כדי להזיז אותו`;
+  $('tbUse').innerHTML = `גובה תפוס: <b>${Math.round(used/10)}</b> מתוך <b>${Math.round(lim/10)}</b> ס"מ · רוחב פנימי 63 ס"מ – עמודה אחת`;
   $('tbOpen').value = Math.round(TB.target / TBX.MAXO * 100);
-  setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc;
-  $('tbTambSec').hidden = TB.closure !== 'tambour'; $('tbDoorSec').hidden = TB.closure !== 'doors';
-  syncDoorBtns('tb', TB);
+  setSeg('tbAlign', TB.align);
+  $('tbTambSec').hidden = false;
 }
 function tbAdd(t) {
   tbMigrate(TB);
@@ -2666,11 +2634,11 @@ function rebuild(keepCamera = false) {
   } else if (METAL[mode]) {
     const tb = buildMetal(mode);
     world.add(tb.group); drawers = tb.drawers; rods = tb.rods; TAMB = tb.slats; DOORS = tb.doors; SHELVES = tb.shelves;
-    if (!keepCamera) frame(TBX.W + 200, TBX.H, true);
+    if (!keepCamera) frame((mode === 'tamb' ? TB_W : TBX.W) + 200, TBX.H, true);
     const D = tb.D / 10, nm = { tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים' }[mode];
     const col = mode === 'mdoor' && MD.color === 'blue' ? 'כחול' : 'RAL 7035';
-    document.getElementById('dims').innerHTML = `${nm} · רוחב <b>90</b> · עומק <b>${D}</b> · גובה <b>195</b> ס"מ · ${col}`;
-    if (mode === 'tamb') { renderTamb(); $('tbSub').textContent = TB.closure === 'doors' ? '90 × 40 × 195 ס"מ · RAL 7035 · שתי דלתות עם מנעול' : '90 × 45 × 195 ס"מ · RAL 7035 · תריס עם מנעול'; }
+    document.getElementById('dims').innerHTML = `${nm} · רוחב <b>${mode === 'tamb' ? TB_W/10 : 90}</b> · עומק <b>${D}</b> · גובה <b>195</b> ס"מ · ${col}`;
+    if (mode === 'tamb') { renderTamb(); $('tbSub').textContent = '67 × 45 × 195 ס"מ · RAL 7035 · תריס עם מנעול'; }
     else renderMetal(mode);
   } else if (mode === 'excl' || mode === 'part') {
     const eb = buildExcl(mode);
@@ -2882,6 +2850,7 @@ document.getElementById('tbAddBins').onclick = () => tbAdd('bins');
 document.getElementById('tbToggle').onclick = () => { TB.target = TB.target > TBX.MAXO/2 ? 0 : TBX.MAXO; renderTamb(); };
 document.getElementById('tbOpen').oninput = (e) => { TB.target = +e.target.value / 100 * TBX.MAXO; };
 segGroup('tbClose', (v) => { TB.closure = v; rebuild(true); });
+segGroup('tbAlign', (v) => { TB.align = v; rebuild(true); });
 document.getElementById('tbAcc').onchange = (e) => { TB.acc = e.target.checked; rebuild(true); };
 [['tbDoorR', TB, 1, 'tb'], ['tbDoorL', TB, 0, 'tb'], ['mdDoorR', MD, 1, 'md'], ['mdDoorL', MD, 0, 'md']].forEach(([id, S, i, px]) =>
   document.getElementById(id).onclick = () => { S.doors[i] = S.doors[i] > 0.5 ? 0 : 1; syncDoorBtns(px, S); });
@@ -3410,11 +3379,11 @@ function describe() {
     const front = cl === 'tambour'
       ? `a two-part vertical-slat tambour (roller) front that slides open to the sides, with recessed handles and a lock in the middle; the tambour is ${S.open > TBX.MAXO*0.6 ? 'open' : S.open > 40 ? 'partly open' : 'closed'}`
       : `two full-height hinged steel doors with a black key lock on the right door; ${doorTxt(S.doors)}`;
-    const shell = `A steel cabinet, 900 mm wide, ${D} mm deep, 1950 mm high, powder-coated ${col}, plinth at the bottom, with ${front}.`;
+    const shell = `A steel cabinet, ${mode === 'tamb' ? TB_W : 900} mm wide, ${D} mm deep, 1950 mm high, powder-coated ${col}, plinth at the bottom, with ${front}.`;
     if (mode === 'tamb') {
       tbMigrate(TB);
-      const zs = [...TB.items].sort((a, b) => a.y - b.y).map(it => it.t === 'shelf' ? `a full-width steel shelf at ${Math.round(it.y/10)} cm`
-        : `from ${Math.round(it.y/10)} cm up, a 600 mm wide column of tilt bins (${ORDER.filter(n => it.comp[n] > 0).map(n => it.comp[n] + ' x ' + n + '-drawer').join(', ')}, largest at the bottom${binsLayout(it).parts.some(p => p.type === 'shelf') ? ', with steel shelves between the sizes' : ''}) hung with their backs on the cabinet back against the ${it.side} side`);
+      const it = TB.items[0], top = ORDER.filter(n => it.comp[n] > 0).reverse();
+      const zs = top.length ? [`one single 600 mm wide column of tilt bin units stacked directly on top of each other, nested, with no shelves at all, filling the 630 mm inner width (from the top down: ${top.map(n => it.comp[n] + ' x ' + n + '-drawer').join(', ')}), ${TB.align === 'front' ? 'pushed forward so the fronts of all units are flush with the front of the cabinet, just behind the tambour' : 'pushed back against the back wall of the cabinet'}`] : [];
       const peg = cl === 'doors' ? ` The inside of each door is a perforated metal pegboard panel${TB.acc ? ' holding hooks, small blue plastic baskets, a hammer, screwdrivers and pliers' : ' (empty)'}.` : '';
       return `${shell} Every tilt bin unit has an injection-moulded light grey RAL 7035 body with clear transparent tilt-out bins. Inside, from the bottom: ${zs.join('; ') || 'empty'}.${peg}${flags.length ? ' ' + flags.join('; ') + '.' : ''}`;
     }
@@ -4544,7 +4513,7 @@ const EN = {
   '✓ נבדק: מספר התאים והפרופילים תואמים לבסיס':'✓ Checked: bin count and profiles match the base', 'עומק בסיס':'Base depth', 'עומק התא התחתון + 1 ס"מ + פרופיל העמוד 3 ס"מ':'bottom unit depth + 1 cm + 3 cm upright profile', 'ההרכב שנשלח לרינדור (נבנה אוטומטית מהמודל)':'Layout sent with the render (built automatically from the model)', 'תפריט':'Menu', 'סגירת התפריט':'Close menu', '✓ נבדק: מספר התאים והפרופילים תואמים למודל':'✓ Checked: bin count and profiles match the model', 'התמונה לא תואמת למודל – לא לשימוש.':'The image does not match the model – do not use.',
   'נמצא פער מול המודל':'Mismatch with the model', 'מרנדר שוב, ניסיון':'rendering again, attempt', 'בדיקת הספירה לא רצה':'The count check did not run', 'בדקו את מספר התאים בעין.':'check the bin count by eye.', 'במודל:':'Model:', 'בתמונה:':'Image:', 'כל הזכויות שמורות':'All rights reserved', 'צמוד לקיר':'touching the wall', 'פנים הארון (מלמעלה למטה)':'Inside the cabinet (top to bottom)', '+ אזור רב תאים':'+ Tilt bin zone', 'פנוי':'Free', 'למעלה':'Up', 'למטה':'Down', 'הסרה':'Remove',
   'גובה מהרצפה בס"מ':'Height above the floor in cm', 'מדף מעל:':'Shelf above:', 'אין מקום – פנו גובה בארון':'No room – free some height in the cabinet', 'אין מקום לאזור רב תאים':'No room for a tilt bin zone',
-  'גובה תפוס:':'Height used:', 'גוררים מדף על המודל כדי להזיז אותו':'drag a shelf on the model to move it', 'מתוך':'of', 'דלתות הזזה עם מנעול (אופציה)':'Lockable sliding doors (option)', 'דלתות הזזה':'sliding doors', 'דלת':'Door',
+  'גובה תפוס:':'Height used:', 'רוחב פנימי 63 ס"מ – עמודה אחת':'inner width 63 cm – one column', 'רבי תאים בארון (מונחים זה על זה, הגדול למטה)':'Tilt bins in the cabinet (stacked on each other, largest at the bottom)', 'יישור בעומק הארון':'Depth alignment', 'יישור אחורי':'Back aligned', 'יישור קדמי':'Front aligned', 'אין מקום – הארון מלא':'No room – the cabinet is full', 'לא בארון הזה':'not in this cabinet', '67 × 45 × 195 ס"מ · RAL 7035 · תריס עם מנעול':'67 × 45 × 195 cm · RAL 7035 · lockable tambour', 'גוררים מדף על המודל כדי להזיז אותו':'drag a shelf on the model to move it', 'מתוך':'of', 'דלתות הזזה עם מנעול (אופציה)':'Lockable sliding doors (option)', 'דלתות הזזה':'sliding doors', 'דלת':'Door',
   'לחיצה על דלת במודל מזיזה אותה. בכל צמד הדלת השמאלית רצה מאחור והימנית מלפנים, עם מנעול צילינדר. בפריסת כנפיים הדלתות יורדות.':'Click a door on the model to slide it. In each pair the left door runs behind and the right one in front, with a cylinder lock. When the wings are spread the doors come off.',
   // metal cabinets
   'ארונות מתכת':'METAL CABINETS', 'ארון מתכת מאובטח לרב תא':'Secured tilt bin metal cabinet', 'ארון תריס':'Tambour metal cabinet', 'ארון 4 מדפים':'4-shelf metal cabinet',
