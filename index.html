@@ -3454,9 +3454,9 @@ $('renderBtn').onclick = () => {
     <div class="r-base" id="rBaseBox" hidden></div>
     <div id="rSetup">
     <div class="lbl">רקע</div>
-    <div class="seg2" id="rBg"><button data-v="transparent">שקוף</button><button data-v="studio" class="on">סטודיו</button></div>
+    <div class="seg2" id="rBg"><button data-v="transparent"${mode === 'scene' ? '' : ' class="on"'}>שקוף</button><button data-v="studio"${mode === 'scene' ? ' class="on"' : ''}>סטודיו</button></div>
     <div class="lbl">יחס תמונה</div>
-    <div class="ratios" id="rRatio">${ratios.map(r => `<button data-v="${r}" class="${r === '1:1' ? 'on' : ''}">${r === 'custom' ? 'CUSTOM' : r}</button>`).join('')}</div>
+    <div class="ratios" id="rRatio">${ratios.map(r => `<button data-v="${r}" class="${r === '4:5' ? 'on' : ''}">${r === 'custom' ? 'CUSTOM' : r}</button>`).join('')}</div>
     <div class="pair" id="rCustom" hidden>
       <label class="fld">רוחב (px)<input type="number" id="rW" min="256" max="3840" step="16" value="2048"></label>
       <label class="fld">גובה (px)<input type="number" id="rH" min="256" max="3840" step="16" value="1536"></label>
@@ -3505,7 +3505,7 @@ $('renderBtn').onclick = () => {
       <button class="btn" data-close>ביטול</button>
     </div>`, (card, close) => {
     $('dlg')._onClose = mountNotes(card);
-    const st = { bg:'studio', ratio:'1:1', res:'std', dpi:300 };
+    const st = { bg: mode === 'scene' ? 'studio' : 'transparent', ratio:'4:5', res:'std', dpi:300 };   // default: transparent 4:5; a scene: studio 4:5
     const q = (sel) => card.querySelector(sel);
     const seg = (id, key, after) => card.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => {
       st[key] = key === 'dpi' ? +b.dataset.v : b.dataset.v;
