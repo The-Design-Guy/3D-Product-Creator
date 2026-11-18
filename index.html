@@ -1194,14 +1194,10 @@
   </div>
 
   <div class="panel" id="pArc" data-mode="arc" data-family="arcs" hidden>
-    <button class="head" aria-expanded="false"><span class="ttl"><h1>ארקליות</h1><span class="sub">ארקליות פתוחות בערימה · כחול / אפור</span></span></button>
+    <button class="head" aria-expanded="false"><span class="ttl"><h1>ארקליות</h1><span class="sub">ארקלית בודדת · כחול / אפור</span></span></button>
     <div class="body"><div class="inner">
       <div class="lbl">דגם</div>
       <div class="seg2" id="arcModel"><button data-v="1">ארקלית 1</button><button data-v="2" class="on">ארקלית 2</button><button data-v="3">ארקלית 3</button><button data-v="4">ארקלית 4</button></div>
-      <div class="lbl">טורים</div>
-      <div class="seg2" id="arcCols"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3" class="on">3</button><button data-v="4">4</button><button data-v="5">5</button><button data-v="6">6</button><button data-v="7">7</button><button data-v="8">8</button></div>
-      <div class="lbl">שורות</div>
-      <div class="seg2" id="arcRows"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4" class="on">4</button><button data-v="5">5</button><button data-v="6">6</button><button data-v="7">7</button><button data-v="8">8</button><button data-v="9">9</button><button data-v="10">10</button><button data-v="11">11</button><button data-v="12">12</button></div>
       <div class="lbl">צבע</div>
       <div class="seg2" id="arcColor"><button data-v="blue" class="on">כחול</button><button data-v="grey">אפור</button></div>
       <div class="lbl">מחיצת אורך</div>
@@ -2577,7 +2573,7 @@ const ARC_MODELS = {
   3:{ code:'PSA2113', D:238, W:145, H:129, inner:'195x127x127', L:3.1, div:false },
   4:{ code:'PSA1108', D:170, W:96, H:80, inner:'134x80x77', L:0.83, div:false },
 };
-const ARC0 = { model:2, cols:3, rows:4, color:'blue', div:false };
+const ARC0 = { model:2, cols:1, rows:1, color:'blue', div:false };     // one single bin per product
 const ARC = { ...ARC0 };
 const TYPE_NAME = { unit:'רב תא', stand:'מעמד', excl:'עגלת רב-תא EXCLUSIVE', part:'מחיצת EXCLUSIVE מודולרית', quad:'מעמד 4 דפנות',
   wall:'מתלה קיר', tena:'תא-נע DELUX', smart:'תא-נע SMART', tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים', arc:'ארקליות' };
@@ -2605,7 +2601,7 @@ function applyCfg(t, c) {
   else if (t === 'tamb') { for (const k of ['comp', 'side', 'shelves', 'extra', 'items']) delete TB[k]; Object.assign(TB, deep(c.tb)); tbMigrate(TB); TB.closure = TB.closure || 'tambour'; TB.doors = TB.doors || [0, 0]; if (TB.acc === undefined) TB.acc = true; }
   else if (t === 'mtamb') Object.assign(MT, deep(c.mt));
   else if (t === 'mdoor') Object.assign(MD, deep(c.md));
-  else if (t === 'arc') Object.assign(ARC, ARC0, c.arc || {});
+  else if (t === 'arc') { Object.assign(ARC, ARC0, c.arc || {}); ARC.cols = ARC.rows = 1; }
   else { const v = t === 'smart' ? 'smart' : 'delux'; for (const k in TN[v]) delete TN[v][k]; Object.assign(TN[v], deep(c.tn)); tena = TN[v]; }
 }
 const capAll = () => ({ arc:{ ...ARC }, current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD), qd:deep(QD) });
@@ -2624,7 +2620,7 @@ function syncUI(t) {
   setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0');
   setSeg('quBase', QD.base); setSeg('quTop', QD.top || 'black'); setSeg('exTop', EXS.excl.top || 'black'); setSeg('ptTop', EXS.part.top || 'black');
   setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; setSeg('mdColor', MD.color);
-  setSeg('arcModel', ARC.model); setSeg('arcCols', ARC.cols); setSeg('arcRows', ARC.rows); setSeg('arcColor', ARC.color); setSeg('arcDiv', ARC.div ? '1' : '0');
+  setSeg('arcModel', ARC.model); setSeg('arcColor', ARC.color); setSeg('arcDiv', ARC.div ? '1' : '0');
   $('ptWide').checked = !!EXS.part.wide; setSeg('exSide', EXS.excl.side || 'left'); setSeg('ptSide', EXS.part.side || 'left'); setSeg('ptCols', EXS.part.cols || 2);
   for (const v of ['delux', 'smart']) { const px = v === 'smart' ? 'sm' : 'tn';
     if ($(px + 'Size')) setSeg(px + 'Size', TN[v].size);
@@ -3235,8 +3231,8 @@ function buildArc() {
   return { group:g, drawers:[], rods:[] };
 }
 function describeArc() {
-  const M = ARC_MODELS[ARC.model], S = arcBlockSize();
-  return `A free-standing block of stacked open-front plastic pick bins ("ארקלית ${ARC.model}", ${M.code}): ${ARC.cols} column${ARC.cols > 1 ? 's' : ''} side by side and ${ARC.rows} bin${ARC.rows > 1 ? 's' : ''} high, each bin sitting on the one below, fronts lined up (about ${Math.round(S.W)} mm wide, ${M.D} mm deep, ${Math.round(S.H)} mm high in all). Every bin is ${M.D} mm deep, ${M.W} mm wide, ${M.H} mm high, injection-moulded ${ARC.color === 'grey' ? 'dark grey' : 'bright blue'} polypropylene with a slightly glossy finish: a low front wall with a white label window, sides that slope up from the low front to the full height at the back, small vertical ribs on the outside of the sides, a thick rim, and a moulded hanging lip on the back.${ARC.div && M.div ? ' Each bin has one lengthwise divider down the middle, from front to back, splitting it into a left and a right half.' : ''}`;
+  const M = ARC_MODELS[ARC.model];
+  return `One single open-front plastic pick bin ("ארקלית ${ARC.model}", ${M.code}), ${M.D} mm deep, ${M.W} mm wide, ${M.H} mm high, injection-moulded ${ARC.color === 'grey' ? 'dark grey' : 'bright blue'} polypropylene with a slightly glossy finish: a low front wall with a label window, sides that slope up from the low front to the full height at the back, small vertical ribs on the outside of the sides, a thick rim, and a moulded hanging lip on the back.${ARC.div && M.div ? ' It has one lengthwise divider down the middle, from front to back, splitting it into a left and a right half.' : ''}`;
 }
 
 // ---------- Metal cabinets (shared builder) ----------
@@ -3868,8 +3864,6 @@ document.getElementById('mtAdd').onclick = () => addShelf(MT);
 document.getElementById('mdAdd').onclick = () => addShelf(MD);
 segGroup('mdColor', (v) => { MD.color = v; rebuild(true); });
 segGroup('arcModel', (v) => { ARC.model = +v; if (ARC.model > 2) ARC.div = false; rebuild(true); });
-segGroup('arcCols', (v) => { ARC.cols = +v; rebuild(true); });
-segGroup('arcRows', (v) => { ARC.rows = +v; rebuild(true); });
 segGroup('arcColor', (v) => { ARC.color = v; rebuild(true); });
 segGroup('arcDiv', (v) => { ARC.div = v === '1'; rebuild(true); });
 // family tabs: each tab shows its own products; the scene works across both
@@ -5684,7 +5678,7 @@ function addFamilies() {
       ...[4, 7, 10].map(n => ({ t:'tena', g:'תא נע DELUXE', name:`תא נע DELUXE – ${n} כנפיים`, kw:`תא נע דלוקס delux gondola ${n} כנפיים`, cfg:C('tena', c => c.tn.size = n) })),
       { t:'smart', name:'תא נע SMART', kw:'תא נע סמארט smart gondola', cfg:C('smart') } ] },
     { id:'walls', name:'מתלי קיר', vars:[600, 1200, 2000].map(h => ({ t:'wall', g:'מתלי קיר', name:'מתלה קיר ' + h/10, kw:'מתלה קיר wall rack פרופיל', cfg:C('wall', c => c.wall.height = h) })) },
-    { id:'arcs', name:'ארקליות', vars:[1, 2, 3, 4].map(n => ({ t:'arc', g:'ארקליות', name:'ארקלית ' + n, kw:`ארקלית ארקליות אחסונית אחסוניות pick bin ${ARC_MODELS[n].code} ${n}`, cfg:C('arc', c => { c.arc = { ...ARC0, model:n, cols:n >= 3 ? 4 : 3, rows:n >= 3 ? 6 : 4 }; }) })) },
+    { id:'arcs', name:'ארקליות', vars:[1, 2, 3, 4].map(n => ({ t:'arc', g:'ארקליות', name:'ארקלית ' + n, kw:`ארקלית ארקליות אחסונית אחסוניות pick bin ${ARC_MODELS[n].code} ${n}`, cfg:C('arc', c => { c.arc = { ...ARC0, model:n }; }) })) },
     { id:'metal', name:'ארונות מתכת', vars:[
       { t:'tamb', name:'ארון מאובטח לרב תא', kw:'ארון מתכת תריס נעילה secure cabinet', cfg:C('tamb') },
       { t:'mtamb', name:'ארון תריס', kw:'ארון מתכת תריס tambour cabinet', cfg:C('mtamb') },
@@ -6093,7 +6087,7 @@ const HEADS = {
     // the tambour opens to 90% while the shelves are set (still showing), and goes back afterwards
     open:() => { const S = METAL.mtamb, was = S.target; S.target = TBX.MAXO * 0.9; return () => { S.target = was; }; } }],
   mdoor:[{ seg:'mdColor', l:'צבע' }],
-  arc:[{ seg:'arcModel', l:'דגם' }, { seg:'arcCols', l:'טורים' }, { seg:'arcRows', l:'שורות' }, { seg:'arcColor', l:'צבע' }, { seg:'arcDiv', l:'מחיצת אורך', if:() => ARC.model <= 2 }],
+  arc:[{ seg:'arcModel', l:'דגם' }, { seg:'arcColor', l:'צבע' }, { seg:'arcDiv', l:'מחיצת אורך', if:() => ARC.model <= 2 }],
 };
 const segBtns = (id) => { const s = $(id); return s ? [...s.children].filter(b => b.tagName === 'BUTTON') : []; };
 const segVal = (b) => b.dataset.v ?? b.dataset.n ?? b.dataset.m;
@@ -6981,9 +6975,8 @@ function cfgFromPlan(p) {
     case 'tamb': { const c = comp(TB_MODELS); if (c) cfg.tb.items = [{ t:'bins', y:TBX.BASE, comp:c, side:'center', noSep:[...ORDER] }]; set(cfg.tb, 'align', st.align); break; }
     case 'mdoor': set(cfg.md, 'color', st.md_color); break;
     case 'arc': { const a = st.arc || {}; cfg.arc = { ...ARC0, ...(cfg.arc || {}) };
-      if (a.model) cfg.arc.model = a.model; if (a.cols) cfg.arc.cols = Math.max(1, Math.min(8, a.cols)); if (a.rows) cfg.arc.rows = Math.max(1, Math.min(12, a.rows));
+      if (a.model) cfg.arc.model = a.model; cfg.arc.cols = cfg.arc.rows = 1;
       if (a.color) cfg.arc.color = a.color; if (a.divider !== null && a.divider !== undefined) cfg.arc.div = !!a.divider && cfg.arc.model <= 2;
-      if (a.height_cm && !a.rows) { const M = ARC_MODELS[cfg.arc.model]; cfg.arc.rows = Math.max(1, Math.min(12, Math.floor((a.height_cm * 10 - M.H) / (M.H - ARC_NEST)) + 1)); }
       break; }
   }
   if (st.fill_model && ['stand', 'wall', 'excl', 'part', 'quad'].includes(p.type)) {
