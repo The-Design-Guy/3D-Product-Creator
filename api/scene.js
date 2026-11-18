@@ -8,7 +8,7 @@ export const config = { maxDuration: 60 };
 const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL || 'gpt-4.1-mini';
 
 const TYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor'];
-const OPS = ['add', 'move', 'move_to', 'rotate', 'rotate_to', 'delete', 'duplicate', 'set', 'bins', 'doors', 'tambour', 'contents', 'select', 'room', 'clear'];
+const OPS = ['add', 'move', 'move_to', 'rotate', 'rotate_to', 'delete', 'duplicate', 'set', 'bins', 'doors', 'tambour', 'contents', 'select', 'room', 'clear', 'commit'];
 
 const CATALOGUE = `
 Product types (type key – Hebrew name – footprint width x depth in cm with rot 0 – what can be set):
@@ -41,6 +41,7 @@ export default async function handler(req, res) {
   const existing = Array.isArray(req.body?.items) ? req.body.items.slice(0, 60) : [];
   const models = req.body?.models && typeof req.body.models === 'object' ? req.body.models : {};
   const selected = req.body?.selected ?? null;
+  const editor = req.body?.context === 'product_editor';
 
   const settings = nul({
     type:'object', additionalProperties:false,
@@ -103,6 +104,10 @@ export default async function handler(req, res) {
     '- contents: text = what is inside the bins of that product for the realistic render ("שים ברגים ירוקים" → contents "ברגים ירוקים"). The 3D model does not show contents.',
     '- room: change the room size / walls.',
     '"המתקן הזה / המוצר הזה / זה" = the selected product (target null). Products can also be named by their name, type or position ("המחיצה השנייה", "זה שליד הקיר").',
+    ...(editor ? [
+      'CONTEXT: the user is in the PRODUCT EDITOR, setting up ONE product before it goes into the scene (it is the selected product, if any). There is no room here: never use move / rotate / room / clear / select / duplicate / delete.',
+      'Use: set (change its settings), bins, doors, tambour, contents; "add" (with type, saved_model, settings) only to switch to / pick another product to set up; "commit" = add the product being set up to the scene (count = how many times, e.g. "תוסיף שלושה כאלה לסצנה" → commit count 3).',
+    ] : ['Never use commit.']),
     'Every field that is not used by an op is null. Use only the product ids listed. Do not invent things the user did not ask for.',
   ].join('\n');
   const user = `Room now: ${JSON.stringify(room)}\nSelected product id: ${selected === null ? 'none' : selected}\nProducts in the scene: ${JSON.stringify(existing)}\nSaved models per type: ${JSON.stringify(models)}\n\nRequest:\n${text}`;
