@@ -156,24 +156,31 @@ async function api(a, body, type) {
 if (!/^[a-z0-9]{20}$/.test(SID)) { $('startBtn').disabled = true; $('startErr').textContent = 'הקישור לא שלם – סרקו שוב את הברקוד מהמחשב.'; }
 
 // ---------- start: camera + compass ----------
-$('startBtn').onclick = async () => {
+// the compass: Android gives it right away; iPhone only after a tap (asked on the first tap of the shutter)
+const needsAsk = () => window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function';
+let asked = false;
+function listenCompass() {
+  const on = (e) => { const h = typeof e.webkitCompassHeading === 'number' ? e.webkitCompassHeading : e.alpha !== null && e.alpha !== undefined ? 360 - e.alpha : null; if (h !== null) heading = (h + 360) % 360; };
+  addEventListener('deviceorientationabsolute', on); addEventListener('deviceorientation', on);
+}
+async function askCompass() {
+  if (asked || !needsAsk()) return; asked = true;
+  try { compass = (await DeviceOrientationEvent.requestPermission()) === 'granted'; if (compass) listenCompass(); } catch { compass = false; }
+}
+async function startCamera(fromTap) {
   $('startErr').textContent = '';
-  try {                                                         // iPhone asks for the compass, and only from a tap
-    if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      const p = await DeviceOrientationEvent.requestPermission().catch(() => 'denied'); compass = p === 'granted';
-    } else compass = 'DeviceOrientationEvent' in window;
-  } catch { compass = false; }
+  if (fromTap) await askCompass();
+  if (!needsAsk() && 'DeviceOrientationEvent' in window && !compass) { compass = true; listenCompass(); }
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1920 }, height:{ ideal:1440 } }, audio:false });
-  } catch (e) { $('startErr').textContent = 'אין גישה למצלמה. אשרו גישה למצלמה בהגדרות הדפדפן ונסו שוב.'; return; }
+  } catch (e) { show('sStart'); $('startErr').textContent = fromTap ? 'אין גישה למצלמה. אשרו גישה למצלמה בהגדרות הדפדפן ונסו שוב.' : ''; return; }
   $('vid').srcObject = stream; await $('vid').play().catch(() => {});
-  if (compass) {
-    const on = (e) => { const h = typeof e.webkitCompassHeading === 'number' ? e.webkitCompassHeading : (e.absolute || e.alpha !== null) && e.alpha !== null ? 360 - e.alpha : null; if (h !== null) heading = (h + 360) % 360; };
-    addEventListener('deviceorientationabsolute', on); addEventListener('deviceorientation', on);
-  }
   drawTicks(); renderThumbs(); show('cam'); requestAnimationFrame(loop);
-  setTimeout(() => { if (heading === null) { compass = false; $('ring').hidden = true; } }, 1500);
-};
+  setTimeout(() => { if (heading === null && !needsAsk()) { compass = false; $('ring').hidden = true; } }, 1500);
+}
+$('startBtn').onclick = () => startCamera(true);
+// straight into the camera when the page opens from the QR code (the start page shows only if the browser needs a tap first)
+if (/^[a-z0-9]{20}$/.test(SID)) { show('sWait'); $('waitTxt').textContent = 'פותח את המצלמה…'; startCamera(false); }
 
 // ---------- the guide ring: where to turn, and auto capture when lined up ----------
 const diff = (a, b) => ((a - b + 540) % 360) - 180;
@@ -195,7 +202,7 @@ function loop(t) {
     $('autoTxt').textContent = 'צילום אוטומטי לפי המצפן · אפשר גם ללחוץ';
   } else {
     $('camSub').textContent = `תמונה ${next + 1} מתוך ${N}`;
-    $('autoTxt').textContent = ready ? 'לחצו לצילום הראשון – משם הטלפון ממשיך לבד' : 'אין מצפן – לחצו לצילום, ואז הסתובבו ⅛ סיבוב ימינה';
+    $('autoTxt').textContent = ready ? 'לחצו לצילום הראשון – משם הטלפון ממשיך לבד' : needsAsk() && !asked ? 'לחצו לצילום הראשון – הטלפון יבקש גישה למצפן, ומשם יצלם לבד' : 'אין מצפן – לחצו לצילום, ואז הסתובבו ⅛ סיבוב ימינה';
   }
   requestAnimationFrame(loop);
 }
@@ -236,7 +243,7 @@ function renderThumbs() {
   $('nextBtn').textContent = all ? 'לניתוח ›' : 'לניתוח בלי כולן ›';
   $('camMsg').textContent = next < N ? AIM[next] : 'כל התמונות צולמו';
 }
-$('shutter').onclick = () => { holdT = 0; capture(); };
+$('shutter').onclick = async () => { holdT = 0; if (needsAsk() && !asked) await askCompass(); capture(); };
 $('cancelBtn').onclick = async () => { if (!confirm('לבטל את הצילום?')) return; stream && stream.getTracks().forEach(t => t.stop()); try { await api('cancel'); } catch {} show('sStart'); };
 
 // ---------- analysis ----------
