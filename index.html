@@ -839,6 +839,13 @@
   .photobar b { font-size:14px; } .photobar #photoName { font-size:13px; color:var(--muted); }
   .photobar .btn { height:36px; border-radius:999px; background:#101820; color:#fff; border-color:#101820; padding:0 16px; }
   body.photo .hint { display:none; }
+  .adrawer.rendermode { width:min(420px, 94vw); }
+  .adtab.open:has(~ .adrawer.rendermode), body:has(.adrawer.rendermode.in) .adtab.open { right:min(420px, 94vw); }
+  html[dir=ltr] body:has(.adrawer.rendermode.in) .adtab.open { right:auto; left:min(420px, 94vw); }
+  .rpanel { padding:6px 2px 24px; }
+  .rpanel > h3 { display:none; }
+  .rpanel .dlg-actions { position:sticky; bottom:-24px; background:linear-gradient(to top, #fff 75%, rgba(255,255,255,0)); padding:14px 0 10px; margin-top:12px; z-index:2; }
+  .rpanel .ratios { grid-template-columns:repeat(5, 1fr); }
   .adtab { position:fixed; z-index:45; top:calc(var(--hh) + var(--sh, 0px) + 12px); right:0; width:26px; height:52px; padding:0; display:flex; align-items:center; justify-content:center; color:#5b646c; background:#fff; border:1px solid var(--line); border-right:0; border-radius:10px 0 0 10px; box-shadow:-6px 4px 16px rgba(0,0,0,.08); cursor:pointer; transition:right .38s cubic-bezier(.2,.8,.2,1), color .15s; }
   .adtab.open { right:min(340px, 92vw); }
   .adtab:hover { color:#101820; }
@@ -4069,6 +4076,7 @@ function saveSceneDialog() {
 }
 // restore: the side drawer – the saved scenes by name; hovering one shows its picture at the top
 function openArchDrawer(refresh) {
+  if (renderBusyGuard()) return;
   if (SHEET) closeSheet(true);
   if (SET_OPEN === 'arch' && !refresh) { closeAddDrawer(); return; }
   setBack();
@@ -4125,6 +4133,25 @@ function openDialog(html, onReady) {
   onReady && onReady(wrap.firstElementChild, close);
   const first = wrap.querySelector('input,select,button'); first && first.focus();
 }
+// ---- the render, in the side drawer (where the products are) ----
+const RWRAP = { _busy:false, _onClose:null };
+function openRenderPanel(html, onReady) {
+  if (SET_OPEN === 'render' && RWRAP._busy) { showDrawer(); return; }     // a render is running: just show it
+  if (SHEET) closeSheet(true);
+  setBack();
+  ADD_OPEN = false; clearInterval(AD_TICK); AD.page = null; $('fabAdd').classList.remove('on');
+  const d = $('addDrawer'), list = $('adList');
+  $('adTitle').textContent = 'Render'; $('adFoot').hidden = true; list.scrollTop = 0;
+  list.innerHTML = `<div class="rpanel">${html}</div>`;
+  const card = list.firstElementChild;
+  const close = () => { RWRAP._busy = false; closeAddDrawer(); };
+  card.querySelectorAll('[data-close]').forEach(b => b.onclick = async () => { if (RWRAP._busy && !(await askConfirm('הרינדור עדיין רץ. לסגור בכל זאת? התוצאה לא תוצג.', 'לסגור'))) return; close(); });
+  SET_OPEN = 'render'; LAST_DRAWER = 'render'; d.classList.add('rendermode'); $('renderBtn').classList.add('on');
+  showDrawer();
+  onReady && onReady(card, close);
+}
+function showDrawer() { const d = $('addDrawer'); d.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => { d.classList.add('in'); adTab(); })); }
+function renderBusyGuard() { if (SET_OPEN === 'render' && RWRAP._busy) { toast('הרינדור עדיין רץ – אפשר לחזור אליו מהלשונית ⋮'); showDrawer(); return true; } return false; }
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.hidden = false;
   clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2600);
@@ -4390,7 +4417,7 @@ $('renderBtn').onclick = () => {
   }
   if (!adminKey()) { toast('הרינדור זמין במצב ניהול'); $('lockBtn').click(); return; }
   const ratios = ['1:1', '3:4', '4:3', '5:4', '4:5', '2:3', '3:2', '9:16', '16:9', 'custom'];
-  openDialog(`
+  openRenderPanel(`
     <h3 dir="ltr" style="text-align:right">RENDER REALISTIC PHOTO?</h3>
     <p class="dlg-sub">התצוגה הנוכחית תהפוך לצילום מוצר ריאליסטי. כל שלב לוקח בערך חצי דקה עד דקה.</p>
     <div class="lbl">תהליך</div>
@@ -4449,7 +4476,7 @@ $('renderBtn').onclick = () => {
       <button class="btn" id="rApprove" hidden>✓ אשר כבסיס</button>
       <button class="btn" data-close>ביטול</button>
     </div>`, (card, close) => {
-    $('dlg')._onClose = mountNotes(card);
+    RWRAP._onClose = mountNotes(card);
     const st = { bg: mode === 'scene' ? 'studio' : 'transparent', ratio:'4:5', res: mode === 'scene' ? 'high' : 'std', dpi:300 };   // product photo: transparent 4:5; a scene: studio 4:5, high quality
     const q = (sel) => card.querySelector(sel);
     const seg = (id, key, after) => card.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => {
@@ -4563,7 +4590,7 @@ $('renderBtn').onclick = () => {
       const z = st.flow === 'two' && st.base ? (() => { const [w, h] = st.base.size.split('x').map(Number); return { w, h }; })() : size();
       if (z.error) return;
       const go = q('#rGo'), out = q('#rOut'), er = q('#rErr');
-      er.hidden = true; go.disabled = true; go.textContent = 'מרנדר…'; q('#rApprove').hidden = true; $('dlg')._busy = true;
+      er.hidden = true; go.disabled = true; go.textContent = 'מרנדר…'; q('#rApprove').hidden = true; RWRAP._busy = true;
       out.hidden = false; out.innerHTML = '';
       try {
         let body;
@@ -4601,7 +4628,7 @@ $('renderBtn').onclick = () => {
         out.querySelector('.r-fs').onclick = () => openLightbox(r.image, acts);
         out.querySelector('img').onclick = () => openLightbox(r.image, acts);
         out.querySelector('img').ondblclick = () => openLightbox(r.image);
-        go.disabled = false; $('dlg')._busy = false;
+        go.disabled = false; RWRAP._busy = false;
         if (st.flow === 'two' && !st.base) {          // stage 1 done: approve it, or render the base again
           go.textContent = 'רנדר בסיס שוב';
           const ap = q('#rApprove'); ap.hidden = false; ap.classList.toggle('primary', ck.ok !== false); ap.classList.toggle('warnbtn', ck.ok === false);
@@ -4614,7 +4641,7 @@ $('renderBtn').onclick = () => {
         }
       } catch (e) {
         out.hidden = true; er.textContent = 'הרינדור נכשל: ' + e.message; er.hidden = false;
-        go.textContent = 'נסה שוב'; go.disabled = false; $('dlg')._busy = false;
+        go.textContent = 'נסה שוב'; go.disabled = false; RWRAP._busy = false;
       }
     };
   });
@@ -5053,6 +5080,7 @@ function photoFor(f, c) {
   return null;
 }
 function openAddDrawer() {
+  if (renderBusyGuard()) return;
   if (SHEET) closeSheet(true);
   setBack();
   const d = $('addDrawer');
@@ -5160,6 +5188,7 @@ function addFromDrawer(v, pt) {
 }
 function closeAddDrawer() {
   const d = $('addDrawer'); if (!ADD_OPEN && !SET_OPEN) return;
+  if (SET_OPEN === 'render' && RWRAP._busy) { d.classList.remove('in'); setTimeout(() => { if (!d.classList.contains('in')) d.hidden = true; adTab(); }, 380); adTab(); return; }
   setBack(); $('fabSet').classList.remove('on');
   ADD_OPEN = false; clearInterval(AD_TICK); $('fabAdd').classList.remove('on'); d.classList.remove('in');
   setTimeout(() => { if (!ADD_OPEN && !SET_OPEN) d.hidden = true; }, 380);
@@ -5169,17 +5198,20 @@ function closeAddDrawer() {
 let LAST_DRAWER = 'add';
 function adTab() {
   const t = $('adTab'); if (!t) return;
-  const open = ADD_OPEN || !!SET_OPEN;
-  t.hidden = mode !== 'scene'; t.classList.toggle('open', open);
+  const open = !$('addDrawer').hidden && $('addDrawer').classList.contains('in');
+  t.hidden = mode !== 'scene' && !(PHOTO.on && SET_OPEN === 'render'); t.classList.toggle('open', open);
   t.title = open ? 'סגירת הפאנל' : 'פתיחת הפאנל'; t.setAttribute('aria-expanded', open);
 }
 function adTabClick() {
-  if (ADD_OPEN || SET_OPEN) { closeAddDrawer(); return; }
+  if (!$('addDrawer').hidden && $('addDrawer').classList.contains('in')) { closeAddDrawer(); return; }
+  if (SET_OPEN === 'render') { showDrawer(); return; }             // a render that runs in the background
+  if (LAST_DRAWER === 'render') { $('renderBtn').click(); return; }
   if (LAST_DRAWER === 'arch') openArchDrawer(); else if (LAST_DRAWER === 'light') openLightDrawer(); else if (LAST_DRAWER === 'set' || LAST_DRAWER === 'cam') openSetDrawer(LAST_DRAWER); else openAddDrawer();
 }
 // ---- "הגדרות הסצנה": the same drawer, with the scene's settings as cards (their controls are lent from the scene panel) ----
 let SET_OPEN = false, SET_LENT = [];
 function openSetDrawer(kind = 'set') {
+  if (renderBusyGuard()) return;
   if (SHEET) closeSheet(true);
   if (SET_OPEN === kind) { closeAddDrawer(); return; }
   setBack();
@@ -5256,6 +5288,7 @@ function lpPlaceSun() {
   LP.ray.geometry.setFromPoints([p, new THREE.Vector3(0, 0, 0)]); LP.ray.computeLineDistances();
 }
 function openLightDrawer() {
+  if (renderBusyGuard()) return;
   if (SHEET) closeSheet(true);
   if (SET_OPEN === 'light') { closeAddDrawer(); return; }
   setBack();
@@ -5329,7 +5362,9 @@ function drawLightView() {
 // the lent controls go back to the scene panel
 function setBack() {
   SET_LENT.forEach(({ el, home }) => { if (home.parentNode) { home.parentNode.insertBefore(el, home); home.remove(); } });
-  SET_LENT = []; SET_OPEN = false;
+  SET_LENT = [];
+  if (SET_OPEN === 'render') { if (RWRAP._onClose) { RWRAP._onClose(); RWRAP._onClose = null; } RWRAP._busy = false; $('addDrawer').classList.remove('rendermode'); $('renderBtn').classList.remove('on'); }
+  SET_OPEN = false;
   if ($('fabCam')) $('fabCam').classList.remove('on');
   if (LP.on) { LP.on = false; $('lightBtn').classList.remove('on'); $('addDrawer').classList.remove('lightmode'); }
 }
@@ -7208,7 +7243,7 @@ const EN = {
   'סיבוב':'Rotate', 'זווית':'Angle', 'רוחב החדר במטרים':'Room width in metres', 'עומק החדר במטרים':'Room depth in metres',
   'קליק בוחר מוצר. קליק או גרירה על תא, דלת או תריס של המוצר הבחור פותחים וסוגרים אותם (גרירה למטה פותחת תא, למעלה סוגרת; התריס זז עם העכבר). ✥ מפעיל הזזה: גרירה על הרצפה, חיצים – ס"מ לפי כיוון המוצר (Shift – 10 ס"מ), החזקת הלחצן על המוצר + גלגלת – גובה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. קליק על הרצפה משחרר. Ctrl+Z מבטל.':'Click selects a product. Clicking or dragging a bin, door or tambour of the selected product opens / closes it (drag down opens a bin, up closes it; the tambour follows the pointer). ✥ turns on moving: drag on the floor, arrows – 1 cm in the product\'s own directions (Shift – 10 cm), hold the button on the product + wheel – height. A product never goes into a wall or another product – it stops on contact. Pink line = lined up with another product. Click the floor to release. Ctrl+Z undoes.',
   'לרב תא בודד בוחרים את מספר התאים בלשונית "רב תא" לפני ההוספה.':'For a single tilt bin, choose the number of bins in the "Tilt bin" tab before adding it.',
-  'צמוד ל':'Touching the ', 'קיר אחורי':'back wall', 'קיר שמאלי':'left wall', 'קיר ימני':'right wall', 'ול':' and the ', 'מוצרים':'products', 'חדר':'room', "מ'":'m', 'עגלת רב-תא EXCLUSIVE':'Exclusive Tilt Bin cart', 'מחיצת EXCLUSIVE מודולרית':'Modular Exclusive Partition', 'מעמד 4 דפנות':'Four-sided stand', 'מתקן חד צדדי':'Single-sided stand', 'מתקן חד צדדי – רגליים':'Single-sided stand – legs', 'מתקן חד צדדי – גלגלים':'Single-sided stand – wheels', 'תא נע DELUXE':'GONDOLA DELUXE', 'תא נע SMART':'GONDOLA SMART', 'כנפיים':'wings', 'הוספת מוצרים':'Add products', 'הגדרות מצלמה':'Camera settings', 'צילום מוצר':'Product photo', 'צילום מוצר – המוצר לבד, על רקע שקוף':'Product photo – the product on its own, transparent background', 'חזרה לסצנה':'Back to the scene', 'הארכיון':'Archive', 'הארכיון: שמירה ושחזור של סצנות':'Archive: save and restore scenes', 'שמור סצנה':'Save scene', 'שחזר סצנה':'Restore scene', 'שלב א׳ בלבד, או כל הגדרות הסצנה':'Stage 1 only, or all the scene settings', 'כל הסצנות השמורות, עם תמונה':'All the saved scenes, with a picture', 'שמירת סצנה':'Save a scene', 'שם הסצנה':'Scene name', 'שלב א׳ בלבד':'Stage 1 only', 'החדר, המוצרים, המיקומים והמצלמה':'The room, products, positions and camera', 'כל הגדרות הסצנה':'All the scene settings', 'כולל התאורה, הבריף לרינדור והתמונות':'Including the lighting, the render brief and the pictures', 'שחזור סצנה':'Restore a scene', 'מעבר עם העכבר על סצנה מציג אותה כאן':'Hover a scene to see it here', 'לסצנה הזו אין עדיין תמונה':'This scene has no picture yet', 'סצנה מלאה':'Full scene', 'שלב א׳':'Stage 1', 'שמירת סצנות זמינה במצב ניהול':'Saving scenes is available in admin mode', 'עדיין אין סצנות שמורות.':'No saved scenes yet.', 'סגירת הפאנל':'Close the panel', 'פתיחת הפאנל':'Open the panel', 'הפאנל':'Panel', 'גררו את השמש על הכיפה':'Drag the sun across the dome', 'גררו את השמש':'Drag the sun', 'סוג האור':'Type of light', 'עוצמה וצל':'Strength and shadow', 'רכות הצל':'Shadow softness', 'איפוס תאורה':'Reset lighting', 'חד':'Sharp', 'רך':'Soft', 'רך מאוד':'Very soft', 'איפוס זווית הצילום':'Reset the camera angle', 'המצלמה חוזרת לזווית ברירת המחדל':'The camera goes back to the default angle', 'איפוס הסצנה':'Reset the scene', 'כל המוצרים יוסרו – מתחילים סצנה חדשה':'All products are removed – a new scene starts', 'זוויות צילום שמורות':'Saved camera angles', 'שמור זווית צילום':'Save camera angle', 'אפס לברירת מחדל':'Reset to default', '— בחרו זווית שמורה —':'— pick a saved angle —', 'אין עדיין זוויות שמורות':'No saved angles yet', 'מחיקת הזווית':'Delete the angle', 'שמירת זווית צילום':'Save a camera angle', 'נשמרת רק הזווית של המצלמה (מיקום, כיוון ועדשה) – לא הסצנה. אפשר להשתמש בה בכל סצנה.':'Only the camera angle is saved (position, direction and lens) – not the scene. It can be used in any scene.', 'שם הזווית':'Angle name', 'בלי מוצר בחור: W / S קדימה ואחורה, A / D לצדדים, R / F למעלה ולמטה, Q / E עדשה, Z / C סיבוב (Shift – מהר).':'With no product selected: W / S forward and back, A / D sideways, R / F up and down, Q / E lens, Z / C turn (Shift – faster).', 'קדמי':'Front', 'קיר קדמי':'Front wall', 'קיר אחורי':'Back wall', 'קיר שמאלי':'Left wall', 'קיר ימני':'Right wall', 'רצפה':'Floor', 'צילום החדר':'Scan the room', 'מצלמה':'Camera', 'סורקים ברקוד בטלפון, מצלמים את החדר ב־360° – והסצנה נבנית לפי החדר האמיתי.':'Scan the code with a phone, film the room in 360° – and the scene is built from the real room.', 'בשלב הזה הברקוד מוכן; הצילום והניתוח בטלפון יגיעו בשלב הבא.':'The code is ready; filming and analysis on the phone come in the next step.', 'החדר':'The room', 'מוצרים בסצנה':'Products in the scene', 'מצלמה':'Camera', 'סצנות שמורות':'Saved scenes', 'ביטול הבחירה (Esc)':'Deselect (Esc)', 'ביטול הבחירה':'Deselect', 'הוספה לסצנה':'Add to the scene', 'מספר תאים':'Bins per set', 'גררו לסצנה':'Drag into the scene', 'שחור':'Black', 'לבן':'White', 'רגליים':'Legs', 'עם':'With', 'כחול':'Blue', 'הרכב הכנפיים':'Wing layout', 'זיהוי כנפיים':'Identify wings', 'סיום':'Done', 'הסר הכל':'Remove all', 'הרכב כנף שמור…':'Saved wing layout…', 'שמור הרכב זה':'Save this layout', 'שם ההרכב':'Layout name', 'שמירה':'Save', 'לא בעומק הזה':'Not at this depth', 'אין מקום בגובה':'No height left', 'בחרו כנף קודם':'Pick a wing first', 'כל התאים פתוחים':'All bins open', 'בחרו מדף':'Pick a shelf', 'לחיצה על תא פותחת / סוגרת':'Click a bin to open / close it', 'גרירה על התריס':'drag the shutter', 'לחיצה / גרירה על דלת':'click / drag a door', ' · גרירת מדף, או R / F':' · drag a shelf, or R / F', 'הרכב התאים':'Bin layout', 'עומק בסיס':'Base depth', 'דלתות הזזה':'Sliding doors', 'בלי':'Without', 'עם דלתות הזזה':'With sliding doors', 'הרכב התאים והמדפים':'Bins and shelves', 'מיקום ומספר המדפים':'Shelves – number and position', 'מספר תאים בסט':'Bins per set', 'צבע הגג':'Top colour', 'ידית':'Handle', 'בסיס':'Base', 'גלגלים':'Wheels', 'מספר טורים':'Columns', 'קיר':'Wall', 'עומק':'Depth', 'יישור':'Alignment', 'צבע':'Colour', 'תוכן התאים ברינדור':'Bin contents in the render', 'תאים':'bins', 'טורים':'columns', 'הועתק – Ctrl+V מדביק':'Copied – Ctrl+V pastes', 'אחורה (לקיר האחורי)':'Back (toward the back wall)', 'שמאלה':'Left', 'קדימה':'Forward', 'ימינה':'Right', 'סיבוב נגד כיוון השעון':'Turn counter-clockwise', 'סיבוב עם כיוון השעון':'Turn clockwise', 'גובה':'Height', 'סיבוב 5° · Shift 45°':'Turn 5° · Shift 45°', 'סיבוב':'Rotation', 'Shift = צעד של 10 ס"מ':'Shift = 10 cm steps', 'ס"מ':'cm', 'מצב עריכה':'Edit mode', 'מצב הזזה':'Move mode', 'מצב סידור':'Arrange mode', 'מצב סידור – דלתות, מדפים, תאים':'Arrange mode – doors, shelves, bins', 'שכפול (Ctrl+D)':'Duplicate (Ctrl+D)', 'מחיקה (Delete)':'Delete (Delete)', 'מצב עריכה ':'Edit mode', 'הגדרות המוצר יופיעו כאן':'The product settings will appear here', 'מקשי ההזזה והמיקום יופיעו כאן':'The move keys and position will appear here', 'סידור דלתות, מדפים ותאים יופיע כאן':'Arranging doors, shelves and bins will appear here', 'חזרה':'Back', 'חזרה לסצנה':'Back to the scene', 'רב תא':'Tilt bin', 'גררו לסצנה, או לחיצה כפולה להוספה במרכז':'Drag into the scene, or double-click to add it in the middle', 'וריאציות':'variations', 'סגירה':'Close', 'הוסף מוצר / מערכת זה / זו':'Add this product / system', 'פעמים':'times', 'כמה פעמים':'How many times', 'הוסף מוצר זה לסצנה':'Add this product to the scene', 'מספר הפעמים שיש להוסיף מערכת זו / מוצר זה לסצנה:':'How many times to add this system / product to the scene:',
+  'צמוד ל':'Touching the ', 'קיר אחורי':'back wall', 'קיר שמאלי':'left wall', 'קיר ימני':'right wall', 'ול':' and the ', 'מוצרים':'products', 'חדר':'room', "מ'":'m', 'עגלת רב-תא EXCLUSIVE':'Exclusive Tilt Bin cart', 'מחיצת EXCLUSIVE מודולרית':'Modular Exclusive Partition', 'מעמד 4 דפנות':'Four-sided stand', 'מתקן חד צדדי':'Single-sided stand', 'מתקן חד צדדי – רגליים':'Single-sided stand – legs', 'מתקן חד צדדי – גלגלים':'Single-sided stand – wheels', 'תא נע DELUXE':'GONDOLA DELUXE', 'תא נע SMART':'GONDOLA SMART', 'כנפיים':'wings', 'הוספת מוצרים':'Add products', 'הרינדור עדיין רץ – אפשר לחזור אליו מהלשונית ⋮':'The render is still running – reopen it from the ⋮ tab', 'הגדרות מצלמה':'Camera settings', 'צילום מוצר':'Product photo', 'צילום מוצר – המוצר לבד, על רקע שקוף':'Product photo – the product on its own, transparent background', 'חזרה לסצנה':'Back to the scene', 'הארכיון':'Archive', 'הארכיון: שמירה ושחזור של סצנות':'Archive: save and restore scenes', 'שמור סצנה':'Save scene', 'שחזר סצנה':'Restore scene', 'שלב א׳ בלבד, או כל הגדרות הסצנה':'Stage 1 only, or all the scene settings', 'כל הסצנות השמורות, עם תמונה':'All the saved scenes, with a picture', 'שמירת סצנה':'Save a scene', 'שם הסצנה':'Scene name', 'שלב א׳ בלבד':'Stage 1 only', 'החדר, המוצרים, המיקומים והמצלמה':'The room, products, positions and camera', 'כל הגדרות הסצנה':'All the scene settings', 'כולל התאורה, הבריף לרינדור והתמונות':'Including the lighting, the render brief and the pictures', 'שחזור סצנה':'Restore a scene', 'מעבר עם העכבר על סצנה מציג אותה כאן':'Hover a scene to see it here', 'לסצנה הזו אין עדיין תמונה':'This scene has no picture yet', 'סצנה מלאה':'Full scene', 'שלב א׳':'Stage 1', 'שמירת סצנות זמינה במצב ניהול':'Saving scenes is available in admin mode', 'עדיין אין סצנות שמורות.':'No saved scenes yet.', 'סגירת הפאנל':'Close the panel', 'פתיחת הפאנל':'Open the panel', 'הפאנל':'Panel', 'גררו את השמש על הכיפה':'Drag the sun across the dome', 'גררו את השמש':'Drag the sun', 'סוג האור':'Type of light', 'עוצמה וצל':'Strength and shadow', 'רכות הצל':'Shadow softness', 'איפוס תאורה':'Reset lighting', 'חד':'Sharp', 'רך':'Soft', 'רך מאוד':'Very soft', 'איפוס זווית הצילום':'Reset the camera angle', 'המצלמה חוזרת לזווית ברירת המחדל':'The camera goes back to the default angle', 'איפוס הסצנה':'Reset the scene', 'כל המוצרים יוסרו – מתחילים סצנה חדשה':'All products are removed – a new scene starts', 'זוויות צילום שמורות':'Saved camera angles', 'שמור זווית צילום':'Save camera angle', 'אפס לברירת מחדל':'Reset to default', '— בחרו זווית שמורה —':'— pick a saved angle —', 'אין עדיין זוויות שמורות':'No saved angles yet', 'מחיקת הזווית':'Delete the angle', 'שמירת זווית צילום':'Save a camera angle', 'נשמרת רק הזווית של המצלמה (מיקום, כיוון ועדשה) – לא הסצנה. אפשר להשתמש בה בכל סצנה.':'Only the camera angle is saved (position, direction and lens) – not the scene. It can be used in any scene.', 'שם הזווית':'Angle name', 'בלי מוצר בחור: W / S קדימה ואחורה, A / D לצדדים, R / F למעלה ולמטה, Q / E עדשה, Z / C סיבוב (Shift – מהר).':'With no product selected: W / S forward and back, A / D sideways, R / F up and down, Q / E lens, Z / C turn (Shift – faster).', 'קדמי':'Front', 'קיר קדמי':'Front wall', 'קיר אחורי':'Back wall', 'קיר שמאלי':'Left wall', 'קיר ימני':'Right wall', 'רצפה':'Floor', 'צילום החדר':'Scan the room', 'מצלמה':'Camera', 'סורקים ברקוד בטלפון, מצלמים את החדר ב־360° – והסצנה נבנית לפי החדר האמיתי.':'Scan the code with a phone, film the room in 360° – and the scene is built from the real room.', 'בשלב הזה הברקוד מוכן; הצילום והניתוח בטלפון יגיעו בשלב הבא.':'The code is ready; filming and analysis on the phone come in the next step.', 'החדר':'The room', 'מוצרים בסצנה':'Products in the scene', 'מצלמה':'Camera', 'סצנות שמורות':'Saved scenes', 'ביטול הבחירה (Esc)':'Deselect (Esc)', 'ביטול הבחירה':'Deselect', 'הוספה לסצנה':'Add to the scene', 'מספר תאים':'Bins per set', 'גררו לסצנה':'Drag into the scene', 'שחור':'Black', 'לבן':'White', 'רגליים':'Legs', 'עם':'With', 'כחול':'Blue', 'הרכב הכנפיים':'Wing layout', 'זיהוי כנפיים':'Identify wings', 'סיום':'Done', 'הסר הכל':'Remove all', 'הרכב כנף שמור…':'Saved wing layout…', 'שמור הרכב זה':'Save this layout', 'שם ההרכב':'Layout name', 'שמירה':'Save', 'לא בעומק הזה':'Not at this depth', 'אין מקום בגובה':'No height left', 'בחרו כנף קודם':'Pick a wing first', 'כל התאים פתוחים':'All bins open', 'בחרו מדף':'Pick a shelf', 'לחיצה על תא פותחת / סוגרת':'Click a bin to open / close it', 'גרירה על התריס':'drag the shutter', 'לחיצה / גרירה על דלת':'click / drag a door', ' · גרירת מדף, או R / F':' · drag a shelf, or R / F', 'הרכב התאים':'Bin layout', 'עומק בסיס':'Base depth', 'דלתות הזזה':'Sliding doors', 'בלי':'Without', 'עם דלתות הזזה':'With sliding doors', 'הרכב התאים והמדפים':'Bins and shelves', 'מיקום ומספר המדפים':'Shelves – number and position', 'מספר תאים בסט':'Bins per set', 'צבע הגג':'Top colour', 'ידית':'Handle', 'בסיס':'Base', 'גלגלים':'Wheels', 'מספר טורים':'Columns', 'קיר':'Wall', 'עומק':'Depth', 'יישור':'Alignment', 'צבע':'Colour', 'תוכן התאים ברינדור':'Bin contents in the render', 'תאים':'bins', 'טורים':'columns', 'הועתק – Ctrl+V מדביק':'Copied – Ctrl+V pastes', 'אחורה (לקיר האחורי)':'Back (toward the back wall)', 'שמאלה':'Left', 'קדימה':'Forward', 'ימינה':'Right', 'סיבוב נגד כיוון השעון':'Turn counter-clockwise', 'סיבוב עם כיוון השעון':'Turn clockwise', 'גובה':'Height', 'סיבוב 5° · Shift 45°':'Turn 5° · Shift 45°', 'סיבוב':'Rotation', 'Shift = צעד של 10 ס"מ':'Shift = 10 cm steps', 'ס"מ':'cm', 'מצב עריכה':'Edit mode', 'מצב הזזה':'Move mode', 'מצב סידור':'Arrange mode', 'מצב סידור – דלתות, מדפים, תאים':'Arrange mode – doors, shelves, bins', 'שכפול (Ctrl+D)':'Duplicate (Ctrl+D)', 'מחיקה (Delete)':'Delete (Delete)', 'מצב עריכה ':'Edit mode', 'הגדרות המוצר יופיעו כאן':'The product settings will appear here', 'מקשי ההזזה והמיקום יופיעו כאן':'The move keys and position will appear here', 'סידור דלתות, מדפים ותאים יופיע כאן':'Arranging doors, shelves and bins will appear here', 'חזרה':'Back', 'חזרה לסצנה':'Back to the scene', 'רב תא':'Tilt bin', 'גררו לסצנה, או לחיצה כפולה להוספה במרכז':'Drag into the scene, or double-click to add it in the middle', 'וריאציות':'variations', 'סגירה':'Close', 'הוסף מוצר / מערכת זה / זו':'Add this product / system', 'פעמים':'times', 'כמה פעמים':'How many times', 'הוסף מוצר זה לסצנה':'Add this product to the scene', 'מספר הפעמים שיש להוסיף מערכת זו / מוצר זה לסצנה:':'How many times to add this system / product to the scene:',
   'פקודה קולית למוצר הזה':'Voice command for this product', 'מספר טורים':'Columns', 'מספר כנפיים':'Wings', 'תריס פתוח':'Tambour open', 'דלתות פתוחות':'Doors open', 'זהה כנפיים':'Identify wings', 'זהה מגירות':'Identify bins',
   'כנף':'Wing', 'סטים':'sets', 'המספר = מספר הסטים (יחידות רב תא) בכנף':'The number = how many sets (tilt-bin units) are in the wing', 'קטגוריות':'Categories', 'גוררים לסיבוב · גלגלת לזום · לחיצה על תא פותחת אותו':'Drag to turn · wheel to zoom · click a bin to open it', 'בחזרה לסצנה':'Back to the scene', 'בחרו מוצר מהשורה למעלה כדי להגדיר אותו.':'Pick a product in the row above to set it up.',
   'בחרו מוצר כדי לראות אותו כאן':'Hover a product to see it here', 'כך זה ייראה':'This is how it will look', 'רב תא בודד – מוכן להוספה.':'A single tilt bin – ready to add.', 'רבי תאים':'Tilt bins', 'עגלות ומעמדים לרב תא':'Carts & stands', 'מחיצות ותאים נעים':'Partitions & gondolas', 'מתלי קיר':'Wall racks',
