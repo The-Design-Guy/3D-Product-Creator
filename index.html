@@ -493,7 +493,7 @@
           <div><div class="lbl">סיבוב</div>
             <div class="rot" id="scnRot"><button data-r="-90">⟲ 90°</button><button data-r="-15">−15°</button><input class="num" type="number" id="scnR" step="1" aria-label="זווית"><button data-r="15">+15°</button><button data-r="90">90° ⟳</button></div></div>
         </div>
-        <div class="use">קליק בוחר מוצר. קליק על תא, דלת או תריס של המוצר הבחור פותח וסוגר אותם. ✥ מפעיל הזזה: גרירה על הרצפה, חיצים – ס"מ לפי כיוון המוצר (Shift – 10 ס"מ), החזקת הלחצן על המוצר + גלגלת – גובה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. קליק על הרצפה משחרר. Ctrl+Z מבטל.</div>
+        <div class="use">קליק בוחר מוצר. קליק או גרירה על תא, דלת או תריס של המוצר הבחור פותחים וסוגרים אותם (גרירה למטה פותחת תא, למעלה סוגרת; התריס זז עם העכבר). ✥ מפעיל הזזה: גרירה על הרצפה, חיצים – ס"מ לפי כיוון המוצר (Shift – 10 ס"מ), החזקת הלחצן על המוצר + גלגלת – גובה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. קליק על הרצפה משחרר. Ctrl+Z מבטל.</div>
         <div class="use" id="scnEditHint" hidden>לרב תא בודד בוחרים את מספר התאים בלשונית "רב תא" לפני ההוספה.</div>
         <label class="fld" style="display:block;margin-top:8px">תוכן התאים ברינדור (למוצר הזה)<textarea id="scnContents" rows="2" style="width:100%;box-sizing:border-box;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px" placeholder="למשל: ברגים ירוקים, אומים קטנים"></textarea></label>
         <div id="scnEdit"></div>
@@ -2434,7 +2434,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (!g) return;
   const it = SCN.items.find(i => i.id === g.userData.itemId);
   if (SCN.sel !== it.id) { selectItem(it.id); SCN.justSel = true; return; }   // first click selects
-  if (!SCN.move) return;                                   // dragging moves the product only in move mode (✥)
+  if (!SCN.move) { partGesture(e); return; }               // not in move mode: dragging works the bins / doors / tambour
   if (!dragRay.ray.intersectPlane(floorPlane, fHit)) return;
   sdrag = { it, dx: it.x - fHit.x, dz: it.z - fHit.z, sx: e.clientX, sy: e.clientY, moved:false };
   clearTimeout(deselT);
@@ -3231,6 +3231,49 @@ canvas.addEventListener('pointerup', e => {
   toggleDrawer(o);
 });
 
+// scene, selected product, not in move mode: press on a part and drag – a bin or a door opens / closes,
+// the tambour slides with the pointer. The camera does not turn meanwhile.
+function partAt(r) {
+  const dr = ITEM_DRAWERS.get(SCN.sel) || [], hit = r.intersectObjects(dr, true)[0];
+  const best = [];
+  if (hit) { let o = hit.object; while (o && !dr.includes(o)) o = o.parent; if (o) best.push({ kind:'bin', d:o, dist:hit.distance }); }
+  const dh = DOORS ? r.intersectObjects(DOORS.meshes, true)[0] : null; if (dh) best.push({ kind:'door', dist:dh.distance });
+  const sh = SLD && SLD.list.some(d => d.g.visible) ? r.intersectObjects(SLD.meshes, true)[0] : null;
+  if (sh) { const d = SLD.list.find(x => x.g.children.includes(sh.object)); if (d) best.push({ kind:'slide', idx:d.idx, dist:sh.distance }); }
+  const th = TAMB ? r.intersectObjects(TAMB.meshes, true)[0] : null; if (th) best.push({ kind:'tamb', dist:th.distance });
+  return best.sort((a, b) => a.dist - b.dist)[0] || null;
+}
+let pg = null;
+function partGesture(e) {
+  dragRay.setFromCamera(pointerNDC(e), camera);
+  const part = partAt(dragRay); if (!part) return;         // on the frame itself: the camera turns as usual
+  const S = metalState();
+  pg = { part, sx:e.clientX, sy:e.clientY, moved:false, done:false, o0:S ? S.open : 0 };
+  controls.enabled = false;
+}
+addEventListener('pointermove', (e) => {
+  if (!pg) return;
+  const dx = e.clientX - pg.sx, dy = e.clientY - pg.sy;
+  if (!pg.moved && Math.hypot(dx, dy) < 6) return;
+  pg.moved = true;
+  const p = pg.part;
+  if (p.kind === 'tamb') {                                 // the shutter follows the pointer
+    const S = metalState(); if (!S) return;
+    S.open = S.target = Math.max(0, Math.min(TBX.MAXO, pg.o0 + (pg.o0 > TBX.MAXO/2 ? -1 : 1) * Math.abs(dx) * 1.6));
+    if (TAMB) placeSlats(TAMB.list, S.open, TAMB.zf, TAMB.hw);
+    const sl = $(editKey() === 'tamb' ? 'tbOpen' : 'mtOpen'); if (sl) sl.value = Math.round(S.open / TBX.MAXO * 100);
+    return;
+  }
+  if (pg.done) return;
+  if (p.kind === 'bin' && Math.abs(dy) >= 10) {           // pull down / toward you opens, push up closes
+    dy > 0 ? openDrawer(p.d) : closeDrawer(p.d); pg.done = true;
+  } else if (p.kind === 'door' && Math.abs(dx) >= 12) { doorClick(dragRay); pg.done = true; }
+  else if (p.kind === 'slide' && Math.abs(dx) >= 12) { toggleSlide(p.idx); pg.done = true; }
+});
+addEventListener('pointerup', () => {
+  if (!pg) return;
+  pg = null; controls.enabled = true;
+});
 // scene: a click on the selected product opens / closes what was clicked; a click on nothing releases it
 function sceneClick(e) {
   if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5 || FREE.on && FREE.lookMoved) return;
@@ -5181,7 +5224,7 @@ const EN = {
   '+ הוסף מוצר':'+ Add product', 'תבנית: 2 מחיצות מהקיר':'Template: 2 partitions from the wall', 'מוצרים בסצנה':'Products in the scene',
   'הסצנה ריקה. הוסף מוצר או בחר תבנית.':'The scene is empty. Add a product or pick a template.', 'שכפול':'Duplicate', 'הסתרה':'Hide', 'הצגה':'Show', 'מחיקה':'Delete',
   'סיבוב':'Rotate', 'זווית':'Angle', 'רוחב החדר במטרים':'Room width in metres', 'עומק החדר במטרים':'Room depth in metres',
-  'קליק בוחר מוצר. קליק על תא, דלת או תריס של המוצר הבחור פותח וסוגר אותם. ✥ מפעיל הזזה: גרירה על הרצפה, חיצים – ס"מ לפי כיוון המוצר (Shift – 10 ס"מ), החזקת הלחצן על המוצר + גלגלת – גובה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. קליק על הרצפה משחרר. Ctrl+Z מבטל.':'Click selects a product. Clicking a bin, door or tambour of the selected product opens / closes it. ✥ turns on moving: drag on the floor, arrows – 1 cm in the product\'s own directions (Shift – 10 cm), hold the button on the product + wheel – height. A product never goes into a wall or another product – it stops on contact. Pink line = lined up with another product. Click the floor to release. Ctrl+Z undoes.',
+  'קליק בוחר מוצר. קליק או גרירה על תא, דלת או תריס של המוצר הבחור פותחים וסוגרים אותם (גרירה למטה פותחת תא, למעלה סוגרת; התריס זז עם העכבר). ✥ מפעיל הזזה: גרירה על הרצפה, חיצים – ס"מ לפי כיוון המוצר (Shift – 10 ס"מ), החזקת הלחצן על המוצר + גלגלת – גובה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. קליק על הרצפה משחרר. Ctrl+Z מבטל.':'Click selects a product. Clicking or dragging a bin, door or tambour of the selected product opens / closes it (drag down opens a bin, up closes it; the tambour follows the pointer). ✥ turns on moving: drag on the floor, arrows – 1 cm in the product\'s own directions (Shift – 10 cm), hold the button on the product + wheel – height. A product never goes into a wall or another product – it stops on contact. Pink line = lined up with another product. Click the floor to release. Ctrl+Z undoes.',
   'לרב תא בודד בוחרים את מספר התאים בלשונית "רב תא" לפני ההוספה.':'For a single tilt bin, choose the number of bins in the "Tilt bin" tab before adding it.',
   'צמוד ל':'Touching the ', 'קיר אחורי':'back wall', 'קיר שמאלי':'left wall', 'קיר ימני':'right wall', 'ול':' and the ', 'מוצרים':'products', 'חדר':'room', "מ'":'m', 'עגלת רב-תא EXCLUSIVE':'Exclusive Tilt Bin cart', 'מחיצת EXCLUSIVE מודולרית':'Modular Exclusive Partition', 'מעמד 4 דפנות':'Four-sided stand',
   '＋ הוסף':'＋ Add', '⚙ סצנה':'⚙ Scene', 'הוספת מוצר לסצנה':'Add a product to the scene', 'הגדרות הסצנה: חדר, קירות, סצנות שמורות, מצלמה':'Scene settings: room, walls, saved scenes, camera',
