@@ -118,6 +118,8 @@
   .cpbody .comp { grid-template-columns:repeat(3, 1fr); gap:8px; }
   .hopts textarea { width:100%; box-sizing:border-box; font:inherit; font-size:13px; padding:8px; border:1px solid var(--line); border-radius:8px; resize:vertical; }
   .kgrp { display:flex; align-items:center; gap:4px; flex:none; }
+  .kcross { direction:ltr; display:grid; grid-template-columns:repeat(3, auto); gap:2px; }
+  .kcross .kk { width:26px; height:22px; font-size:11px; border-bottom-width:1px; border-radius:5px; }
   .kgrp small { font-size:11px; color:var(--muted); margin-inline-start:4px; white-space:nowrap; }
   .kk { width:30px; height:30px; flex:none; font:inherit; font-size:13px; font-weight:800; color:var(--ink); background:#fff; border:1px solid var(--line); border-bottom-width:2px; border-radius:7px; cursor:pointer; padding:0; transition:background .1s, transform .1s; }
   .kk:hover { border-color:var(--ink); }
@@ -806,10 +808,27 @@
   .camangles select { flex:1; min-width:0; height:36px; font:inherit; font-size:13px; padding:0 10px; border:1px solid var(--line); border-radius:9px; background:#fff; }
   .camacts { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .camacts .btn { height:36px; font-size:13px; }
+  .opbox .oprow { border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:8px; }
+  .opbox .oph { display:flex; align-items:center; gap:8px; }
+  .opbox .oph b { font-size:13px; white-space:nowrap; }
+  .opbox .oph select { flex:1; min-width:0; }
+  .opbox .opdel { border:0; background:none; cursor:pointer; color:var(--muted); font-size:14px; padding:2px 4px; }
+  .opbox .opdel:hover { color:#c0392b; }
+  .opbox .opf { display:grid; grid-template-columns:1fr 1fr; gap:6px 10px; margin-top:8px; }
+  .opbox .opf label { display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--muted); }
+  .opbox select, .opbox .opf input { width:100%; height:32px; box-sizing:border-box; font:inherit; font-size:13px; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:8px; padding:0 8px; }
+  .opbox .opempty { font-size:12px; color:var(--muted); margin-bottom:8px; }
+  .opbox .opadd { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .roomscan { display:flex; flex-direction:column; align-items:stretch; gap:8px; }
   .roomscan .btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; height:44px; font-size:15px; font-weight:700; background:#101820; color:#fff; border-color:#101820; }
   .roomscan .btn:hover { background:#1f2a33; border-color:#1f2a33; }
   .roomscan .use { margin:0; font-size:11px; line-height:1.45; text-align:center; }
+  .scanst { display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px; font-weight:600; margin:4px 0 10px; }
+  .scanst i { width:9px; height:9px; border-radius:50%; background:#c9ced2; flex:none; }
+  .scanst[data-s=capturing] i, .scanst[data-s=analyzing] i, .scanst[data-s=review] i { background:#0088FF; animation:scpulse 1s ease-in-out infinite; }
+  @keyframes scpulse { 50% { opacity:.3; } }
+  .scanth { display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; margin:0 auto 10px; max-width:300px; }
+  .scanth span { aspect-ratio:3/4; border-radius:4px; background:#eef0f1 center/cover no-repeat; border:1px solid var(--line); }
   .qrbox { display:flex; justify-content:center; margin:14px 0 8px; }
   .qrbox img { width:220px; height:220px; border:1px solid var(--line); border-radius:12px; background:#fff; }
   .srow .sb svg { display:block; }
@@ -908,6 +927,7 @@
         <button class="btn" id="scnAI">🎙 בנייה בקול (AI)</button>
       </div>
       <div class="roomscan" id="roomScan"><button class="btn" id="roomScanBtn"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span>צילום החדר</span></button><span class="use">סורקים ברקוד בטלפון, מצלמים את החדר ב־360° – והסצנה נבנית לפי החדר האמיתי.</span></div>
+      <div class="opbox" id="scnOpen"></div>
       <div class="lbl">סצנות שמורות</div>
       <div class="mrow"><select id="scnLib" aria-label="סצנה שמורה"><option value="">— פתיחת סצנה שמורה —</option></select><button class="sb adm" id="scnLibDel" title="מחיקת הסצנה" aria-label="מחיקת הסצנה">✕</button></div>
       <div class="pair adm"><button class="btn" id="scnSaveBase">שמור סצנת בסיס</button><button class="btn" id="scnSaveReady">שמור סצנה מוכנה</button></div>
@@ -1172,6 +1192,21 @@
     </div></div>
   </div>
 
+  <div class="panel" id="pArc" data-mode="arc" data-family="arcs" hidden>
+    <button class="head" aria-expanded="false"><span class="ttl"><h1>ארקליות</h1><span class="sub">ארקליות פתוחות בערימה · כחול / אפור</span></span></button>
+    <div class="body"><div class="inner">
+      <div class="lbl">דגם</div>
+      <div class="seg2" id="arcModel"><button data-v="1">ארקלית 1</button><button data-v="2" class="on">ארקלית 2</button><button data-v="3">ארקלית 3</button><button data-v="4">ארקלית 4</button></div>
+      <div class="lbl">טורים</div>
+      <div class="seg2" id="arcCols"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3" class="on">3</button><button data-v="4">4</button><button data-v="5">5</button><button data-v="6">6</button><button data-v="7">7</button><button data-v="8">8</button></div>
+      <div class="lbl">שורות</div>
+      <div class="seg2" id="arcRows"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4" class="on">4</button><button data-v="5">5</button><button data-v="6">6</button><button data-v="7">7</button><button data-v="8">8</button><button data-v="9">9</button><button data-v="10">10</button><button data-v="11">11</button><button data-v="12">12</button></div>
+      <div class="lbl">צבע</div>
+      <div class="seg2" id="arcColor"><button data-v="blue" class="on">כחול</button><button data-v="grey">אפור</button></div>
+      <div class="lbl">מחיצת אורך</div>
+      <div class="seg2" id="arcDiv"><button data-v="0" class="on">בלי</button><button data-v="1">עם מחיצה</button></div>
+    </div></div>
+  </div>
   <div class="panel" id="pMdoor" data-mode="mdoor" data-family="metal" hidden>
     <button class="head" aria-expanded="false">
       <span class="ttl"><h1>ארון 4 מדפים</h1><span class="sub" id="mdSub">90 × 40 × 195 ס"מ · דלתות ציר עם מנעול מפתח</span></span>
@@ -2534,8 +2569,17 @@ function renderExcl(k) {
 // Each item keeps its own copy of its product settings; the selected item is edited in its
 // product's own panel, which is borrowed into the scene panel while it is selected.
 // =====================================================================
+// sizes from the catalogue (PSA): outside depth x width x height, mm
+const ARC_MODELS = {
+  1:{ code:'PSA5319', D:504, W:307, H:194, inner:'415x271x190', L:21.4, div:true },
+  2:{ code:'PSA3219', D:350, W:210, H:196, inner:'265x172x191', L:8.7, div:true },
+  3:{ code:'PSA2113', D:238, W:145, H:129, inner:'195x127x127', L:3.1, div:false },
+  4:{ code:'PSA1108', D:170, W:96, H:80, inner:'134x80x77', L:0.83, div:false },
+};
+const ARC0 = { model:2, cols:3, rows:4, color:'blue', div:false };
+const ARC = { ...ARC0 };
 const TYPE_NAME = { unit:'רב תא', stand:'מעמד', excl:'עגלת רב-תא EXCLUSIVE', part:'מחיצת EXCLUSIVE מודולרית', quad:'מעמד 4 דפנות',
-  wall:'מתלה קיר', tena:'תא-נע DELUX', smart:'תא-נע SMART', tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים' };
+  wall:'מתלה קיר', tena:'תא-נע DELUX', smart:'תא-נע SMART', tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים', arc:'ארקליות' };
 const SCN = { room:{ W:6000, D:5000, back:true, left:false, right:false }, items:[], sel:null, editType:null, next:1 };
 let SCENE_BUILD = false;
 const deep = (o) => JSON.parse(JSON.stringify(o));
@@ -2548,6 +2592,7 @@ function capCfg(t) {
   if (t === 'tamb') return { tb:deep(TB) };
   if (t === 'mtamb') return { mt:deep(MT) };
   if (t === 'mdoor') return { md:deep(MD) };
+  if (t === 'arc') return { arc:{ ...ARC } };
   return { tn:deep(TN[t === 'smart' ? 'smart' : 'delux']) };
 }
 function applyCfg(t, c) {
@@ -2559,13 +2604,15 @@ function applyCfg(t, c) {
   else if (t === 'tamb') { for (const k of ['comp', 'side', 'shelves', 'extra', 'items']) delete TB[k]; Object.assign(TB, deep(c.tb)); tbMigrate(TB); TB.closure = TB.closure || 'tambour'; TB.doors = TB.doors || [0, 0]; if (TB.acc === undefined) TB.acc = true; }
   else if (t === 'mtamb') Object.assign(MT, deep(c.mt));
   else if (t === 'mdoor') Object.assign(MD, deep(c.md));
+  else if (t === 'arc') Object.assign(ARC, ARC0, c.arc || {});
   else { const v = t === 'smart' ? 'smart' : 'delux'; for (const k in TN[v]) delete TN[v][k]; Object.assign(TN[v], deep(c.tn)); tena = TN[v]; }
 }
-const capAll = () => ({ current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD), qd:deep(QD) });
+const capAll = () => ({ arc:{ ...ARC }, current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD), qd:deep(QD) });
 function restoreAll(a) {
   applyCfg('unit', a); applyCfg('stand', a); applyCfg('wall', a);
   applyCfg('excl', { exs:a.exs.excl }); applyCfg('part', { exs:a.exs.part });
   applyCfg('smart', { tn:a.tn.smart }); applyCfg('tena', { tn:a.tn.delux }); applyCfg('tamb', { tb:a.tb });
+  if (a.arc) applyCfg('arc', { arc:a.arc });
   if (a.mt) applyCfg('mtamb', { mt:a.mt }); if (a.md) applyCfg('mdoor', { md:a.md }); if (a.qd) applyCfg('quad', { qd:a.qd });
 }
 // the selected item's settings live in the globals while it is being edited
@@ -2576,6 +2623,7 @@ function syncUI(t) {
   setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0');
   setSeg('quBase', QD.base); setSeg('quTop', QD.top || 'black'); setSeg('exTop', EXS.excl.top || 'black'); setSeg('ptTop', EXS.part.top || 'black');
   setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; setSeg('mdColor', MD.color);
+  setSeg('arcModel', ARC.model); setSeg('arcCols', ARC.cols); setSeg('arcRows', ARC.rows); setSeg('arcColor', ARC.color); setSeg('arcDiv', ARC.div ? '1' : '0');
   $('ptWide').checked = !!EXS.part.wide; setSeg('exSide', EXS.excl.side || 'left'); setSeg('ptSide', EXS.part.side || 'left'); setSeg('ptCols', EXS.part.cols || 2);
   for (const v of ['delux', 'smart']) { const px = v === 'smart' ? 'sm' : 'tn';
     if ($(px + 'Size')) setSeg(px + 'Size', TN[v].size);
@@ -2641,6 +2689,105 @@ function snapItem(it) {
   it.z = Math.max(-D2 + ez, Math.min(D2 - ez, it.z));
 }
 
+// ---------- doors & windows on the walls ----------
+const OPEN_TYPES = {
+  door:   { single:{ he:'דלת רגילה', w:900, h:2100 }, double:{ he:'דלת כפולה', w:1600, h:2100 }, sliding:{ he:'דלת הזזה מזכוכית', w:1800, h:2200 }, passage:{ he:'מעבר פתוח', w:1000, h:2200 } },
+  window: { std:{ he:'חלון רגיל', w:1200, h:1200, sill:900 }, shop:{ he:'ויטרינה', w:2400, h:2400, sill:100 }, high:{ he:'חלון גבוה צר', w:1500, h:500, sill:2000 } },
+};
+const OPEN_EN = { door:{ single:'plain white interior door (closed)', double:'closed double door', sliding:'glass sliding door with aluminium frame', passage:'open doorway without a door' }, window:{ std:'window with a white frame', shop:'large shop-front glass window', high:'high narrow clerestory window' } };
+const WALL_HE = { back:'אחורי', left:'שמאלי', right:'ימני', front:'קדמי' };
+const WALL_H = 2800;
+const wallLen = (w) => w === 'back' || w === 'front' ? SCN.room.W : SCN.room.D;
+const roomOpenings = () => (SCN.room.openings = SCN.room.openings || []);
+function openFix(o) {
+  const L = wallLen(o.wall), cl = (v, a, b) => Math.max(a, Math.min(b, Math.round(v)));
+  o.w = cl(o.w, 300, L - 100); o.h = cl(o.h, 300, WALL_H - 100);
+  o.sill = o.kind === 'door' ? 0 : cl(o.sill || 0, 0, WALL_H - 50 - o.h);
+  o.off = cl(o.off ?? (L - o.w) / 2, 0, L - o.w);
+}
+function addOpening(kind, type, wall, extra = {}) {
+  const T = OPEN_TYPES[kind][type] || Object.values(OPEN_TYPES[kind])[0];
+  const o = { id:Date.now() + Math.random(), kind, type:OPEN_TYPES[kind][type] ? type : Object.keys(OPEN_TYPES[kind])[0], wall, w:T.w, h:T.h, sill:T.sill || 0, off:null };
+  for (const k in extra) if (extra[k] !== null && extra[k] !== undefined) o[k] = extra[k];
+  openFix(o); roomOpenings().push(o);
+  if (wall !== 'front') SCN.room[wall] = true;
+  return o;
+}
+// where an opening sits, in metres: c = its centre along the wall (x for back/front, z for the side walls)
+function openPlace(o) {
+  const R = SCN.room, c = (o.wall === 'back' || o.wall === 'front' ? -R.W/2000 : -R.D/2000) + (o.off + o.w/2) / 1000;
+  return { c, w:o.w/1000, h:o.h/1000, sill:o.sill/1000 };
+}
+// no product right in front of a door (1 m) or of a window it would cover (60 cm) – used when the AI places things
+let AI_PLACING = false;
+function openBlocks(it, x, z, y) {
+  const R = SCN.room, W2 = R.W/2000, D2 = R.D/2000, { ex, ez } = extents(it);
+  for (const o of SCN.room.openings || []) {
+    const p = openPlace(o), deep = o.kind === 'door' ? 1.0 : 0.6;
+    if (o.kind === 'window' && y + (it.h || 0) <= p.sill + 0.02) continue;     // low enough to stand under the window
+    const a0 = p.c - p.w/2 - 0.05, a1 = p.c + p.w/2 + 0.05;
+    let hit;
+    if (o.wall === 'back') hit = x + ex > a0 && x - ex < a1 && z - ez < -D2 + deep;
+    else if (o.wall === 'front') hit = x + ex > a0 && x - ex < a1 && z + ez > D2 - deep;
+    else if (o.wall === 'left') hit = z + ez > a0 && z - ez < a1 && x - ex < -W2 + deep;
+    else hit = z + ez > a0 && z - ez < a1 && x + ex > W2 - deep;
+    if (hit) return true;
+  }
+  return false;
+}
+const opFrameMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#ebe8e2'), roughness:0.6 });
+const opDoorMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#f4f2ee'), roughness:0.55 });
+const opHandleMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#9aa0a6'), roughness:0.3, metalness:0.8 });
+const opAlumMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#5d6267'), roughness:0.35, metalness:0.6 });
+const opGlassMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#cfe3ee'), roughness:0.05, transmission:0.6, transparent:true, opacity:0.35, depthWrite:false });
+const opOutsideMat = new THREE.MeshBasicMaterial({ color:new THREE.Color('#e4edf3') });
+const opPassMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#dcd8d1'), roughness:0.95 });
+// one wall with its openings: the wall is cut into panels around them, and each opening gets its frame and door / glass
+function buildRoomWall(world, key, L, pos, ry) {
+  const g = new THREE.Group(); g.position.copy(pos); g.rotation.y = ry; world.add(g);
+  const sign = key === 'left' ? -1 : 1;                              // local x along the wall
+  const list = (SCN.room.openings || []).filter(o => o.wall === key).map(o => { const p = openPlace(o); const lx = sign * p.c; return { o, a:lx - p.w/2, b:lx + p.w/2, ...p }; }).sort((u, v) => u.a - v.a);
+  const H = WALL_H / 1000;
+  const panel = (x0, x1, y0, y1) => { if (x1 - x0 < 0.002 || y1 - y0 < 0.002) return; const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, y1 - y0), wallMat); m.position.set((x0 + x1)/2, (y0 + y1)/2, 0); m.receiveShadow = true; g.add(m); };
+  const box = (w, h, d, x, y, z, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; g.add(m); return m; };
+  let cur = -L/2;
+  for (const q of list) {
+    const a = Math.max(q.a, cur), b = Math.min(q.b, L/2); if (b <= a) continue;
+    panel(cur, a, 0, H); panel(a, b, q.sill + q.h, H); panel(a, b, 0, q.sill); cur = b;
+    const w = b - a, cx = (a + b)/2, y0 = q.sill, y1 = q.sill + q.h, F = 0.05, FD = 0.07;
+    box(w + 2*F, F, FD, cx, y1 + F/2, 0, opFrameMat);                                    // frame
+    box(F, q.h, FD, a - F/2, (y0 + y1)/2, 0, opFrameMat); box(F, q.h, FD, b + F/2, (y0 + y1)/2, 0, opFrameMat);
+    const t = q.o.type;
+    if (q.o.kind === 'window') {
+      box(w + 2*F, F, FD + 0.06, cx, y0 - F/2, 0.02, opFrameMat);                         // sill
+      const back = new THREE.Mesh(new THREE.PlaneGeometry(w, q.h), opOutsideMat); back.position.set(cx, (y0 + y1)/2, -0.35); g.add(back);
+      box(w, q.h, 0.01, cx, (y0 + y1)/2, -0.01, opGlassMat);
+      const n = t === 'shop' ? Math.max(1, Math.round(w / 1.2)) : t === 'std' ? 2 : 1;          // mullions
+      for (let k = 1; k < n; k++) box(0.04, q.h, 0.04, a + w*k/n, (y0 + y1)/2, -0.005, opFrameMat);
+      if (t === 'std') box(w, 0.04, 0.04, cx, y0 + q.h*0.62, -0.005, opFrameMat);
+    } else if (t === 'passage') {
+      const back = new THREE.Mesh(new THREE.PlaneGeometry(w, q.h), opPassMat); back.position.set(cx, (y0 + y1)/2, -0.6); g.add(back);
+      box(w, 0.002, 0.6, cx, 0.001, -0.3, opPassMat);
+    } else if (t === 'sliding') {
+      const half = w/2 + 0.03;
+      for (const [x, z] of [[a + half/2, -0.03], [b - half/2, -0.07]]) {
+        box(half, q.h, 0.012, x, (y0 + y1)/2, z, opGlassMat);
+        box(half, 0.04, 0.03, x, y0 + 0.02, z, opAlumMat); box(half, 0.04, 0.03, x, y1 - 0.02, z, opAlumMat);
+        box(0.04, q.h, 0.03, x - half/2 + 0.02, (y0 + y1)/2, z, opAlumMat); box(0.04, q.h, 0.03, x + half/2 - 0.02, (y0 + y1)/2, z, opAlumMat);
+      }
+      const back = new THREE.Mesh(new THREE.PlaneGeometry(w, q.h), opOutsideMat); back.position.set(cx, (y0 + y1)/2, -0.4); g.add(back);
+    } else {                                                               // single / double door, closed
+      const leaves = t === 'double' ? 2 : 1, lw = (w - 0.006*(leaves + 1)) / leaves;
+      for (let k = 0; k < leaves; k++) {
+        const x = a + 0.006 + lw/2 + k*(lw + 0.006);
+        box(lw, q.h - 0.006, 0.04, x, (y0 + y1)/2, -0.015, opDoorMat);
+        const hx = leaves === 2 ? (k === 0 ? x + lw/2 - 0.08 : x - lw/2 + 0.08) : x + lw/2 - 0.08;
+        box(0.13, 0.022, 0.05, hx, 1.02, 0.025, opHandleMat);
+      }
+    }
+  }
+  panel(cur, L/2, 0, H);
+}
 // ---------- build ----------
 const ITEM_GROUPS = new Map();
 function buildScene() {
@@ -2652,11 +2799,14 @@ function buildScene() {
   ITEM_GROUPS.clear(); ITEM_DRAWERS.clear(); ITEM_PARTS.clear();
   const R = SCN.room, W = R.W/1000, D = R.D/1000;
   const fl = new THREE.Mesh(new THREE.PlaneGeometry(W, D), floorMat); fl.rotation.x = -Math.PI/2; fl.receiveShadow = true; world.add(fl);
-  const wh = 2.8;
-  const addWall = (w, x, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, wh), wallMat); m.position.set(x, wh/2, z); m.rotation.y = ry; m.receiveShadow = true; world.add(m); };
-  if (R.back) addWall(W, 0, -D/2, 0);
-  if (R.left) addWall(D, -W/2, 0, Math.PI/2);
-  if (R.right) addWall(D, W/2, 0, -Math.PI/2);
+  (R.openings || []).forEach(openFix);
+  if (R.back) buildRoomWall(world, 'back', W, new THREE.Vector3(0, 0, -D/2), 0);
+  if (R.left) buildRoomWall(world, 'left', D, new THREE.Vector3(-W/2, 0, 0), Math.PI/2);
+  if (R.right) buildRoomWall(world, 'right', D, new THREE.Vector3(W/2, 0, 0), -Math.PI/2);
+  for (const o of (R.openings || []).filter(o => o.wall === 'front')) {        // the front wall is not drawn: the opening shows as a strip on the floor
+    const p = openPlace(o), m = new THREE.Mesh(new THREE.BoxGeometry(p.w, 0.006, 0.14), o.kind === 'door' ? opAlumMat : opFrameMat);
+    m.position.set(p.c, 0.003, D/2 - 0.07); world.add(m);
+  }
   if (R.front) {                                   // between the camera and the room: a low, see-through band on screen
     const fw = new THREE.Mesh(new THREE.PlaneGeometry(W, 0.35), new THREE.MeshStandardMaterial({ color:0xd9dde0, transparent:true, opacity:0.45, roughness:0.9, depthWrite:false, side:THREE.DoubleSide }));
     fw.position.set(0, 0.175, D/2); world.add(fw);
@@ -2672,6 +2822,7 @@ function buildScene() {
     else if (it.type === 'excl' || it.type === 'part') b = buildExcl(it.type);
     else if (it.type === 'quad') b = buildQuad();
     else if (METAL[it.type]) b = buildMetal(it.type);
+    else if (it.type === 'arc') b = buildArc();
     else { WING_GROUPS.clear(); SLD = null; b = buildTena(); b.sld = SLD; }
     if (it.draft) ghost(b.group);
     ITEM_DRAWERS.set(it.id, it.hidden ? [] : b.drawers);
@@ -2698,7 +2849,7 @@ function buildScene() {
 }
 function placeNew(it) {
   // to the right of everything already in the room, against the back wall
-  const others = SCN.items.filter(o => o !== it && o.x !== undefined);
+  const others = SCN.items.filter(o => o !== it && o.x !== undefined && o.hx !== undefined);
   const { ex, ez } = extents(it);
   it.x = others.length ? Math.max(...others.map(o => o.x + extents(o).ex)) + ex + 0.15 : 0;
   it.z = -SCN.room.D/2000 + ez;
@@ -2866,6 +3017,7 @@ function placeGroup(it) {
 function collides(it, x, z, y, e = 1e-4) {
   const R = SCN.room, W2 = R.W/2000, D2 = R.D/2000, { ex, ez } = extents(it);
   if (x - ex < -W2 - e || x + ex > W2 + e || z - ez < -D2 - e || z + ez > D2 + e || y < -e) return true;
+  if (AI_PLACING && R.openings && R.openings.length && openBlocks(it, x, z, y)) return true;
   for (const o of SCN.items) {
     if (o === it || o.hidden || o.hx === undefined || !(y < yOf(o) + o.h - e && yOf(o) < y + it.h - e)) continue;
     const q = extents(o);
@@ -2956,10 +3108,10 @@ addEventListener('keydown', (e) => {
   if (SCN.mode === 'arrange' && !e.ctrlKey && !e.metaKey && !e.altKey && arrangeKey(e.code, e.shiftKey)) { e.preventDefault(); e.stopImmediatePropagation(); return; }
   const dir = { ArrowRight:[1, 0], ArrowLeft:[-1, 0], ArrowUp:[0, -1], ArrowDown:[0, 1] }[e.key]; if (!dir) return;
   e.preventDefault(); e.stopPropagation();
-  // in the product's own frame: ←/→ along its width, ↑ backwards (toward its back), ↓ toward its front
-  const step = e.shiftKey ? 0.1 : 0.01, a = THREE.MathUtils.degToRad(it.rot), [lx, lz] = dir;
+  // the room's directions, whatever way the product is turned: ↑ toward the back wall, ↓ toward the front, ←/→ left / right as you face the back wall
+  const step = e.shiftKey ? 0.1 : 0.01, [lx, lz] = dir;
   pushUndo(it);
-  nudge(it, (lx*Math.cos(a) + lz*Math.sin(a)) * step, (-lx*Math.sin(a) + lz*Math.cos(a)) * step, 0);
+  nudge(it, lx * step, lz * step, 0);
   guideSnap(it, true); placeGroup(it); renderScene();
 }, true);
 // height: hold the left button on the selected product and turn the wheel
@@ -3017,7 +3169,9 @@ canvas.addEventListener('dblclick', (e) => {
 // ---------- describe the scene for the realistic render ----------
 function describeScene() {
   const R = SCN.room, walls = ['back', 'left', 'right'].filter(k => R[k]);
-  const lines = [`A realistic interior scene: a room about ${R.W/1000} x ${R.D/1000} m with a smooth floor${walls.length ? ' and plain light walls (' + walls.join(', ') + ')' : ''}. It contains ${SCN.items.filter(i => !i.hidden).length} products, arranged exactly as in the image:`];
+  const opTxt = (R.openings || []).map(o => `a ${OPEN_EN[o.kind][o.type]} ${Math.round(o.w/10)} cm wide and ${Math.round(o.h/10)} cm high in the ${o.wall} wall, ${Math.round(o.off/10)} cm from the ${o.wall === 'left' || o.wall === 'right' ? 'back' : 'left'} corner${o.kind === 'window' ? `, ${Math.round(o.sill/10)} cm above the floor` : ''}`);
+  const scanTxt = R.scan && R.scan.en ? `The room looks like the real one in the room reference photos: ${R.scan.en}\n` : '';
+  const lines = [`${scanTxt}${opTxt.length ? 'Openings that must appear exactly where they are in the base image: ' + opTxt.join('; ') + '.\n' : ''}A realistic interior scene: a room about ${R.W/1000} x ${R.D/1000} m with a smooth floor${walls.length ? ' and plain light walls (' + walls.join(', ') + ')' : ''}. It contains ${SCN.items.filter(i => !i.hidden).length} products, arranged exactly as in the image:`];
   const saved = capAll(), m = mode;
   SCN.items.filter(i => !i.hidden).forEach((it, k) => {
     applyCfg(it.type, it.id === SCN.sel ? capCfg(it.type) : it.cfg);
@@ -3028,6 +3182,60 @@ function describeScene() {
   restoreAll(saved);
   const sel = SCN.items.find(i => i.id === SCN.sel); if (sel) applyCfg(sel.type, sel.cfg);
   return lines.join('\n');
+}
+
+// ---------- ארקליות: open-front plastic pick bins, stacked in columns ----------
+const ARC_GAP = 2, ARC_NEST = 6;                     // between columns; how much a bin sits into the one below
+const arcBlue = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#1c5fd0'), roughness:0.42, clearcoat:0.25, clearcoatRoughness:0.5 });
+const arcGrey = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#4b5157'), roughness:0.5, clearcoat:0.15, clearcoatRoughness:0.6 });
+const arcLabel = new THREE.MeshStandardMaterial({ color:new THREE.Color('#e3e8ee'), roughness:0.75 });
+const ARC_GEO = new Map();                           // one set of geometries per model (shared by every bin)
+function arcGeos(m) {
+  if (ARC_GEO.has(m)) return ARC_GEO.get(m);
+  const { D, W, H } = ARC_MODELS[m], t = Math.max(2, Math.round(W / 90)), hf = H * 0.44;
+  const side = (h, th) => {                           // the side profile: low front, sloped edge, full height at the back
+    const sh = new THREE.Shape(), z0 = -D/2, z1 = D/2, k = h / H;
+    [[z0, 0], [z1, 0], [z1, hf * k], [z1 - 0.07*D, hf * k], [z1 - 0.38*D, h], [z0, h]].forEach(([z, y], i) => i ? sh.lineTo(-z, y) : sh.moveTo(-z, y));
+    const g = new THREE.ExtrudeGeometry(sh, { depth:th, bevelEnabled:false }); g.rotateY(Math.PI / 2); g.translate(-th/2, 0, 0); return g;
+  };
+  const G = {
+    side:side(H, t), div:side(H * 0.92, Math.max(1.5, t * 0.7)),
+    bottom:new THREE.BoxGeometry(W, t, D), front:new THREE.BoxGeometry(W, hf, t), back:new THREE.BoxGeometry(W, H, t),
+    rimF:new THREE.BoxGeometry(W, t * 1.6, t * 3.2), rimS:new THREE.BoxGeometry(t * 2.6, t * 1.6, 0.62 * D), rimB:new THREE.BoxGeometry(W, t * 1.6, t * 3),
+    handle:new THREE.BoxGeometry(W * 0.36, H * 0.1, t * 4), label:new THREE.BoxGeometry(W * 0.5, hf * 0.3, 1.2), rib:new THREE.BoxGeometry(t, H * 0.86, t * 1.4),
+    t, hf,
+  };
+  ARC_GEO.set(m, G); return G;
+}
+function makeArcBin(m, mat, div) {
+  const { D, W, H } = ARC_MODELS[m], G = arcGeos(m), t = G.t, hf = G.hf, g = new THREE.Group();
+  const add = (geo, x, y, z, mm = mat) => { const o = new THREE.Mesh(geo, mm); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; g.add(o); return o; };
+  add(G.side, -W/2 + t/2, 0, 0); add(G.side, W/2 - t/2, 0, 0);
+  add(G.bottom, 0, t/2, 0);
+  add(G.front, 0, hf/2, D/2 - t/2);
+  add(G.back, 0, H/2, -D/2 + t/2);
+  add(G.rimF, 0, hf - t*0.8, D/2 - t*1.6);
+  add(G.rimS, -W/2 + t*1.3, H - t*0.8, -D/2 + 0.31*D); add(G.rimS, W/2 - t*1.3, H - t*0.8, -D/2 + 0.31*D);
+  add(G.rimB, 0, H - t*0.8, -D/2 + t*1.5);
+  add(G.handle, 0, H - H*0.05, -D/2 + t*3);
+  add(G.label, 0, hf * 0.42, D/2 + 0.6, arcLabel);
+  for (const z of [-0.32*D, -0.08*D]) for (const sx of [-1, 1]) add(G.rib, sx * (W/2 + t*0.5), H*0.43, z);
+  if (div && ARC_MODELS[m].div) add(G.div, 0, t, 0);
+  return g;
+}
+const arcBlockSize = (a = ARC) => { const M = ARC_MODELS[a.model]; return { W:a.cols * M.W + (a.cols - 1) * ARC_GAP, D:M.D, H:M.H + (a.rows - 1) * (M.H - ARC_NEST) }; };
+function buildArc() {
+  const g = new THREE.Group(), root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
+  const M = ARC_MODELS[ARC.model], mat = ARC.color === 'grey' ? arcGrey : arcBlue, S = arcBlockSize();
+  for (let c = 0; c < ARC.cols; c++) for (let r = 0; r < ARC.rows; r++) {
+    const b = makeArcBin(ARC.model, mat, ARC.div);
+    b.position.set(-S.W/2 + M.W/2 + c * (M.W + ARC_GAP), r * (M.H - ARC_NEST), 0); root.add(b);
+  }
+  return { group:g, drawers:[], rods:[] };
+}
+function describeArc() {
+  const M = ARC_MODELS[ARC.model], S = arcBlockSize();
+  return `A free-standing block of stacked open-front plastic pick bins ("ארקלית ${ARC.model}", ${M.code}): ${ARC.cols} column${ARC.cols > 1 ? 's' : ''} side by side and ${ARC.rows} bin${ARC.rows > 1 ? 's' : ''} high, each bin sitting on the one below, fronts lined up (about ${Math.round(S.W)} mm wide, ${M.D} mm deep, ${Math.round(S.H)} mm high in all). Every bin is ${M.D} mm deep, ${M.W} mm wide, ${M.H} mm high, injection-moulded ${ARC.color === 'grey' ? 'dark grey' : 'bright blue'} polypropylene with a slightly glossy finish: a low front wall with a white label window, sides that slope up from the low front to the full height at the back, small vertical ribs on the outside of the sides, a thick rim, and a moulded hanging lip on the back.${ARC.div && M.div ? ' Each bin has one lengthwise divider down the middle, from front to back, splitting it into a left and a right half.' : ''}`;
 }
 
 // ---------- Metal cabinets (shared builder) ----------
@@ -3658,6 +3866,11 @@ document.getElementById('mtOpen').oninput = (e) => { MT.target = +e.target.value
 document.getElementById('mtAdd').onclick = () => addShelf(MT);
 document.getElementById('mdAdd').onclick = () => addShelf(MD);
 segGroup('mdColor', (v) => { MD.color = v; rebuild(true); });
+segGroup('arcModel', (v) => { ARC.model = +v; if (ARC.model > 2) ARC.div = false; rebuild(true); });
+segGroup('arcCols', (v) => { ARC.cols = +v; rebuild(true); });
+segGroup('arcRows', (v) => { ARC.rows = +v; rebuild(true); });
+segGroup('arcColor', (v) => { ARC.color = v; rebuild(true); });
+segGroup('arcDiv', (v) => { ARC.div = v === '1'; rebuild(true); });
 // family tabs: each tab shows its own products; the scene works across both
 function setFamily(f, open = true) {
   document.querySelectorAll('.tab[data-f]').forEach(t => { const on = t.dataset.f === f; t.classList.toggle('on', on); t.setAttribute('aria-selected', on); });
@@ -4247,6 +4460,7 @@ function fileStem() {
   if (mode === 'tamb') return `secured-tilt-bin-cabinet-${TB.closure}`;
   if (mode === 'mtamb') return `tambour-metal-cabinet`;
   if (mode === 'mdoor') return `4-shelf-metal-cabinet-${MD.color}`;
+  if (mode === 'arc') return `pick-bins-${ARC.model}-${ARC.cols}x${ARC.rows}-${ARC.color}`;
   if (mode === 'quad') return `four-sided-tilt-bin-stand-${Math.round(stackHeight(QD.comp)/10)}-${QD.base}`;
   if (mode === 'excl') return `exclusive-cart-${Math.round(exTotal('excl')/10)}`;
   if (mode === 'part') return `exclusive-partition-${Math.round(exTotal('part')/10)}`;
@@ -4364,6 +4578,7 @@ function structureSummary() {
 }
 function describe() {
   if (mode === 'scene') return describeScene();
+  if (mode === 'arc') return describeArc();
   const base = 'Wall-mounted tilt-bin storage unit: injection-moulded body in light grey RAL 7035 (matte, slightly satin), with clear transparent polystyrene tilt-out bins';
   const flags = [];
   if ($('backWall').checked && mode === 'part') flags.push('the end without the handle touches a plain light wall at a right angle, so the partition juts out from the wall into the room, smooth floor');
@@ -5035,8 +5250,8 @@ function closeSheet(now) {
 function groupVars(list) { const out = []; list.forEach(v => { const k = v.g || v.name, g = out.find(x => x.name === k); g ? g.vars.push(v) : out.push({ name:k, vars:[v] }); }); return out; }
 let ADD_OPEN = false, AD_TICK = 0;
 // product photos (from the Drive folder), per product; a card fades through them
-const PRODUCT_IMGS = {"bin2": ["img/bin2-0.webp"], "bin3": ["img/bin3-0.webp"], "bin4": ["img/bin4-0.webp"], "bin5": ["img/bin5-v2.webp"], "bin6": ["img/bin6-0.webp"], "bin9": ["img/bin9-0.webp"], "stand1": ["img/stand1-0.webp", "img/stand1-1.webp", "img/stand1-2.webp", "img/stand1-3.webp", "img/stand1-4.webp", "img/stand1-5.webp", "img/stand1-6.webp", "img/stand1-7.webp", "img/stand1-8.webp", "img/stand1-9.webp", "img/stand1-10.webp", "img/stand1-11.webp"], "stand2": ["img/stand2-0.webp", "img/stand2-1.webp"], "excl": ["img/excl-0.webp", "img/excl-1.webp"], "quad": ["img/quad-0.webp", "img/quad-1.webp", "img/quad-2.webp", "img/quad-3.webp"], "part": ["img/part-0.webp", "img/part-1.webp", "img/part-2.webp", "img/part-3.webp", "img/part-4.webp", "img/part-5.webp", "img/part-6.webp"], "delux": ["img/delux-0.webp", "img/delux-1.webp", "img/delux-2.webp", "img/delux-3.webp", "img/delux-4.webp", "img/delux-5.webp", "img/delux-6.webp", "img/delux-7.webp", "img/delux-8.webp", "img/delux-9.webp", "img/delux-10.webp", "img/delux-11.webp", "img/delux-12.webp", "img/delux-13.webp", "img/delux-14.webp", "img/delux-15.webp", "img/delux-16.webp", "img/delux-17.webp"], "smart": ["img/smart-0.webp", "img/smart-1.webp", "img/smart-2.webp"], "wall": ["img/wall-0.webp", "img/wall-1.webp", "img/wall-2.webp", "img/wall-3.webp", "img/wall-4.webp", "img/wall-5.webp", "img/wall-6.webp"], "tamb": ["img/tamb-0.webp", "img/tamb-1.webp", "img/tamb-2.webp", "img/tamb-3.webp", "img/tamb-4.webp", "img/tamb-5.webp"]};
-const IMG_KEY = { 'מתקן חד צדדי':'stand1', 'עגלה דו צדדית':'stand2', 'עגלת EXCLUSIVE':'excl', 'מעמד 4 דפנות':'quad', 'מחיצת EXCLUSIVE':'part', 'תא נע DELUXE':'delux', 'תא נע SMART':'smart', 'מתלי קיר':'wall', 'ארון מאובטח לרב תא':'tamb' };
+const PRODUCT_IMGS = {"arc": ["img/arc-0.webp", "img/arc-1.webp"], "bin2": ["img/bin2-0.webp"], "bin3": ["img/bin3-0.webp"], "bin4": ["img/bin4-0.webp"], "bin5": ["img/bin5-v2.webp"], "bin6": ["img/bin6-0.webp"], "bin9": ["img/bin9-0.webp"], "stand1": ["img/stand1-0.webp", "img/stand1-1.webp", "img/stand1-2.webp", "img/stand1-3.webp", "img/stand1-4.webp", "img/stand1-5.webp", "img/stand1-6.webp", "img/stand1-7.webp", "img/stand1-8.webp", "img/stand1-9.webp", "img/stand1-10.webp", "img/stand1-11.webp"], "stand2": ["img/stand2-0.webp", "img/stand2-1.webp"], "excl": ["img/excl-0.webp", "img/excl-1.webp"], "quad": ["img/quad-0.webp", "img/quad-1.webp", "img/quad-2.webp", "img/quad-3.webp"], "part": ["img/part-0.webp", "img/part-1.webp", "img/part-2.webp", "img/part-3.webp", "img/part-4.webp", "img/part-5.webp", "img/part-6.webp"], "delux": ["img/delux-0.webp", "img/delux-1.webp", "img/delux-2.webp", "img/delux-3.webp", "img/delux-4.webp", "img/delux-5.webp", "img/delux-6.webp", "img/delux-7.webp", "img/delux-8.webp", "img/delux-9.webp", "img/delux-10.webp", "img/delux-11.webp", "img/delux-12.webp", "img/delux-13.webp", "img/delux-14.webp", "img/delux-15.webp", "img/delux-16.webp", "img/delux-17.webp"], "smart": ["img/smart-0.webp", "img/smart-1.webp", "img/smart-2.webp"], "wall": ["img/wall-0.webp", "img/wall-1.webp", "img/wall-2.webp", "img/wall-3.webp", "img/wall-4.webp", "img/wall-5.webp", "img/wall-6.webp"], "tamb": ["img/tamb-0.webp", "img/tamb-1.webp", "img/tamb-2.webp", "img/tamb-3.webp", "img/tamb-4.webp", "img/tamb-5.webp"]};
+const IMG_KEY = { 'ארקליות':'arc', 'מתקן חד צדדי':'stand1', 'עגלה דו צדדית':'stand2', 'עגלת EXCLUSIVE':'excl', 'מעמד 4 דפנות':'quad', 'מחיצת EXCLUSIVE':'part', 'תא נע DELUXE':'delux', 'תא נע SMART':'smart', 'מתלי קיר':'wall', 'ארון מאובטח לרב תא':'tamb' };
 function productImgs(f) {
   const v = f.vars[0];
   if (v.t === 'unit') return [2, 3, 4, 5, 6, 9].flatMap(n => PRODUCT_IMGS['bin' + n] || []);   // all the bin sizes, one after another
@@ -5060,6 +5275,8 @@ const PRODUCT_OPTS = {
   'תא נע DELUXE':[{ l:'מספר כנפיים', vars:(v) => String(v.cfg.tn.size) },
     { l:'דלתות הזזה', ch:[['בלי', C2(c => { c.tn.slide = { ...(c.tn.slide || {}), on:false, open:[0, 0, 0, 0] }; })], ['עם', C2(c => { c.tn.slide = { on:true, open:[0, 0, 0, 0] }; })]],
       def:(c) => c.tn.slide && c.tn.slide.on ? 'עם' : 'בלי', if:(c) => c.tn.size === 4 || c.tn.size === 10 }],
+  'ארקליות':[{ l:'דגם', vars:(v) => 'ארקלית ' + v.cfg.arc.model },
+    { l:'צבע', ch:[['כחול', C2(c => c.arc.color = 'blue')], ['אפור', C2(c => c.arc.color = 'grey')]], def:(c) => c.arc.color === 'grey' ? 'אפור' : 'כחול' }],
   'ארון 4 מדפים':[{ l:'צבע', ch:[['RAL 7035', C2(c => c.md.color = '7035')], ['כחול', C2(c => c.md.color = 'blue')]], def:(c) => c.md.color === 'blue' ? 'כחול' : 'RAL 7035' }],
 };
 // the photo of a chosen setup, when there is one (otherwise the model's own picture)
@@ -5076,6 +5293,7 @@ function photoFor(f, c) {
     case 'תא נע DELUXE': return c.tn.slide && c.tn.slide.on ? g('delux', { 4:3, 10:6 }[c.tn.size]) : g('delux', { 4:1, 7:0, 10:2 }[c.tn.size]);
     case 'תא נע SMART': return g('smart', 0);
     case 'ארון מאובטח לרב תא': return g('tamb', 0);
+    case 'ארקליות': return c.arc.color === 'grey' ? g('arc', 1) : g('arc', 0);
   }
   return null;
 }
@@ -5208,6 +5426,34 @@ function adTabClick() {
   if (LAST_DRAWER === 'render') { $('renderBtn').click(); return; }
   if (LAST_DRAWER === 'arch') openArchDrawer(); else if (LAST_DRAWER === 'light') openLightDrawer(); else if (LAST_DRAWER === 'set' || LAST_DRAWER === 'cam') openSetDrawer(LAST_DRAWER); else openAddDrawer();
 }
+// ---- doors & windows: the list in the scene settings ----
+function renderOpenings() {
+  const box = $('scnOpen'); if (!box) return;
+  const list = roomOpenings();
+  const opt = (o, v, t) => `<option value="${v}"${o === v ? ' selected' : ''}>${t}</option>`;
+  const num = (f, v, l) => `<label>${l}<input type="number" data-f="${f}" value="${Math.round(v / 10)}" min="0" step="1"></label>`;
+  box.innerHTML = (list.length ? '' : '<div class="opempty">אין עדיין דלתות או חלונות בחדר.</div>') + list.map(o => `<div class="oprow" data-id="${o.id}">
+      <div class="oph"><b>${o.kind === 'door' ? 'דלת' : 'חלון'}</b><select data-f="type">${Object.entries(OPEN_TYPES[o.kind]).map(([k, t]) => opt(o.type, k, t.he)).join('')}</select><button class="opdel" title="הסרה" aria-label="הסרה">✕</button></div>
+      <div class="opf"><label>קיר<select data-f="wall">${Object.entries(WALL_HE).map(([k, t]) => opt(o.wall, k, t)).join('')}</select></label>
+        ${num('off', o.off, o.wall === 'left' || o.wall === 'right' ? 'מהקיר האחורי (ס"מ)' : 'מהקיר השמאלי (ס"מ)')}
+        ${num('w', o.w, 'רוחב (ס"מ)')}${num('h', o.h, 'גובה (ס"מ)')}${o.kind === 'window' ? num('sill', o.sill, 'גובה מהרצפה (ס"מ)') : ''}</div></div>`).join('')
+    + `<div class="opadd"><button class="btn" id="opAddDoor">+ דלת</button><button class="btn" id="opAddWin">+ חלון</button></div>`;
+  const changed = () => { pushRoomUndo(); rebuild(true); renderOpenings(); };
+  box.querySelectorAll('.oprow').forEach(row => {
+    const o = list.find(x => String(x.id) === row.dataset.id); if (!o) return;
+    row.querySelector('.opdel').onclick = () => { SCN.room.openings = list.filter(x => x !== o); changed(); };
+    row.querySelectorAll('[data-f]').forEach(el => el.onchange = () => {
+      const f = el.dataset.f;
+      if (f === 'type') { const T = OPEN_TYPES[o.kind][el.value]; o.type = el.value; o.w = T.w; o.h = T.h; o.sill = T.sill || 0; }
+      else if (f === 'wall') { o.wall = el.value; if (o.wall !== 'front') SCN.room[o.wall] = true; o.off = null; }
+      else o[f] = (+el.value || 0) * 10;
+      openFix(o); changed();
+    });
+  });
+  $('opAddDoor').onclick = () => { addOpening('door', 'single', 'back'); changed(); };
+  $('opAddWin').onclick = () => { addOpening('window', 'std', SCN.room.left ? 'left' : 'back'); changed(); };
+}
+function pushRoomUndo() { if (typeof VOICE !== 'undefined') { VOICE.undo.push(sceneState()); if (VOICE.undo.length > 30) VOICE.undo.shift(); } }
 // ---- "הגדרות הסצנה": the same drawer, with the scene's settings as cards (their controls are lent from the scene panel) ----
 let SET_OPEN = false, SET_LENT = [];
 function openSetDrawer(kind = 'set') {
@@ -5231,6 +5477,7 @@ function openSetDrawer(kind = 'set') {
   if (kind === 'cam') card('', [...$('camMode').closest('.camsec').children].filter(k => !(k.classList.contains('lbl') && k.textContent.trim() === 'מצלמה')));
   else {
   card('החדר', [kids.find(k => k.classList.contains('pair') && k.querySelector('#scnW')), $('roomScan')]);
+  card('דלתות וחלונות', [$('scnOpen')]); renderOpenings();
   card('מוצרים בסצנה', [$('scnList')]);
   card('סצנות שמורות', [$('scnLib').closest('.mrow'), $('scnSaveBase') && $('scnSaveBase').closest('.pair'), $('scnLibInfo')]);
   }
@@ -5238,14 +5485,62 @@ function openSetDrawer(kind = 'set') {
   d.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => d.classList.add('in')));
 }
 // ---- "צילום החדר": a code to open on the phone; there the room is filmed in 360° and sent. (first step: the code only) ----
-function openRoomScan() {
-  const sid = Math.random().toString(36).slice(2, 10);
-  const url = location.origin + location.pathname + '?roomscan=' + sid;
+// ---- room scan: a QR for the phone, then the room is built from what the phone sends back ----
+async function openRoomScan() {
+  if (!server) { openDialog(`<h3>צילום החדר</h3><p class="dlg-sub">צילום החדר עובד באתר עצמו (Vercel), כי הטלפון שולח את התמונות לשרת. כאן, בתצוגה המקדימה, אין שרת.</p><div class="dlg-actions"><button class="btn" data-close>הבנתי</button></div>`); return; }
+  if (!adminKey()) { toast('צילום החדר זמין במצב ניהול'); $('lockBtn').click(); return; }
+  let id;
+  try { id = (await api('/api/scan?a=new', {})).id; } catch (e) { toast(e.message); return; }
+  const url = location.origin + '/scan.html?s=' + id;
   openDialog(`<h3>צילום החדר</h3>
-    <p class="dlg-sub">סרקו את הברקוד בטלפון, צלמו את החדר ב־360° ושלחו. המערכת תבין איך החדר נראה ותבנה את הסצנה לפיו. אחר כך אפשר לתקן במיקרופון.</p>
+    <p class="dlg-sub">סרקו את הברקוד במצלמה של הטלפון. עומדים באמצע החדר מול הקיר שיהיה הקיר האחורי, ומסתובבים לאט ימינה – 8 תמונות. כשתאשרו בטלפון, החדר ייבנה כאן.</p>
     <div class="qrbox"><img alt="ברקוד" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(url)}"></div>
-    <div class="use" style="text-align:center">בשלב הזה הברקוד מוכן; הצילום והניתוח בטלפון יגיעו בשלב הבא.</div>
-    <div class="dlg-actions"><button class="btn" data-close>סגירה</button></div>`);
+    <div class="scanst" id="scanSt"><i></i><span>ממתין לטלפון…</span></div>
+    <div class="scanth" id="scanTh">${Array.from({ length:8 }, () => '<span></span>').join('')}</div>
+    <div class="use" style="text-align:center">הקישור תקף 30 דקות · <a href="${url}" target="_blank" rel="noopener">פתיחה במכשיר הזה</a></div>
+    <div class="dlg-actions"><button class="btn" data-close>סגירה</button></div>`, (card, close) => {
+    let stop = false, done = false;
+    $('dlg')._onClose = () => { stop = true; if (!done) api('/api/scan?a=cancel&id=' + id, {}).catch(() => {}); };
+    const ST = { waiting:'ממתין לטלפון…', capturing:'מצלמים…', analyzing:'ה־AI מנתח את החדר…', review:'ממתין לאישור בטלפון…', done:'בונה את החדר…', cancelled:'הצילום בוטל' };
+    const tick = async () => {
+      if (stop) return;
+      try {
+        const r = await fetch('/api/scan?a=status&id=' + id, { headers:{ 'x-admin-key':adminKey() } });
+        const st = await r.json();
+        if (!r.ok) throw new Error(st.error || 'HTTP ' + r.status);
+        const n = (st.photos || []).filter(Boolean).length;
+        card.querySelector('#scanSt span').textContent = (ST[st.status] || st.status) + (st.status === 'capturing' ? ` ${n} מתוך 8` : '') + (st.error ? ' · ' + st.error : '');
+        card.querySelector('#scanSt').dataset.s = st.status;
+        card.querySelectorAll('#scanTh span').forEach((el, k) => { const u = st.photos && st.photos[k]; if (u && el.dataset.u !== u) { el.dataset.u = u; el.style.backgroundImage = `url("${u}")`; el.classList.add('on'); } });
+        if (st.status === 'done' && st.result) { done = stop = true; close(); applyScan(st.result, st.photos || []); return; }
+        if (st.status === 'cancelled') { stop = true; return; }
+      } catch (e) { card.querySelector('#scanSt span').textContent = e.message; }
+      setTimeout(tick, 2000);
+    };
+    tick();
+  });
+}
+async function applyScan(r, photos) {
+  pushRoomUndo();
+  const R = SCN.room, cl = (v, d) => Math.max(2000, Math.min(100000, Math.round((+v || d) * 1000)));
+  R.W = cl(r.width_m, R.W / 1000); R.D = cl(r.depth_m, R.D / 1000);
+  const w = r.walls || {}; R.back = w.back !== false; R.left = !!w.left; R.right = !!w.right; R.front = !!w.front;
+  R.openings = [];
+  for (const o of r.openings || []) if (OPEN_TYPES[o.kind]) addOpening(o.kind, o.type, o.wall, { w:o.width_cm * 10, h:o.height_cm * 10, off:o.offset_cm * 10, sill:(o.sill_cm || 0) * 10 });
+  R.back = w.back !== false; R.left = !!w.left || R.openings.some(o => o.wall === 'left'); R.right = !!w.right || R.openings.some(o => o.wall === 'right');
+  R.scan = { style:r.style || '', floor:r.floor || '', walls:r.wall_color || '', en:r.description_en || '' };
+  if (r.description_he) renderFields.background = r.description_he;
+  SCN.items.forEach(snapItem);
+  $('scnW').value = R.W / 1000; $('scnD').value = R.D / 1000;
+  rebuild(); renderOpenings();
+  const doors = R.openings.filter(o => o.kind === 'door').length, wins = R.openings.length - doors;
+  toast(`החדר נבנה לפי הצילום: ${R.W/1000} × ${R.D/1000} מ'${doors ? ` · ${doors} ${doors === 1 ? 'דלת' : 'דלתות'}` : ''}${wins ? ` · ${wins} ${wins === 1 ? 'חלון' : 'חלונות'}` : ''}`);
+  // two of the photos become the room reference of the render (they can be removed in the render panel)
+  const refs = [];
+  for (const u of [photos[0], photos[2] || photos[6]].filter(Boolean)) {
+    try { refs.push({ name:'צילום החדר ' + (photos.indexOf(u) + 1), data:await shrink(await (await fetch(u)).blob()) }); } catch {}
+  }
+  if (refs.length) renderRefs.room = refs.slice(0, SLOT_MAX);
 }
 // ---- "תאורה": in the side drawer – the room under a glass half-dome; drag the light anywhere on the dome ----
 const LP = { on:false, cam:new THREE.PerspectiveCamera(32, 1, 0.05, 200), dome:new THREE.Scene(), sun:null, c:new THREE.Vector3(), R:3, drag:false };
@@ -5388,6 +5683,7 @@ function addFamilies() {
       ...[4, 7, 10].map(n => ({ t:'tena', g:'תא נע DELUXE', name:`תא נע DELUXE – ${n} כנפיים`, kw:`תא נע דלוקס delux gondola ${n} כנפיים`, cfg:C('tena', c => c.tn.size = n) })),
       { t:'smart', name:'תא נע SMART', kw:'תא נע סמארט smart gondola', cfg:C('smart') } ] },
     { id:'walls', name:'מתלי קיר', vars:[600, 1200, 2000].map(h => ({ t:'wall', g:'מתלי קיר', name:'מתלה קיר ' + h/10, kw:'מתלה קיר wall rack פרופיל', cfg:C('wall', c => c.wall.height = h) })) },
+    { id:'arcs', name:'ארקליות', vars:[1, 2, 3, 4].map(n => ({ t:'arc', g:'ארקליות', name:'ארקלית ' + n, kw:`ארקלית ארקליות אחסונית אחסוניות pick bin ${ARC_MODELS[n].code} ${n}`, cfg:C('arc', c => { c.arc = { ...ARC0, model:n, cols:n >= 3 ? 4 : 3, rows:n >= 3 ? 6 : 4 }; }) })) },
     { id:'metal', name:'ארונות מתכת', vars:[
       { t:'tamb', name:'ארון מאובטח לרב תא', kw:'ארון מתכת תריס נעילה secure cabinet', cfg:C('tamb') },
       { t:'mtamb', name:'ארון תריס', kw:'ארון מתכת תריס tambour cabinet', cfg:C('mtamb') },
@@ -5760,7 +6056,7 @@ function renderStrip(it, md) {
   if (md === 'move') {
     const key = (k, t) => `<button class="kk" data-k="${k}" title="${t}">${k}</button>`;
     const fld = (id, l, u) => `<label class="ssf"><span>${l} <i>${u}</i></span><input type="number" id="${id}" step="1"></label>`;
-    body.innerHTML = `<div class="kgrp">${key('W', 'אחורה (לקיר האחורי)')}${key('A', 'שמאלה')}${key('S', 'קדימה')}${key('D', 'ימינה')}<small>הזזה</small></div>
+    body.innerHTML = `<div class="kgrp"><div class="kcross"><span></span>${key('W', 'אחורה (לקיר האחורי)')}<span></span>${key('A', 'שמאלה')}${key('S', 'קדימה')}${key('D', 'ימינה')}</div><small>הזזה</small></div>
       <div class="kgrp">${key('R', 'למעלה')}${key('F', 'למטה')}<small>גובה</small></div>
       <div class="kgrp">${key('Z', 'סיבוב נגד כיוון השעון')}${key('C', 'סיבוב עם כיוון השעון')}<small>סיבוב 5° · Shift 45°</small></div>
       <span class="sssep"></span>
@@ -5796,6 +6092,7 @@ const HEADS = {
     // the tambour opens to 90% while the shelves are set (still showing), and goes back afterwards
     open:() => { const S = METAL.mtamb, was = S.target; S.target = TBX.MAXO * 0.9; return () => { S.target = was; }; } }],
   mdoor:[{ seg:'mdColor', l:'צבע' }],
+  arc:[{ seg:'arcModel', l:'דגם' }, { seg:'arcCols', l:'טורים' }, { seg:'arcRows', l:'שורות' }, { seg:'arcColor', l:'צבע' }, { seg:'arcDiv', l:'מחיצת אורך', if:() => ARC.model <= 2 }],
 };
 const segBtns = (id) => { const s = $(id); return s ? [...s.children].filter(b => b.tagName === 'BUTTON') : []; };
 const segVal = (b) => b.dataset.v ?? b.dataset.n ?? b.dataset.m;
@@ -6262,7 +6559,7 @@ async function voiceDone() {
     const r = await api('/api/scene', scenePayload(text));
     const n = executeOps(r.ops || []);
     VOICE.busy = false;
-    voiceUI('done', n ? (r.understood || 'בוצע') : (r.understood ? r.understood + ' – לא היה מה לשנות' : 'לא הבנתי מה לעשות. נסו שוב.'));
+    voiceUI('done', (n ? (r.understood || 'בוצע') : (r.understood ? r.understood + ' – לא היה מה לשנות' : 'לא הבנתי מה לעשות. נסו שוב.')) + (n && AI_WARN.length ? ' · שימו לב: ' + AI_WARN.join(' · ') : ''));
   } catch (e) { VOICE.busy = false; voiceUI('done', e.message); }
 }
 // what the AI gets: the room, the products (with their bins, side by side), the saved models
@@ -6289,6 +6586,7 @@ function binFaces(it) {
 }
 function cfgComp(t, c) {
   if (!c) return null;
+  if (t === 'arc') return null;
   if (t === 'excl' || t === 'part') return c.exs && c.exs.comp;
   if (t === 'quad') return c.qd && c.qd.comp;
   if (t === 'tamb') return c.tb && c.tb.items && c.tb.items[0] && c.tb.items[0].comp;
@@ -6306,10 +6604,14 @@ function scenePayload(text) {
       comp:cfgComp(i.type, cfg), cols:i.type === 'part' ? cfg.exs && cfg.exs.cols : undefined, top:(cfg.exs || cfg.qd || {}).top,
       bins_per_row_by_face:Object.fromEntries(Object.entries(faces).map(([k, rows]) => [k, rows.map(r => r.length)])),
       has_doors:i.type === 'mdoor' || (i.type === 'tena' && !!(cfg.tn && cfg.tn.slide && cfg.tn.slide.on)), has_tambour:i.type === 'tamb' || i.type === 'mtamb',
-      contents:i.contents || '' };
+      arc:i.type === 'arc' ? cfg.arc : undefined,
+      contents:i.contents || '', y_cm:Math.round(yOf(i) * 100), against_walls:touchWall(i),
+      wings:(i.type === 'tena' || i.type === 'smart') && cfg.tn && cfg.tn.bySize && cfg.tn.bySize[cfg.tn.size || 4] ? cfg.tn.bySize[cfg.tn.size || 4].wings.map(w => ({ layer:w.layer, comp:w.comp })) : undefined };
   });
   const models = Object.fromEntries(Object.entries(lib.models).map(([t, ms]) => [t, Object.keys(ms)]));
-  return { text, room:{ width_cm:R.W/10, depth_cm:R.D/10, walls:{ back:R.back, left:R.left, right:R.right, front:!!R.front } }, selected:SCN.sel, items, models };
+  const lightNow = { type:LIGHT.type, clock:Math.round(((180 - LIGHT.az) / 30 % 12 + 12) % 12) || 12, elevation_deg:LIGHT.el, power_pct:Math.round(LIGHT.power * 100), soft_level:LIGHT.soft ?? (LIGHT_TYPES[LIGHT.type] || LIGHT_TYPES.studio).soft };
+  const openings = (R.openings || []).map((o, k) => ({ index:k + 1, kind:o.kind, type:o.type, wall:o.wall, width_cm:Math.round(o.w/10), height_cm:Math.round(o.h/10), offset_cm:Math.round(o.off/10), sill_cm:Math.round(o.sill/10) }));
+  return { text, room:{ width_cm:R.W/10, depth_cm:R.D/10, walls:{ back:R.back, left:R.left, right:R.right, front:!!R.front }, openings }, selected:SCN.sel, items, models, light:lightNow };
 }
 // the product editor: what is being set up (or nothing yet) and the products that can be picked
 function editorPayload(text) {
@@ -6372,6 +6674,11 @@ function voiceUndo() {
 function executeOps(ops) {
   if (!ops.length) return 0;
   VOICE.undo.push(sceneState()); if (VOICE.undo.length > 30) VOICE.undo.shift();
+  AI_WARN = []; const walled = [], WROT = { back:0, left:90, right:270, front:180 };
+  AI_PLACING = true;
+  try { return executeOps0(ops, walled, WROT); } finally { AI_PLACING = false; }
+}
+function executeOps0(ops, walled, WROT) {
   const sel0 = SCN.items.find(i => i.id === SCN.sel); if (sel0) sel0.cfg = capCfg(sel0.type);
   const W2 = SCN.room.W/2000, D2 = SCN.room.D/2000, added = [], rows = [], post = [];
   let lastAdded = null, done = 0;
@@ -6382,16 +6689,22 @@ function executeOps(ops) {
       case 'clear': selectItem(null, true); SCN.items = []; done++; break;
       case 'room': if (o.room) { const R = SCN.room, r = o.room;
         R.W = Math.max(2000, Math.min(100000, Math.round(r.width_m * 1000) || R.W)); R.D = Math.max(2000, Math.min(100000, Math.round(r.depth_m * 1000) || R.D));
-        R.back = !!r.back; R.left = !!r.left; R.right = !!r.right; if (r.front !== undefined) R.front = !!r.front; done++; } break;
+        R.back = !!r.back; R.left = !!r.left; R.right = !!r.right; if (r.front !== undefined && r.front !== null) R.front = !!r.front; done++; } break;
+      case 'light': if (o.light) { aiLight(o.light); done++; } break;
+      case 'opening': if (o.opening) { if (aiOpening(o.opening)) done++; } break;
       case 'add': {
         if (!o.type || !TYPE_NAME[o.type]) break;
         const cfg = cfgFromPlan({ type:o.type, saved_model:o.saved_model || '', settings:o.settings || {} }), n = o.count || 1, grp = [];
         for (let i = 0; i < n; i++) {
-          const a = { id:SCN.next++, type:o.type, cfg:deep(cfg), rot:o.rot || 0, name:(o.name || o.saved_model || TYPE_NAME[o.type]) + (n > 1 ? ' ' + (i + 1) : ''),
-            x:o.x_cm === null ? undefined : o.x_cm/100 - W2, z:o.z_cm === null ? undefined : o.z_cm/100 - D2 };
+          const a = { id:SCN.next++, type:o.type, cfg:deep(cfg), rot:o.wall ? WROT[o.wall] : (o.rot || 0), name:(o.name || o.saved_model || TYPE_NAME[o.type]) + (n > 1 || o.fill ? ' ' + (i + 1) : ''),
+            x:o.wall || o.x_cm === null ? undefined : o.x_cm/100 - W2, z:o.wall || o.z_cm === null ? undefined : o.z_cm/100 - D2 };
+          if (o.y_cm) a.y = Math.max(0, Math.min(250, o.y_cm)) / 100;
+          if (o.text) a.contents = o.text;
           SCN.items.push(a); grp.push(a); added.push(a); lastAdded = a;
         }
-        grp.row = o.row; rows.push(grp); done++; break; }
+        if (o.wall) { SCN.room[o.wall] = true; walled.push({ grp, wall:o.wall, fill:!!o.fill, name:o.name || o.saved_model || TYPE_NAME[o.type] }); }
+        else { grp.row = o.row; rows.push(grp); }
+        done++; break; }
       case 'delete': if (it) { if (SCN.sel === it.id) selectItem(null, true); SCN.items = SCN.items.filter(x => x !== it); done++; } break;
       case 'set': if (it) {
         const cfg = it.id === SCN.sel ? capCfg(it.type) : it.cfg;
@@ -6407,9 +6720,11 @@ function executeOps(ops) {
     const a = g[i - 1], b = g[i], ea = extents(a), eb = extents(b);
     if (g.row === 'z') { b.x = a.x; b.z = a.z + ea.ez + eb.ez + 0.05; } else { b.x = a.x + ea.ex + eb.ex + 0.05; b.z = a.z; }
   }
+  walled.forEach(w => w.grp.forEach(it => it.hidden = true));     // not in the way until each is placed
+  for (const w of walled) placeOnWall(w);
   let again = false;
-  for (const a of added) { if (a.x === undefined) continue; snapItem(a); if (collides(a, a.x, a.z, yOf(a))) { a.x = a.z = undefined; again = true; } }
-  if (again || rows.length) rebuild(true);
+  for (const a of added) { if (a.x === undefined || walled.some(w => w.grp.includes(a))) continue; snapItem(a); if (collides(a, a.x, a.z, yOf(a))) { a.x = a.z = undefined; again = true; } }
+  if (again || rows.length || walled.length) rebuild(true);
   // moves, turns, copies, selection, bins and doors on the built scene
   for (const o of post) {
     const it = target(o); if (!it) continue;
@@ -6443,6 +6758,63 @@ function executeOps(ops) {
   if (!done) VOICE.undo.pop();
   return done;
 }
+// products along a wall: their back to the wall, side by side, around the middle of the wall (or as many as fit)
+function placeOnWall({ grp, wall, fill, name }) {
+  const R = SCN.room, W2 = R.W/2000, D2 = R.D/2000, a0 = grp[0]; if (!a0 || a0.hx === undefined) return;
+  const along = wall === 'back' || wall === 'front' ? 'x' : 'z', half = along === 'x' ? extents(a0).ex : extents(a0).ez, lo = along === 'x' ? -W2 : -D2, hi = -lo;
+  const fix = (it) => { const { ex, ez } = extents(it);
+    if (wall === 'back') it.z = -D2 + ez; else if (wall === 'front') it.z = D2 - ez; else if (wall === 'left') it.x = -W2 + ex; else it.x = W2 - ex; };
+  if (fill) {                                                          // as many as fit along the wall
+    const n = Math.min(30, Math.floor((hi - lo + 1e-6) / (2*half)));
+    while (grp.length < n) { const c = { ...deep({ type:a0.type, cfg:a0.cfg, rot:a0.rot, y:a0.y || 0, contents:a0.contents }), id:SCN.next++, name:`${name} ${grp.length + 1}`, hx:a0.hx, hz:a0.hz, h:a0.h, hidden:true }; SCN.items.push(c); grp.push(c); }
+  }
+  const total = grp.length * 2*half;
+  let pos = Math.max(lo, -total/2), lost = 0;                          // centred on the wall; corners already taken are skipped
+  for (const it of grp) {
+    let ok = false;
+    delete it.hidden;
+    for (; pos + 2*half <= hi + 1e-6; pos += 0.01) {
+      it[along] = pos + half; fix(it);
+      if (!collides(it, it.x, it.z, yOf(it))) { ok = true; break; }
+    }
+    if (!ok && !fill) {                                                // try again from the start of the wall
+      for (pos = lo; pos + 2*half <= hi + 1e-6; pos += 0.01) { it[along] = pos + half; fix(it); if (!collides(it, it.x, it.z, yOf(it))) { ok = true; break; } }
+    }
+    if (ok) pos += 2*half; else { SCN.items = SCN.items.filter(x => x !== it); lost++; }
+  }
+  if (lost && !fill) AI_WARN.push(`${lost} × ${name} לא נכנסו על הקיר`);
+}
+// doors & windows by voice
+function aiOpening(q) {
+  const list = roomOpenings(), cm = (v) => v === null || v === undefined ? undefined : v * 10;
+  const pick = () => q.index ? list[q.index - 1] : list.filter(o => (!q.kind || o.kind === q.kind) && (!q.wall || o.wall === q.wall)).pop();
+  if (q.action === 'remove') { const o = pick(); if (!o) return false; SCN.room.openings = list.filter(x => x !== o); return true; }
+  if (q.action === 'set') {
+    const o = pick(); if (!o) return false;
+    if (q.type && OPEN_TYPES[o.kind][q.type]) o.type = q.type; if (q.wall) { o.wall = q.wall; o.off = null; }
+    for (const [f, v] of [['w', q.width_cm], ['h', q.height_cm], ['off', q.offset_cm], ['sill', q.sill_cm]]) if (cm(v) !== undefined) o[f] = cm(v);
+    openFix(o); return true;
+  }
+  if (!q.kind || !q.wall) return false;
+  const o = addOpening(q.kind, q.type, q.wall, { w:cm(q.width_cm), h:cm(q.height_cm), sill:cm(q.sill_cm), off:cm(q.offset_cm) });
+  if (q.offset_cm === null || q.offset_cm === undefined) { o.off = null; openFix(o); }
+  return true;
+}
+// lighting by voice: type, direction on a clock (12 = the back wall), height, strength and shadow
+function aiLight(l) {
+  if (l.type && LIGHT_TYPES[l.type] && l.type !== LIGHT.type) { LIGHT.type = l.type; LIGHT.soft = null; }
+  if (l.clock !== null && l.clock !== undefined) { let az = 180 - l.clock * 30; az = ((az + 180) % 360 + 360) % 360 - 180; LIGHT.az = az; }
+  if (l.elevation_deg !== null && l.elevation_deg !== undefined) LIGHT.el = Math.max(5, Math.min(89, Math.round(l.elevation_deg)));
+  if (l.power_pct) LIGHT.power = l.power_pct / 100;
+  if (l.power_change_pct) LIGHT.power *= 1 + l.power_change_pct / 100;
+  LIGHT.power = Math.max(0.3, Math.min(2, Math.round(LIGHT.power * 20) / 20));
+  const cur = LIGHT.soft ?? (LIGHT_TYPES[LIGHT.type] || LIGHT_TYPES.studio).soft;
+  if (l.soft_level) LIGHT.soft = Math.max(1, Math.min(20, Math.round(l.soft_level)));
+  else if (l.soft === 'softer') LIGHT.soft = Math.min(20, Math.round(cur * 1.5 + 2));
+  else if (l.soft === 'sharper') LIGHT.soft = Math.max(1, Math.round(cur / 1.5 - 1));
+  applyLight();
+  if (SET_OPEN === 'light') { setBack(); openLightDrawer(); }
+}
 // ---------- "add product": a popup with the products and the saved models, a picture on hover ----------
 function buildType(t) {                           // the 3D product of type t from the current settings
   if (t === 'unit') { const u = makeUnit(current); return { group:u.group, drawers:u.drawers, rods:[u.rod] }; }
@@ -6451,6 +6823,7 @@ function buildType(t) {                           // the 3D product of type t fr
   if (t === 'excl' || t === 'part') return buildExcl(t);
   if (t === 'quad') return buildQuad();
   if (METAL[t]) return buildMetal(t);
+  if (t === 'arc') return buildArc();
   return buildTena();
 }
 let PT = null;                                     // a small renderer of its own for the product pictures
@@ -6545,6 +6918,50 @@ function openAddDialog() {
 
 // ---------- build the scene by voice: words → /api/scene → "this is what I understood" → add ----------
 const nearest = (v, list) => list.reduce((a, b) => Math.abs(b - v) < Math.abs(a - v) ? b : a);
+// run fn with the globals set to this product's settings, then put everything back
+function withCfg(type, cfg, fn) {
+  const sel = mode === 'scene' ? SCN.items.find(i => i.id === SCN.sel) : null;
+  if (sel) sel.cfg = capCfg(sel.type);
+  const saved = capAll(), tn = tena;
+  try { SCENE_BUILD = true; applyCfg(type, cfg); return fn(); }
+  finally { SCENE_BUILD = false; restoreAll(saved); if (sel) applyCfg(sel.type, sel.cfg); else tena = tn; }
+}
+let AI_WARN = [];                                   // things the AI asked for that the product does not allow
+// "the rest with #6 up to 2 m": the most units of that model that still fit
+function fillComp(type, cfg, fixed, m, toMm) {
+  return withCfg(type, cfg, () => {
+    let lim = Infinity;
+    if (type === 'excl' || type === 'part') lim = Math.min(toMm || EXV[type].maxH, EXV[type].maxH) - (EX_BOT + 2*PROF + EX_ABS);
+    else if (type === 'quad') lim = Math.min(QD_MAX, (toMm || QD_BOT + QD_MAX + EX_ABS) - QD_BOT - EX_ABS);
+    else if (type === 'stand') lim = stand.height + 5;
+    else if (type === 'wall') lim = wallUsable();
+    else return fixed;
+    const c = { ...fixed };
+    while (stackHeight({ ...c, [m]:(c[m] || 0) + 1 }) <= lim && (c[m] || 0) < 30) c[m] = (c[m] || 0) + 1;
+    return c;
+  });
+}
+// per-wing layout of a DELUX / SMART: [{layer, model, count|null = as many as fit}]
+function fillWings(type, cfg, specs) {
+  return withCfg(type, cfg, () => {
+    const st = tenaState(), names = { rear:'האחורית', middle:'האמצעית', front:'הקדמית' };
+    const byLayer = {}; for (const sp of specs) (byLayer[sp.layer] = byLayer[sp.layer] || []).push(sp);
+    if (tena.variant === 'delux' && specs.some(sp => !STD_ALLOWED[sp.layer].includes(sp.model))) { tena.depthMode = 'custom'; tena.depth = 2000; }   // a deeper DELUX takes them
+    for (const [layer, list] of Object.entries(byLayer)) for (const w of st.wings.filter(x => x.layer === layer)) {
+      const ok = list.filter(sp => tenaAllowed(layer, sp.model));
+      list.filter(sp => !ok.includes(sp)).forEach(sp => AI_WARN.push(`רב תא ${sp.model} לא מתאים לכנף ${names[layer]} של ${TYPE_NAME[type]} – הכנף נשארה כמו שהייתה`));
+      if (!ok.length) continue;
+      w.comp = {};
+      for (const sp of ok) {
+        const want = sp.count ? sp.count : 40;
+        for (let k = 0; k < want && wfCanAdd(w, sp.model); k++) w.comp[sp.model] = (w.comp[sp.model] || 0) + 1;
+      }
+    }
+    if (tena.depthMode === 'custom' && tena.depth === 2000) tena.depth = Math.max(cfg && cfg.tn && cfg.tn.depth || 625, Math.ceil((BASE_DEPTH + ['rear', 'middle', 'front'].reduce((a, l) => a + layerDepth(l), 0)) / 5) * 5);
+    AI_WARN = [...new Set(AI_WARN)];
+    return capCfg(type);
+  });
+}
 function cfgFromPlan(p) {
   const saved = p.saved_model && lib.models[p.type] && lib.models[p.type][p.saved_model];
   const cfg = p.base ? deep(p.base) : saved ? deep(saved.cfg) : deep(capCfg(p.type)), st = p.settings || {};
@@ -6562,7 +6979,18 @@ function cfgFromPlan(p) {
     case 'tena': set(cfg.tn, 'size', st.tena_size); if (st.doors !== null && st.doors !== undefined) cfg.tn.slide = { ...(cfg.tn.slide || { open:[0, 0, 0, 0] }), on:!!st.doors }; break;
     case 'tamb': { const c = comp(TB_MODELS); if (c) cfg.tb.items = [{ t:'bins', y:TBX.BASE, comp:c, side:'center', noSep:[...ORDER] }]; set(cfg.tb, 'align', st.align); break; }
     case 'mdoor': set(cfg.md, 'color', st.md_color); break;
+    case 'arc': { const a = st.arc || {}; cfg.arc = { ...ARC0, ...(cfg.arc || {}) };
+      if (a.model) cfg.arc.model = a.model; if (a.cols) cfg.arc.cols = Math.max(1, Math.min(8, a.cols)); if (a.rows) cfg.arc.rows = Math.max(1, Math.min(12, a.rows));
+      if (a.color) cfg.arc.color = a.color; if (a.divider !== null && a.divider !== undefined) cfg.arc.div = !!a.divider && cfg.arc.model <= 2;
+      if (a.height_cm && !a.rows) { const M = ARC_MODELS[cfg.arc.model]; cfg.arc.rows = Math.max(1, Math.min(12, Math.floor((a.height_cm * 10 - M.H) / (M.H - ARC_NEST)) + 1)); }
+      break; }
   }
+  if (st.fill_model && ['stand', 'wall', 'excl', 'part', 'quad'].includes(p.type)) {
+    const fixed = Object.fromEntries((st.comp || []).filter(c => c.count > 0 && c.model !== st.fill_model).map(c => [c.model, c.count]));
+    const c = fillComp(p.type, cfg, fixed, st.fill_model, st.fill_to_cm ? st.fill_to_cm * 10 : 0);
+    return cfgFromPlan({ ...p, saved_model:'', base:cfg, settings:{ ...st, fill_model:null, comp:Object.entries(c).map(([m, n]) => ({ model:+m, count:n })) } });
+  }
+  if (st.wings && st.wings.length && (p.type === 'tena' || p.type === 'smart')) return fillWings(p.type, cfg, st.wings);
   return cfg;
 }
 function opLines(ops) {
@@ -6583,6 +7011,9 @@ function opLines(ops) {
       case 'contents': return `<li>תוכן התאים ב־${nm(o)}: ${(o.text || '').replace(/</g, '&lt;')}</li>`;
       case 'select': return `<li>בחירת ${nm(o)}</li>`;
       case 'room': return `<li>החדר: ${o.room ? o.room.width_m + ' × ' + o.room.depth_m + " מ'" : ''}</li>`;
+      case 'opening': { const q = o.opening || {}; const T = q.kind && OPEN_TYPES[q.kind] && OPEN_TYPES[q.kind][q.type]; const what = T ? T.he : q.kind === 'window' ? 'חלון' : 'דלת';
+        return `<li>${q.action === 'remove' ? 'הסרת' : q.action === 'set' ? 'שינוי' : 'הוספת'} ${what}${q.wall ? ' בקיר ה' + WALL_HE[q.wall] : ''}${q.width_cm ? ` · רוחב ${q.width_cm} ס"מ` : ''}${q.height_cm ? ` · גובה ${q.height_cm} ס"מ` : ''}</li>`; }
+      case 'light': return `<li>תאורה${o.light && o.light.type ? ': ' + (LIGHT_TYPES[o.light.type] || {}).he : ''}${o.light && o.light.clock ? ` מכיוון שעה ${o.light.clock}` : ''}${o.light && o.light.power_change_pct ? ` · עוצמה ${o.light.power_change_pct > 0 ? '+' : ''}${o.light.power_change_pct}%` : ''}${o.light && o.light.soft ? ` · צל ${o.light.soft === 'softer' ? 'רך' : 'חד'} יותר` : ''}</li>`;
       case 'clear': return `<li><b>ריקון הסצנה</b></li>`;
     }
     return '';
@@ -6672,7 +7103,7 @@ function openSceneAI() {
       finally { go.disabled = false; go.textContent = 'המשך'; }
     };
     q('#aiBack').onclick = () => { show(false); ta.focus(); };
-    q('#aiAdd').onclick = () => { close(); const n = executeOps(plan.ops); toast(n ? 'בוצע' : 'לא היה מה לשנות'); };
+    q('#aiAdd').onclick = () => { close(); const n = executeOps(plan.ops); toast(n ? 'בוצע' + (AI_WARN.length ? ' · שימו לב: ' + AI_WARN.join(' · ') : '') : 'לא היה מה לשנות'); };
   });
 }
 function renderSceneTypes() {
@@ -7023,15 +7454,17 @@ function toggleLightPop(on) {
 // =====================================================================
 const Mic = {
   kind: null, d: null, rec: null, stream: null, ctx: null, analyser: null, buf: null,
-  level: 0, listening: false, handlers: {},
+  level: 0, listening: false, handlers: {}, quietT: 0,
+  kick() { clearTimeout(this.quietT); if (this.listening) this.quietT = setTimeout(() => { if (this.listening) this.stop(); }, 5000); },   // 5 s of silence = finished
   async init() {
     try { if (window.claude && window.claude.use) { this.d = await window.claude.use('dictation'); if (this.d) this.kind = 'claude'; } } catch {}
     if (!this.kind && (window.SpeechRecognition || window.webkitSpeechRecognition)) this.kind = 'web';
     if (this.kind === 'claude') {
-      this.d.onPartial(({ text }) => { this.level = Math.min(1, this.level + 0.35); this.handlers.partial && this.handlers.partial(text); });
-      this.d.onFinal(({ text }) => { this.level = 1; this.handlers.final && this.handlers.final(text); });
+      this.d.onPartial(({ text }) => { this.kick(); this.level = Math.min(1, this.level + 0.35); this.handlers.partial && this.handlers.partial(text); });
+      this.d.onFinal(({ text }) => { this.kick(); this.level = 1; this.handlers.final && this.handlers.final(text); });
       this.d.onState(({ state, reason }) => {
         this.listening = state !== 'idle';
+        if (this.listening) { if (!this.quietT) this.kick(); } else { clearTimeout(this.quietT); this.quietT = 0; }
         this.handlers.state && this.handlers.state(this.listening, reason);
       });
     }
@@ -7049,6 +7482,7 @@ const Mic = {
     const rec = this.rec = new SR();
     rec.lang = LANG === 'en' ? 'en-US' : 'he-IL'; rec.continuous = true; rec.interimResults = true;
     rec.onresult = (e) => {
+      this.kick();
       let interim = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t = e.results[i][0].transcript;
@@ -7060,7 +7494,7 @@ const Mic = {
     rec.onend = () => { this.cleanup(); this.handlers.state && this.handlers.state(false, 'stopped'); };
     rec.onerror = (e) => { this.handlers.error && this.handlers.error(e.error); };
     rec.start();
-    this.listening = true; this.handlers.state && this.handlers.state(true);
+    this.listening = true; this.kick(); this.handlers.state && this.handlers.state(true);
     // real waveform from the microphone
     navigator.mediaDevices && navigator.mediaDevices.getUserMedia({ audio:true }).then(stream => {
       if (!this.listening) { stream.getTracks().forEach(t => t.stop()); return; }
@@ -7076,7 +7510,7 @@ const Mic = {
     this.rec && this.rec.stop();
   },
   cleanup() {
-    this.listening = false;
+    this.listening = false; clearTimeout(this.quietT); this.quietT = 0;
     this.stream && this.stream.getTracks().forEach(t => t.stop());
     this.ctx && this.ctx.close().catch(() => {});
     this.stream = this.ctx = this.analyser = this.buf = null;
@@ -7243,7 +7677,7 @@ const EN = {
   'סיבוב':'Rotate', 'זווית':'Angle', 'רוחב החדר במטרים':'Room width in metres', 'עומק החדר במטרים':'Room depth in metres',
   'קליק בוחר מוצר. קליק או גרירה על תא, דלת או תריס של המוצר הבחור פותחים וסוגרים אותם (גרירה למטה פותחת תא, למעלה סוגרת; התריס זז עם העכבר). ✥ מפעיל הזזה: גרירה על הרצפה, חיצים – ס"מ לפי כיוון המוצר (Shift – 10 ס"מ), החזקת הלחצן על המוצר + גלגלת – גובה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. קליק על הרצפה משחרר. Ctrl+Z מבטל.':'Click selects a product. Clicking or dragging a bin, door or tambour of the selected product opens / closes it (drag down opens a bin, up closes it; the tambour follows the pointer). ✥ turns on moving: drag on the floor, arrows – 1 cm in the product\'s own directions (Shift – 10 cm), hold the button on the product + wheel – height. A product never goes into a wall or another product – it stops on contact. Pink line = lined up with another product. Click the floor to release. Ctrl+Z undoes.',
   'לרב תא בודד בוחרים את מספר התאים בלשונית "רב תא" לפני ההוספה.':'For a single tilt bin, choose the number of bins in the "Tilt bin" tab before adding it.',
-  'צמוד ל':'Touching the ', 'קיר אחורי':'back wall', 'קיר שמאלי':'left wall', 'קיר ימני':'right wall', 'ול':' and the ', 'מוצרים':'products', 'חדר':'room', "מ'":'m', 'עגלת רב-תא EXCLUSIVE':'Exclusive Tilt Bin cart', 'מחיצת EXCLUSIVE מודולרית':'Modular Exclusive Partition', 'מעמד 4 דפנות':'Four-sided stand', 'מתקן חד צדדי':'Single-sided stand', 'מתקן חד צדדי – רגליים':'Single-sided stand – legs', 'מתקן חד צדדי – גלגלים':'Single-sided stand – wheels', 'תא נע DELUXE':'GONDOLA DELUXE', 'תא נע SMART':'GONDOLA SMART', 'כנפיים':'wings', 'הוספת מוצרים':'Add products', 'הרינדור עדיין רץ – אפשר לחזור אליו מהלשונית ⋮':'The render is still running – reopen it from the ⋮ tab', 'הגדרות מצלמה':'Camera settings', 'צילום מוצר':'Product photo', 'צילום מוצר – המוצר לבד, על רקע שקוף':'Product photo – the product on its own, transparent background', 'חזרה לסצנה':'Back to the scene', 'הארכיון':'Archive', 'הארכיון: שמירה ושחזור של סצנות':'Archive: save and restore scenes', 'שמור סצנה':'Save scene', 'שחזר סצנה':'Restore scene', 'שלב א׳ בלבד, או כל הגדרות הסצנה':'Stage 1 only, or all the scene settings', 'כל הסצנות השמורות, עם תמונה':'All the saved scenes, with a picture', 'שמירת סצנה':'Save a scene', 'שם הסצנה':'Scene name', 'שלב א׳ בלבד':'Stage 1 only', 'החדר, המוצרים, המיקומים והמצלמה':'The room, products, positions and camera', 'כל הגדרות הסצנה':'All the scene settings', 'כולל התאורה, הבריף לרינדור והתמונות':'Including the lighting, the render brief and the pictures', 'שחזור סצנה':'Restore a scene', 'מעבר עם העכבר על סצנה מציג אותה כאן':'Hover a scene to see it here', 'לסצנה הזו אין עדיין תמונה':'This scene has no picture yet', 'סצנה מלאה':'Full scene', 'שלב א׳':'Stage 1', 'שמירת סצנות זמינה במצב ניהול':'Saving scenes is available in admin mode', 'עדיין אין סצנות שמורות.':'No saved scenes yet.', 'סגירת הפאנל':'Close the panel', 'פתיחת הפאנל':'Open the panel', 'הפאנל':'Panel', 'גררו את השמש על הכיפה':'Drag the sun across the dome', 'גררו את השמש':'Drag the sun', 'סוג האור':'Type of light', 'עוצמה וצל':'Strength and shadow', 'רכות הצל':'Shadow softness', 'איפוס תאורה':'Reset lighting', 'חד':'Sharp', 'רך':'Soft', 'רך מאוד':'Very soft', 'איפוס זווית הצילום':'Reset the camera angle', 'המצלמה חוזרת לזווית ברירת המחדל':'The camera goes back to the default angle', 'איפוס הסצנה':'Reset the scene', 'כל המוצרים יוסרו – מתחילים סצנה חדשה':'All products are removed – a new scene starts', 'זוויות צילום שמורות':'Saved camera angles', 'שמור זווית צילום':'Save camera angle', 'אפס לברירת מחדל':'Reset to default', '— בחרו זווית שמורה —':'— pick a saved angle —', 'אין עדיין זוויות שמורות':'No saved angles yet', 'מחיקת הזווית':'Delete the angle', 'שמירת זווית צילום':'Save a camera angle', 'נשמרת רק הזווית של המצלמה (מיקום, כיוון ועדשה) – לא הסצנה. אפשר להשתמש בה בכל סצנה.':'Only the camera angle is saved (position, direction and lens) – not the scene. It can be used in any scene.', 'שם הזווית':'Angle name', 'בלי מוצר בחור: W / S קדימה ואחורה, A / D לצדדים, R / F למעלה ולמטה, Q / E עדשה, Z / C סיבוב (Shift – מהר).':'With no product selected: W / S forward and back, A / D sideways, R / F up and down, Q / E lens, Z / C turn (Shift – faster).', 'קדמי':'Front', 'קיר קדמי':'Front wall', 'קיר אחורי':'Back wall', 'קיר שמאלי':'Left wall', 'קיר ימני':'Right wall', 'רצפה':'Floor', 'צילום החדר':'Scan the room', 'מצלמה':'Camera', 'סורקים ברקוד בטלפון, מצלמים את החדר ב־360° – והסצנה נבנית לפי החדר האמיתי.':'Scan the code with a phone, film the room in 360° – and the scene is built from the real room.', 'בשלב הזה הברקוד מוכן; הצילום והניתוח בטלפון יגיעו בשלב הבא.':'The code is ready; filming and analysis on the phone come in the next step.', 'החדר':'The room', 'מוצרים בסצנה':'Products in the scene', 'מצלמה':'Camera', 'סצנות שמורות':'Saved scenes', 'ביטול הבחירה (Esc)':'Deselect (Esc)', 'ביטול הבחירה':'Deselect', 'הוספה לסצנה':'Add to the scene', 'מספר תאים':'Bins per set', 'גררו לסצנה':'Drag into the scene', 'שחור':'Black', 'לבן':'White', 'רגליים':'Legs', 'עם':'With', 'כחול':'Blue', 'הרכב הכנפיים':'Wing layout', 'זיהוי כנפיים':'Identify wings', 'סיום':'Done', 'הסר הכל':'Remove all', 'הרכב כנף שמור…':'Saved wing layout…', 'שמור הרכב זה':'Save this layout', 'שם ההרכב':'Layout name', 'שמירה':'Save', 'לא בעומק הזה':'Not at this depth', 'אין מקום בגובה':'No height left', 'בחרו כנף קודם':'Pick a wing first', 'כל התאים פתוחים':'All bins open', 'בחרו מדף':'Pick a shelf', 'לחיצה על תא פותחת / סוגרת':'Click a bin to open / close it', 'גרירה על התריס':'drag the shutter', 'לחיצה / גרירה על דלת':'click / drag a door', ' · גרירת מדף, או R / F':' · drag a shelf, or R / F', 'הרכב התאים':'Bin layout', 'עומק בסיס':'Base depth', 'דלתות הזזה':'Sliding doors', 'בלי':'Without', 'עם דלתות הזזה':'With sliding doors', 'הרכב התאים והמדפים':'Bins and shelves', 'מיקום ומספר המדפים':'Shelves – number and position', 'מספר תאים בסט':'Bins per set', 'צבע הגג':'Top colour', 'ידית':'Handle', 'בסיס':'Base', 'גלגלים':'Wheels', 'מספר טורים':'Columns', 'קיר':'Wall', 'עומק':'Depth', 'יישור':'Alignment', 'צבע':'Colour', 'תוכן התאים ברינדור':'Bin contents in the render', 'תאים':'bins', 'טורים':'columns', 'הועתק – Ctrl+V מדביק':'Copied – Ctrl+V pastes', 'אחורה (לקיר האחורי)':'Back (toward the back wall)', 'שמאלה':'Left', 'קדימה':'Forward', 'ימינה':'Right', 'סיבוב נגד כיוון השעון':'Turn counter-clockwise', 'סיבוב עם כיוון השעון':'Turn clockwise', 'גובה':'Height', 'סיבוב 5° · Shift 45°':'Turn 5° · Shift 45°', 'סיבוב':'Rotation', 'Shift = צעד של 10 ס"מ':'Shift = 10 cm steps', 'ס"מ':'cm', 'מצב עריכה':'Edit mode', 'מצב הזזה':'Move mode', 'מצב סידור':'Arrange mode', 'מצב סידור – דלתות, מדפים, תאים':'Arrange mode – doors, shelves, bins', 'שכפול (Ctrl+D)':'Duplicate (Ctrl+D)', 'מחיקה (Delete)':'Delete (Delete)', 'מצב עריכה ':'Edit mode', 'הגדרות המוצר יופיעו כאן':'The product settings will appear here', 'מקשי ההזזה והמיקום יופיעו כאן':'The move keys and position will appear here', 'סידור דלתות, מדפים ותאים יופיע כאן':'Arranging doors, shelves and bins will appear here', 'חזרה':'Back', 'חזרה לסצנה':'Back to the scene', 'רב תא':'Tilt bin', 'גררו לסצנה, או לחיצה כפולה להוספה במרכז':'Drag into the scene, or double-click to add it in the middle', 'וריאציות':'variations', 'סגירה':'Close', 'הוסף מוצר / מערכת זה / זו':'Add this product / system', 'פעמים':'times', 'כמה פעמים':'How many times', 'הוסף מוצר זה לסצנה':'Add this product to the scene', 'מספר הפעמים שיש להוסיף מערכת זו / מוצר זה לסצנה:':'How many times to add this system / product to the scene:',
+  'צמוד ל':'Touching the ', 'קיר אחורי':'back wall', 'קיר שמאלי':'left wall', 'קיר ימני':'right wall', 'ול':' and the ', 'מוצרים':'products', 'חדר':'room', "מ'":'m', 'עגלת רב-תא EXCLUSIVE':'Exclusive Tilt Bin cart', 'מחיצת EXCLUSIVE מודולרית':'Modular Exclusive Partition', 'מעמד 4 דפנות':'Four-sided stand', 'מתקן חד צדדי':'Single-sided stand', 'מתקן חד צדדי – רגליים':'Single-sided stand – legs', 'מתקן חד צדדי – גלגלים':'Single-sided stand – wheels', 'תא נע DELUXE':'GONDOLA DELUXE', 'תא נע SMART':'GONDOLA SMART', 'כנפיים':'wings', 'הוספת מוצרים':'Add products', 'ארקליות':'Pick bins', 'ארקלית 1':'Pick bin 1', 'ארקלית 2':'Pick bin 2', 'ארקלית 3':'Pick bin 3', 'ארקלית 4':'Pick bin 4', 'דגם':'Model', 'שורות':'Rows', 'מחיצת אורך':'Lengthwise divider', 'עם מחיצה':'With divider', 'אפור':'Grey', 'דלתות וחלונות':'Doors & windows', 'אין עדיין דלתות או חלונות בחדר.':'No doors or windows in the room yet.', '+ דלת':'+ Door', '+ חלון':'+ Window', 'דלת':'Door', 'חלון':'Window', 'דלת רגילה':'Door', 'דלת כפולה':'Double door', 'דלת הזזה מזכוכית':'Glass sliding door', 'מעבר פתוח':'Open doorway', 'חלון רגיל':'Window', 'ויטרינה':'Shop window', 'חלון גבוה צר':'High narrow window', 'אחורי':'Back', 'שמאלי':'Left', 'ימני':'Right', 'מהקיר השמאלי (ס"מ)':'From the left wall (cm)', 'מהקיר האחורי (ס"מ)':'From the back wall (cm)', 'רוחב (ס"מ)':'Width (cm)', 'גובה (ס"מ)':'Height (cm)', 'גובה מהרצפה (ס"מ)':'Above the floor (cm)', 'הסרה':'Remove', 'הרינדור עדיין רץ – אפשר לחזור אליו מהלשונית ⋮':'The render is still running – reopen it from the ⋮ tab', 'הגדרות מצלמה':'Camera settings', 'צילום מוצר':'Product photo', 'צילום מוצר – המוצר לבד, על רקע שקוף':'Product photo – the product on its own, transparent background', 'חזרה לסצנה':'Back to the scene', 'הארכיון':'Archive', 'הארכיון: שמירה ושחזור של סצנות':'Archive: save and restore scenes', 'שמור סצנה':'Save scene', 'שחזר סצנה':'Restore scene', 'שלב א׳ בלבד, או כל הגדרות הסצנה':'Stage 1 only, or all the scene settings', 'כל הסצנות השמורות, עם תמונה':'All the saved scenes, with a picture', 'שמירת סצנה':'Save a scene', 'שם הסצנה':'Scene name', 'שלב א׳ בלבד':'Stage 1 only', 'החדר, המוצרים, המיקומים והמצלמה':'The room, products, positions and camera', 'כל הגדרות הסצנה':'All the scene settings', 'כולל התאורה, הבריף לרינדור והתמונות':'Including the lighting, the render brief and the pictures', 'שחזור סצנה':'Restore a scene', 'מעבר עם העכבר על סצנה מציג אותה כאן':'Hover a scene to see it here', 'לסצנה הזו אין עדיין תמונה':'This scene has no picture yet', 'סצנה מלאה':'Full scene', 'שלב א׳':'Stage 1', 'שמירת סצנות זמינה במצב ניהול':'Saving scenes is available in admin mode', 'עדיין אין סצנות שמורות.':'No saved scenes yet.', 'סגירת הפאנל':'Close the panel', 'פתיחת הפאנל':'Open the panel', 'הפאנל':'Panel', 'גררו את השמש על הכיפה':'Drag the sun across the dome', 'גררו את השמש':'Drag the sun', 'סוג האור':'Type of light', 'עוצמה וצל':'Strength and shadow', 'רכות הצל':'Shadow softness', 'איפוס תאורה':'Reset lighting', 'חד':'Sharp', 'רך':'Soft', 'רך מאוד':'Very soft', 'איפוס זווית הצילום':'Reset the camera angle', 'המצלמה חוזרת לזווית ברירת המחדל':'The camera goes back to the default angle', 'איפוס הסצנה':'Reset the scene', 'כל המוצרים יוסרו – מתחילים סצנה חדשה':'All products are removed – a new scene starts', 'זוויות צילום שמורות':'Saved camera angles', 'שמור זווית צילום':'Save camera angle', 'אפס לברירת מחדל':'Reset to default', '— בחרו זווית שמורה —':'— pick a saved angle —', 'אין עדיין זוויות שמורות':'No saved angles yet', 'מחיקת הזווית':'Delete the angle', 'שמירת זווית צילום':'Save a camera angle', 'נשמרת רק הזווית של המצלמה (מיקום, כיוון ועדשה) – לא הסצנה. אפשר להשתמש בה בכל סצנה.':'Only the camera angle is saved (position, direction and lens) – not the scene. It can be used in any scene.', 'שם הזווית':'Angle name', 'בלי מוצר בחור: W / S קדימה ואחורה, A / D לצדדים, R / F למעלה ולמטה, Q / E עדשה, Z / C סיבוב (Shift – מהר).':'With no product selected: W / S forward and back, A / D sideways, R / F up and down, Q / E lens, Z / C turn (Shift – faster).', 'קדמי':'Front', 'קיר קדמי':'Front wall', 'קיר אחורי':'Back wall', 'קיר שמאלי':'Left wall', 'קיר ימני':'Right wall', 'רצפה':'Floor', 'צילום החדר':'Scan the room', 'מצלמה':'Camera', 'סורקים ברקוד בטלפון, מצלמים את החדר ב־360° – והסצנה נבנית לפי החדר האמיתי.':'Scan the code with a phone, film the room in 360° – and the scene is built from the real room.', 'בשלב הזה הברקוד מוכן; הצילום והניתוח בטלפון יגיעו בשלב הבא.':'The code is ready; filming and analysis on the phone come in the next step.', 'החדר':'The room', 'מוצרים בסצנה':'Products in the scene', 'מצלמה':'Camera', 'סצנות שמורות':'Saved scenes', 'ביטול הבחירה (Esc)':'Deselect (Esc)', 'ביטול הבחירה':'Deselect', 'הוספה לסצנה':'Add to the scene', 'מספר תאים':'Bins per set', 'גררו לסצנה':'Drag into the scene', 'שחור':'Black', 'לבן':'White', 'רגליים':'Legs', 'עם':'With', 'כחול':'Blue', 'הרכב הכנפיים':'Wing layout', 'זיהוי כנפיים':'Identify wings', 'סיום':'Done', 'הסר הכל':'Remove all', 'הרכב כנף שמור…':'Saved wing layout…', 'שמור הרכב זה':'Save this layout', 'שם ההרכב':'Layout name', 'שמירה':'Save', 'לא בעומק הזה':'Not at this depth', 'אין מקום בגובה':'No height left', 'בחרו כנף קודם':'Pick a wing first', 'כל התאים פתוחים':'All bins open', 'בחרו מדף':'Pick a shelf', 'לחיצה על תא פותחת / סוגרת':'Click a bin to open / close it', 'גרירה על התריס':'drag the shutter', 'לחיצה / גרירה על דלת':'click / drag a door', ' · גרירת מדף, או R / F':' · drag a shelf, or R / F', 'הרכב התאים':'Bin layout', 'עומק בסיס':'Base depth', 'דלתות הזזה':'Sliding doors', 'בלי':'Without', 'עם דלתות הזזה':'With sliding doors', 'הרכב התאים והמדפים':'Bins and shelves', 'מיקום ומספר המדפים':'Shelves – number and position', 'מספר תאים בסט':'Bins per set', 'צבע הגג':'Top colour', 'ידית':'Handle', 'בסיס':'Base', 'גלגלים':'Wheels', 'מספר טורים':'Columns', 'קיר':'Wall', 'עומק':'Depth', 'יישור':'Alignment', 'צבע':'Colour', 'תוכן התאים ברינדור':'Bin contents in the render', 'תאים':'bins', 'טורים':'columns', 'הועתק – Ctrl+V מדביק':'Copied – Ctrl+V pastes', 'אחורה (לקיר האחורי)':'Back (toward the back wall)', 'שמאלה':'Left', 'קדימה':'Forward', 'ימינה':'Right', 'סיבוב נגד כיוון השעון':'Turn counter-clockwise', 'סיבוב עם כיוון השעון':'Turn clockwise', 'גובה':'Height', 'סיבוב 5° · Shift 45°':'Turn 5° · Shift 45°', 'סיבוב':'Rotation', 'Shift = צעד של 10 ס"מ':'Shift = 10 cm steps', 'ס"מ':'cm', 'מצב עריכה':'Edit mode', 'מצב הזזה':'Move mode', 'מצב סידור':'Arrange mode', 'מצב סידור – דלתות, מדפים, תאים':'Arrange mode – doors, shelves, bins', 'שכפול (Ctrl+D)':'Duplicate (Ctrl+D)', 'מחיקה (Delete)':'Delete (Delete)', 'מצב עריכה ':'Edit mode', 'הגדרות המוצר יופיעו כאן':'The product settings will appear here', 'מקשי ההזזה והמיקום יופיעו כאן':'The move keys and position will appear here', 'סידור דלתות, מדפים ותאים יופיע כאן':'Arranging doors, shelves and bins will appear here', 'חזרה':'Back', 'חזרה לסצנה':'Back to the scene', 'רב תא':'Tilt bin', 'גררו לסצנה, או לחיצה כפולה להוספה במרכז':'Drag into the scene, or double-click to add it in the middle', 'וריאציות':'variations', 'סגירה':'Close', 'הוסף מוצר / מערכת זה / זו':'Add this product / system', 'פעמים':'times', 'כמה פעמים':'How many times', 'הוסף מוצר זה לסצנה':'Add this product to the scene', 'מספר הפעמים שיש להוסיף מערכת זו / מוצר זה לסצנה:':'How many times to add this system / product to the scene:',
   'פקודה קולית למוצר הזה':'Voice command for this product', 'מספר טורים':'Columns', 'מספר כנפיים':'Wings', 'תריס פתוח':'Tambour open', 'דלתות פתוחות':'Doors open', 'זהה כנפיים':'Identify wings', 'זהה מגירות':'Identify bins',
   'כנף':'Wing', 'סטים':'sets', 'המספר = מספר הסטים (יחידות רב תא) בכנף':'The number = how many sets (tilt-bin units) are in the wing', 'קטגוריות':'Categories', 'גוררים לסיבוב · גלגלת לזום · לחיצה על תא פותחת אותו':'Drag to turn · wheel to zoom · click a bin to open it', 'בחזרה לסצנה':'Back to the scene', 'בחרו מוצר מהשורה למעלה כדי להגדיר אותו.':'Pick a product in the row above to set it up.',
   'בחרו מוצר כדי לראות אותו כאן':'Hover a product to see it here', 'כך זה ייראה':'This is how it will look', 'רב תא בודד – מוכן להוספה.':'A single tilt bin – ready to add.', 'רבי תאים':'Tilt bins', 'עגלות ומעמדים לרב תא':'Carts & stands', 'מחיצות ותאים נעים':'Partitions & gondolas', 'מתלי קיר':'Wall racks',
