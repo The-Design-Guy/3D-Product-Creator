@@ -3994,8 +3994,10 @@ function selectPreset(name, applySettings = true) {
   const p = activeName && store.presets[activeName];
   if (p && p.light) { Object.assign(LIGHT, p.light); applyLight(); if (buildLightPop.sync && !$('lightPop').hidden) buildLightPop.sync(); }
   if (p) { renderNotes = p.notes || ''; renderFields = { contents:'', background:'', extra:'', ...(p.fields || {}) }; renderParsedFrom = renderNotes; }
-  if (p && applySettings && p.families && p.families[FAMILY]) applyFamily(p.families[FAMILY]);
-  resetView();
+  // in the scene / a product photo the catalog setting brings only its camera and light – it never swaps the view or the product
+  const inScene = mode === 'scene' || (typeof PHOTO !== 'undefined' && PHOTO.on);
+  if (p && applySettings && !inScene && p.families && p.families[FAMILY]) applyFamily(p.families[FAMILY]);
+  if (mode !== 'scene') resetView();
   renderPresetPicker();
 }
 $('presetSel').onchange = (e) => selectPreset(e.target.value);
