@@ -1,6 +1,6 @@
 // Stores an image of a saved scene (approved base / final render) in Vercel Blob and returns its public URL.
 // Admin only. The browser sends the raw image bytes (not base64) to stay well under the request size limit.
-// Needs a Blob store connected to the project (Vercel → Storage → Blob), which adds BLOB_READ_WRITE_TOKEN.
+// Needs a Blob store connected to the project (Vercel → Storage → Blob), which adds BLOB_STORE_ID (OIDC – the SDK signs in by itself) or, in older setups, BLOB_READ_WRITE_TOKEN.
 import { isAdmin } from './_auth.js';
 
 export const config = { maxDuration: 60 };
@@ -14,7 +14,7 @@ async function rawBody(req) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
   if (!isAdmin(req)) return res.status(401).json({ error: 'נדרש מצב ניהול' });
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return res.status(501).json({ error: 'לא חובר אחסון תמונות (Vercel Blob) – ראו README' });
+  if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) return res.status(501).json({ error: 'לא חובר אחסון תמונות (Vercel Blob) – ראו README' });
   const type = String(req.headers['content-type'] || '').split(';')[0];
   if (!TYPES[type]) return res.status(400).json({ error: 'רק WebP, PNG או JPG' });
   try {

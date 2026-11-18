@@ -8,7 +8,7 @@ const KEY = 'library';
 // images of a scene that is deleted or replaced are removed from Vercel Blob (when it is connected)
 async function dropImages(sc, keep = []) {
   const urls = [sc?.base?.url, sc?.final?.url].filter(u => u && !keep.includes(u));
-  if (!urls.length || !process.env.BLOB_READ_WRITE_TOKEN) return;
+  if (!urls.length || (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID)) return;
   try { const { del } = await import('@vercel/blob'); await del(urls); } catch {}
 }
 const empty = () => ({ models: {}, scenes: {} });

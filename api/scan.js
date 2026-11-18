@@ -72,7 +72,7 @@ export default async function handler(req, res) {
     if (a === 'new') {
       if (req.method !== 'POST') return res.status(405).json({ error:'method not allowed' });
       if (!isAdmin(req)) return res.status(401).json({ error:'נדרש מצב ניהול' });
-      if (!process.env.BLOB_READ_WRITE_TOKEN) return res.status(501).json({ error:'לא חובר אחסון תמונות (Vercel Blob) – ראו README' });
+      if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) return res.status(501).json({ error:'לא חובר אחסון תמונות (Vercel Blob) – ראו README' });
       const nid = randomBytes(15).toString('base64').replace(/[^a-z0-9]/gi, '').toLowerCase().padEnd(20, '0').slice(0, 20);
       await save(nid, { status:'waiting', created:Date.now(), photos:Array(MAX_PHOTOS).fill(null), result:null, error:'' });
       return res.status(200).json({ id:nid, ttl:TTL });
