@@ -504,6 +504,30 @@
   .dlg-card { width:min(420px, calc(100vw - 32px)); max-height:calc(100vh - 40px); overflow:auto; background:#fff; border-radius:14px;
     padding:18px; box-shadow:0 20px 60px rgba(20,30,40,.25); direction:rtl; }
   .dlg-card h3 { margin:0 0 6px; font-size:17px; letter-spacing:.01em; }
+  .wzbtn { width:100%; margin-top:8px; }
+  .dlg-card.wizcard { width:min(760px, calc(100vw - 32px)); }
+  .wzsteps { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:14px; }
+  .wzsteps button { font:inherit; font-size:12px; display:flex; align-items:center; gap:6px; padding:5px 10px 5px 8px; border:1px solid var(--line); border-radius:99px; background:#fff; color:var(--muted); cursor:pointer; }
+  .wzsteps button b { width:18px; height:18px; border-radius:50%; background:#eef0f2; display:grid; place-items:center; font-size:11px; }
+  .wzsteps button.on { border-color:var(--acc); color:var(--ink); } .wzsteps button.on b { background:var(--acc); color:#fff; } .wzsteps button.done b { background:#cfe6d6; }
+  .wz h3 { margin:0 0 6px; }
+  .wzf { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted); margin-bottom:10px; }
+  .wzf input, .wzf textarea, .wztable input, .wztable select { font:inherit; font-size:13px; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:7px 9px; background:#fff; box-sizing:border-box; width:100%; }
+  .wzchips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .wzchips button { font:inherit; font-size:13px; padding:7px 12px; border:1px solid var(--line); border-radius:99px; background:#fff; cursor:pointer; color:var(--ink); }
+  .wzchips button.on { background:var(--acc); border-color:var(--acc); color:#fff; }
+  .wzlogo { display:flex; align-items:center; gap:10px; } .wzlogo img { height:48px; max-width:160px; object-fit:contain; border:1px solid var(--line); border-radius:8px; padding:4px; background:#fff; } .wzlogo span { color:var(--muted); }
+  .wzmap { width:100%; max-height:260px; display:block; margin-top:10px; }
+  .wzsplit { display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; } .wzsplit #wzLists { max-height:46vh; overflow:auto; }
+  @media (max-width:640px) { .wzsplit { grid-template-columns:1fr; } }
+  .wzphotos { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
+  .wzphotos span { width:54px; height:54px; border-radius:8px; background:#eef0f2 center/cover no-repeat; position:relative; border:1px solid var(--line); }
+  .wzphotos span button { position:absolute; top:-6px; left:-6px; width:18px; height:18px; border-radius:50%; border:0; background:#2f3b45; color:#fff; font-size:10px; cursor:pointer; }
+  .wzq { font-size:13px; background:#fff8e6; border:1px solid #f0dfb0; border-radius:8px; padding:8px 10px; margin:6px 0; display:flex; flex-direction:column; gap:4px; }
+  .wztable { overflow:auto; max-height:40vh; } .wztable table { width:100%; border-collapse:collapse; font-size:12px; } .wztable th { text-align:start; color:var(--muted); font-weight:500; padding:4px; }
+  .wztable td { padding:3px; vertical-align:middle; } .wztable td:first-child { min-width:130px; } .wzdim { display:flex; gap:3px; align-items:center; } .wzdim input { width:54px; } .wztable td input[data-f=qty] { width:64px; }
+  .wztable .opdel { border:0; background:none; cursor:pointer; color:var(--muted); }
+  .wzsum { display:flex; flex-direction:column; gap:6px; font-size:14px; }
   .dlg-sub { font-size:13px; color:var(--muted); margin:0 0 12px; line-height:1.5; }
   .fld { display:block; font-size:13px; color:var(--muted); margin:8px 0; }
   .fld input { display:block; width:100%; margin-top:4px; font:inherit; font-size:14px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; color:var(--ink); }
@@ -964,6 +988,7 @@
         <button class="btn primary" id="scnAdd">+ הוסף מוצר</button>
         <button class="btn" id="scnAI">🎙 בנייה בקול (AI)</button>
       </div>
+      <button class="btn wzbtn" id="scnWiz">🧭 אשף תכנון חלל</button>
       <div class="roomscan" id="roomScan"><button class="btn" id="roomScanBtn"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span>צילום החדר</span></button><span class="use">סורקים ברקוד בטלפון, מצלמים את החדר ב־360° – והסצנה נבנית לפי החדר האמיתי.</span></div>
       <div class="opbox" id="scnOpen"></div>
       <div class="opbox" id="scnObst"></div>
@@ -3194,6 +3219,7 @@ function sceneTemplate(name) {
 function initScenePanel() {
   $('scnAdd').onclick = () => openSheet('add');
   $('scnAI').onclick = () => openSceneAI();
+  $('scnWiz').onclick = () => openWizard();
   $('scnDup').onclick = () => { const it = SCN.items.find(i => i.id === SCN.sel); if (it) dupItem(it); };
   $('scnEditBtn').onclick = () => { const e = $('scnEdit'); e.scrollIntoView({ behavior:'smooth', block:'start' }); e.animate([{ background:'#eef4ff' }, { background:'transparent' }], 900); };
   document.querySelectorAll('[data-draft]').forEach(b => b.onclick = () => draftDone(b.dataset.draft === 'ok'));
@@ -4904,7 +4930,7 @@ function applyFamily(f) {
     $(px + 'DepthFld').hidden = TN[v].depthMode !== 'custom'; $(px + 'Depth').value = TN[v].depth / 10;
   }
   tenaOpenWing = f.wing || null; spreadTarget = spread = f.spread ? 1 : 0;
-  if (f.scene) { releaseBody(); SCN.room = deep(f.scene.room); SCN.items = deep(f.scene.items); SCN.zones = deep(f.scene.zones || []); SCN.next = f.scene.next || SCN.items.length + 1; SCN.shots = deep(f.scene.shots || []); renderShots && renderShots(); SCN.sel = null; SCN.editType = null; }
+  if (f.scene) { releaseBody(); SCN.room = deep(f.scene.room); SCN.brief = deep(f.scene.brief || null); SCN.items = deep(f.scene.items); SCN.zones = deep(f.scene.zones || []); SCN.next = f.scene.next || SCN.items.length + 1; SCN.shots = deep(f.scene.shots || []); renderShots && renderShots(); SCN.sel = null; SCN.editType = null; }
   $('backWall').checked = !!f.backWall;
   $('rod').checked = !!f.rod; $('labelsOn').checked = !!f.labels; $('openAll').checked = !!f.openAll;
   [...seg.children].forEach(c => c.classList.toggle('on', +c.dataset.n === current));
@@ -7585,7 +7611,7 @@ function editorOps(ops) {
 function sceneState() { return { snap:sceneSnap(), sel:SCN.sel, t:Date.now() }; }
 function restoreState(st) {
   releaseBody(); SCN.sel = null; SCN.editType = null;
-  SCN.room = deep(st.snap.room); SCN.items = deep(st.snap.items); SCN.zones = deep(st.snap.zones || []); SCN.next = Math.max(SCN.next, st.snap.next || 0);
+  SCN.room = deep(st.snap.room); SCN.brief = deep(st.snap.brief || null); SCN.items = deep(st.snap.items); SCN.zones = deep(st.snap.zones || []); SCN.next = Math.max(SCN.next, st.snap.next || 0);
   rebuild(true);
   if (st.sel && SCN.items.some(i => i.id === st.sel)) selectItem(st.sel); else renderScene();
 }
@@ -8278,6 +8304,149 @@ function openDesignDialog(d) {
     card.querySelector('#dsOk').onclick = () => { close(); designApply(d); toast(`נבנו ${d.lay.items.length} פריטים · Ctrl+Z מבטל`); };
   });
 }
+// ---------- planning wizard: business → space → size → doors & obstacles → inventory → plan ----------
+const WZ_SPACE = { warehouse:'מחסן', workshop:'סדנה / מוסך', lab:'מעבדה', tech:'חדר טכנאים', assembly:'קו הרכבה / ייצור', shop:'חנות / תצוגה', office:'משרד', other:'אחר' };
+const KIND_HE = { small_parts:'ברגים / חלקים קטנים', electronics:'רכיבי אלקטרוניקה', hand_tools:'כלי עבודה ידניים', power_tools:'כלי עבודה חשמליים', boxed_goods:'ארגזים / סחורה ארוזה', heavy:'פריטים כבדים', long_items:'פריטים ארוכים', personal:'ציוד אישי', consumables:'מתכלים', chemicals:'שמנים / כימיקלים', documents:'מסמכים / קלסרים', mobile:'ציוד נייד בין עמדות', other:'אחר' };
+const FREQ_HE = { daily:'יומי', weekly:'שבועי', rare:'לעיתים רחוקות' };
+const WZ_STEPS = ['העסק', 'החלל', 'מידות', 'פתחים ומכשולים', 'מה מאחסנים', 'סיכום'];
+const wzBrief = () => (SCN.brief = SCN.brief || { step:0, biz:{ name:'', field:'', logo:'' }, space:{ type:'', purpose:'' }, inv:{ text:'', rows:[], questions:[], photos:[] } });
+const wzEsc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]);
+function imgToData(file, max = 1024, type = 'image/jpeg') {
+  return new Promise((ok, bad) => { const fr = new FileReader(); fr.onerror = bad; fr.onload = () => { const im = new Image(); im.onerror = bad; im.onload = () => {
+    const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); ok(c.toDataURL(type, 0.82)); }; im.src = fr.result; }; fr.readAsDataURL(file); });
+}
+// a small top view of the room: walls, doors / windows, obstacles
+function wzMap() {
+  const R = SCN.room, W = R.W, D = R.D, pad = Math.max(W, D) * 0.06, sw = Math.max(W, D) * 0.012;
+  const wall = (k, x1, y1, x2, y2) => R[k] ? `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#2f3b45" stroke-width="${sw * 2}"/>` : `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#b9c1c7" stroke-width="${sw}" stroke-dasharray="${sw * 3}"/>`;
+  const ops = (R.openings || []).map(o => { const a = o.off, b = o.off + o.w, c = o.kind === 'door' ? '#3d7be0' : '#8fd0f0';
+    const [x1, y1, x2, y2] = o.wall === 'back' ? [a, 0, b, 0] : o.wall === 'front' ? [a, D, b, D] : o.wall === 'left' ? [0, a, 0, b] : [W, a, W, b];
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${sw * 3}"/>`; }).join('');
+  const obs = (R.obstacles || []).map(o => { const b = obstBox(o), w = b.x1 - b.x0, d = b.z1 - b.z0;
+    const f = { column:'#9ea3a6', pipe:'#5d6267', gypsum:o.status === 'new' ? '#e8eefc' : '#f1efeb', tap:'#3d7be0', step:'#e7e2d8' }[o.kind];
+    const st = o.kind === 'gypsum' && o.status === 'new' ? `stroke="#6d8fd8" stroke-dasharray="${sw * 2}"` : 'stroke="#6b747c"';
+    return o.kind === 'column' && o.round ? `<circle cx="${o.x}" cy="${o.z}" r="${w/2}" fill="${f}" ${st} stroke-width="${sw/2}"/>` : `<rect x="${b.x0}" y="${b.z0}" width="${w}" height="${d}" fill="${f}" ${st} stroke-width="${sw/2}"/>`; }).join('');
+  const fs = Math.max(W, D) * 0.035;
+  return `<svg viewBox="${-pad} ${-pad} ${W + 2 * pad} ${D + 2 * pad}" class="wzmap" aria-label="מבט על החדר"><rect x="0" y="0" width="${W}" height="${D}" fill="#f6f4f0"/>
+    ${wall('back', 0, 0, W, 0)}${wall('front', 0, D, W, D)}${wall('left', 0, 0, 0, D)}${wall('right', W, 0, W, D)}${ops}${obs}
+    <text x="${W/2}" y="${-pad * 0.3}" font-size="${fs}" text-anchor="middle" fill="#6b747c">אחורי · ${(W/1000).toFixed(1)} מ'</text>
+    <text x="${W/2}" y="${D + pad * 0.8}" font-size="${fs}" text-anchor="middle" fill="#6b747c">קדמי (מצלמה)</text></svg>`;
+}
+function wzPlanText(B) {
+  const rows = B.inv.rows.map(r => `- ${r.name} (${KIND_HE[r.kind] || r.kind})${r.length_cm || r.width_cm || r.height_cm ? `, ${[r.length_cm, r.width_cm, r.height_cm].map(v => v || '?').join('×')} ס"מ` : ''}${r.qty ? `, כמות ${r.qty}${r.unit && r.unit !== 'pcs' ? ' ' + r.unit : ''}` : ''}${r.weight_kg ? `, ${r.weight_kg} ק"ג` : ''}${r.freq ? `, שליפה ${FREQ_HE[r.freq]}` : ''}${r.notes ? ` – ${r.notes}` : ''}`).join('\n');
+  return `תכנן את כל החלל לפי האפיון:\nעסק: ${B.biz.name || '—'}${B.biz.field ? ` (${B.biz.field})` : ''}\nסוג החלל: ${WZ_SPACE[B.space.type] || B.space.type || '—'}${B.space.purpose ? `\nלמה ישמש: ${B.space.purpose}` : ''}\n`
+    + (rows ? `מה מאחסנים:\n${rows}\n` : (B.inv.text ? `מה מאחסנים (תיאור): ${B.inv.text}\n` : ''))
+    + 'שמור על הדלתות, החלונות והמכשולים שבחדר. בחר מוצרים לפי סוג הפריטים, ובכמות שמספיקה למלאי.';
+}
+function openWizard(at) {
+  const B = wzBrief(); if (at !== undefined) B.step = at;
+  openDialog(`<div class="wz"><div class="wzsteps" id="wzSteps"></div><div class="wzbody" id="wzBody"></div><div class="dlg-err" id="wzErr" hidden></div>
+    <div class="dlg-actions"><button class="btn primary" id="wzNext">הבא</button><button class="btn" id="wzPrev">הקודם</button><button class="btn" data-close>סגירה</button></div></div>`, (card, close) => {
+    card.classList.add('wizcard');
+    const q = (x) => card.querySelector(x), body = q('#wzBody');
+    const lent = [];
+    const lend = (el, into) => { const home = document.createComment('lent'); el.parentNode.insertBefore(home, el); into.appendChild(el); lent.push({ el, home }); };
+    const unlend = () => { while (lent.length) { const { el, home } = lent.pop(); home.parentNode.insertBefore(el, home); home.remove(); } };
+    let mo = null;
+    $('dlg')._onClose = () => { unlend(); mo && mo.disconnect(); if (Mic.listening) Mic.stop(); };
+    const err = (t) => { const e = q('#wzErr'); e.textContent = t || ''; e.hidden = !t; };
+    const draw = () => {
+      unlend(); mo && mo.disconnect(); mo = null; err('');
+      q('#wzSteps').innerHTML = WZ_STEPS.map((t, i) => `<button class="${i === B.step ? 'on' : i < B.step ? 'done' : ''}" data-i="${i}"><b>${i + 1}</b>${t}</button>`).join('');
+      q('#wzSteps').querySelectorAll('button').forEach(b => b.onclick = () => { B.step = +b.dataset.i; draw(); });
+      q('#wzPrev').hidden = B.step === 0; q('#wzNext').textContent = B.step === 5 ? 'תכנן את החלל' : 'הבא';
+      const s = B.step;
+      if (s === 0) {
+        body.innerHTML = `<h3>העסק</h3><p class="dlg-sub">שם העסק לא חייב להופיע בתמונה. אם תעלו לוגו, הוא יוצג בסצנה כשלט על קיר.</p>
+          <label class="wzf">שם העסק<input id="wzName" value="${wzEsc(B.biz.name)}" placeholder="למשל: מוסך כהן"></label>
+          <label class="wzf">תחום<input id="wzField" value="${wzEsc(B.biz.field)}" placeholder="למשל: תיקון רכבים, אלקטרוניקה, מעבדת שיניים"></label>
+          <div class="wzf">לוגו (לא חובה)<div class="wzlogo">${B.biz.logo ? `<img src="${B.biz.logo}" alt="לוגו">` : '<span>אין לוגו</span>'}<label class="btn">העלאה<input type="file" id="wzLogo" accept="image/*" hidden></label>${B.biz.logo ? '<button class="btn" id="wzLogoDel">הסרה</button>' : ''}</div></div>`;
+        q('#wzName').oninput = (e) => B.biz.name = e.target.value; q('#wzField').oninput = (e) => B.biz.field = e.target.value;
+        q('#wzLogo').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; B.biz.logo = await imgToData(f, 480, 'image/png'); draw(); };
+        if (q('#wzLogoDel')) q('#wzLogoDel').onclick = () => { B.biz.logo = ''; draw(); };
+      } else if (s === 1) {
+        body.innerHTML = `<h3>החלל</h3><div class="wzchips" id="wzType">${Object.entries(WZ_SPACE).map(([k, t]) => `<button class="${B.space.type === k ? 'on' : ''}" data-v="${k}">${t}</button>`).join('')}</div>
+          <label class="wzf">למה ישמש החלל ומה חשוב לכם<textarea id="wzPurpose" rows="3" placeholder="למשל: 6 טכנאים עובדים במקביל, צריך גישה מהירה לחלקים קטנים, כלים יקרים נעולים">${wzEsc(B.space.purpose)}</textarea></label>`;
+        q('#wzType').querySelectorAll('button').forEach(b => b.onclick = () => { B.space.type = b.dataset.v; draw(); });
+        q('#wzPurpose').oninput = (e) => B.space.purpose = e.target.value;
+      } else if (s === 2) {
+        const R = SCN.room;
+        body.innerHTML = `<h3>מידות החדר</h3><p class="dlg-sub">רוחב = לאורך הקיר האחורי. אפשר גם לצלם את החדר בטלפון – ה-AI יבנה ממנו את החדר ותוכלו לחזור לאשף אחרי זה.</p>
+          <div class="pair"><label class="wzf">רוחב (מ')<input type="number" id="wzW" step="0.1" min="2" value="${R.W/1000}"></label><label class="wzf">עומק (מ')<input type="number" id="wzD" step="0.1" min="2" value="${R.D/1000}"></label></div>
+          <div class="wzf">קירות<div class="wzchips" id="wzWalls">${['back', 'left', 'right', 'front'].map(k => `<button class="${R[k] ? 'on' : ''}" data-v="${k}">${WALL_HE[k]}</button>`).join('')}</div></div>
+          <button class="btn" id="wzScan">📷 צילום החדר בטלפון</button><div id="wzMapBox"></div>`;
+        const upd = () => { rebuild(true); q('#wzMapBox').innerHTML = wzMap(); };
+        q('#wzW').onchange = (e) => { R.W = Math.max(2000, Math.min(100000, Math.round(+e.target.value * 1000) || R.W)); SCN.items.forEach(snapItem); upd(); };
+        q('#wzD').onchange = (e) => { R.D = Math.max(2000, Math.min(100000, Math.round(+e.target.value * 1000) || R.D)); SCN.items.forEach(snapItem); upd(); };
+        q('#wzWalls').querySelectorAll('button').forEach(b => b.onclick = () => { R[b.dataset.v] = !R[b.dataset.v]; b.classList.toggle('on', !!R[b.dataset.v]); upd(); });
+        q('#wzScan').onclick = () => { close(); openRoomScan(); toast('אחרי שהחדר ייבנה – פתחו שוב את האשף מהפאנל'); };
+        q('#wzMapBox').innerHTML = wzMap();
+      } else if (s === 3) {
+        body.innerHTML = `<h3>דלתות, חלונות ומכשולים</h3><p class="dlg-sub">עמודים, צינורות, ברזים, קירות גבס (קיימים / להסרה / חדשים לבנייה). אפשר גם להזיז אותם אחר כך בסצנה עם Ctrl + גרירה.</p>
+          <div class="wzsplit"><div id="wzLists"></div><div id="wzMapBox"></div></div>`;
+        lend($('scnOpen'), q('#wzLists')); lend($('scnObst'), q('#wzLists')); renderOpenings(); renderObstacles();
+        q('#wzMapBox').innerHTML = wzMap();
+        mo = new MutationObserver(() => { const m = q('#wzMapBox'); if (m) m.innerHTML = wzMap(); });
+        mo.observe(q('#wzLists'), { childList:true, subtree:true });
+      } else if (s === 4) {
+        const I = B.inv;
+        body.innerHTML = `<h3>מה מאחסנים</h3><p class="dlg-sub">כתבו או הקליטו מה יש, כמה ממנו ובאיזה גודל, ו/או צלמו את הפריטים. ה-AI יבנה טבלה, ואתם מאשרים או מתקנים. מידות מתמונה הן הערכה בלבד.</p>
+          <div class="aibox"><textarea id="wzInvText" rows="3" placeholder="למשל: 300 קופסאות ברגים קטנות, 15 מקדחות, 40 ארגזי קרטון 60×40×40, שמנים בפחים של 5 ליטר">${wzEsc(I.text)}</textarea><button class="aimic" id="wzMic" title="הקלטה" aria-label="הקלטה">🎙</button></div>
+          <div class="use" id="wzPartial"></div>
+          <div class="wzphotos">${I.photos.map((u, k) => `<span style="background-image:url('${u}')"><button data-k="${k}" aria-label="הסרה">✕</button></span>`).join('')}<label class="btn">📷 תמונות<input type="file" id="wzPh" accept="image/*" multiple hidden></label>
+            <button class="btn primary" id="wzParse">נתח עם AI</button></div>
+          ${I.questions.length ? `<div class="wzq">${I.questions.map(t => `<div>❓ ${wzEsc(t)}</div>`).join('')}</div>` : ''}
+          <div class="wztable"><table><thead><tr><th>פריט</th><th>סוג</th><th>א×ר×ג (ס"מ)</th><th>כמות</th><th>שליפה</th><th></th></tr></thead><tbody>
+          ${I.rows.map((r, k) => `<tr data-k="${k}"><td><input data-f="name" value="${wzEsc(r.name)}"></td>
+            <td><select data-f="kind">${Object.entries(KIND_HE).map(([v, t]) => `<option value="${v}"${r.kind === v ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
+            <td class="wzdim"><input data-f="length_cm" type="number" value="${r.length_cm ?? ''}"><input data-f="width_cm" type="number" value="${r.width_cm ?? ''}"><input data-f="height_cm" type="number" value="${r.height_cm ?? ''}">${r.from_photo ? '<i title="הערכה מתמונה">≈</i>' : ''}</td>
+            <td><input data-f="qty" type="number" value="${r.qty ?? ''}"></td>
+            <td><select data-f="freq"><option value="">—</option>${Object.entries(FREQ_HE).map(([v, t]) => `<option value="${v}"${r.freq === v ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
+            <td><button class="opdel" data-del="${k}" aria-label="הסרה">✕</button></td></tr>`).join('')}
+          </tbody></table><button class="btn" id="wzRow">+ שורה</button></div>`;
+        const ta = q('#wzInvText'), mic = q('#wzMic');
+        ta.oninput = () => I.text = ta.value;
+        Mic.on({ partial:(t) => { const p = q('#wzPartial'); if (p) p.textContent = t; }, final:(t) => { ta.value = (ta.value.trim() + ' ' + t.trim()).trim(); I.text = ta.value; const p = q('#wzPartial'); if (p) p.textContent = ''; },
+          state:(on) => mic.classList.toggle('on', !!on), error:() => {} });
+        micReady.then(kind => { mic.hidden = !kind; });
+        mic.onclick = () => { if (Mic.listening) { Mic.stop(); return; } Mic.start().catch(() => mic.classList.remove('on')); };
+        q('#wzPh').onchange = async (e) => { for (const f of [...e.target.files].slice(0, 6 - I.photos.length)) I.photos.push(await imgToData(f)); draw(); };
+        body.querySelectorAll('.wzphotos [data-k]').forEach(b => b.onclick = () => { I.photos.splice(+b.dataset.k, 1); draw(); });
+        q('#wzParse').onclick = async () => {
+          if (Mic.listening) await Mic.stop();
+          if (!I.text.trim() && !I.photos.length) { err('כתבו, הקליטו או צלמו קודם מה מאחסנים.'); return; }
+          if (!server) { err('ניתוח AI זמין רק בגרסה שעולה ל-Vercel. אפשר למלא את הטבלה ידנית.'); return; }
+          const b = q('#wzParse'); b.disabled = true; b.textContent = 'מנתח…'; err('');
+          try { const r = await api('/api/inventory', { text:I.text, images:I.photos, rows:I.rows }); I.rows = r.rows || []; I.questions = r.questions || []; draw(); }
+          catch (e) { b.disabled = false; b.textContent = 'נתח עם AI'; err(e.message); }
+        };
+        body.querySelectorAll('tbody [data-f]').forEach(el => el.onchange = () => { const r = I.rows[+el.closest('tr').dataset.k], f = el.dataset.f;
+          r[f] = el.type === 'number' ? (el.value === '' ? null : +el.value) : (el.value || (f === 'freq' ? null : '')); if (f.endsWith('_cm')) r.from_photo = false; });
+        body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { I.rows.splice(+b.dataset.del, 1); draw(); });
+        q('#wzRow').onclick = () => { I.rows.push({ name:'', kind:'other', length_cm:null, width_cm:null, height_cm:null, qty:null, unit:'pcs', weight_kg:null, freq:null, notes:'', from_photo:false }); draw(); };
+      } else {
+        const R = SCN.room, I = B.inv;
+        body.innerHTML = `<h3>סיכום</h3><div class="wzsum">
+          <div><b>עסק:</b> ${wzEsc(B.biz.name) || '—'}${B.biz.field ? ' · ' + wzEsc(B.biz.field) : ''}${B.biz.logo ? ' · יש לוגו' : ''}</div>
+          <div><b>חלל:</b> ${WZ_SPACE[B.space.type] || '—'}${B.space.purpose ? ' – ' + wzEsc(B.space.purpose) : ''}</div>
+          <div><b>מידות:</b> ${R.W/1000} × ${R.D/1000} מ' · ${(R.openings || []).length} פתחים · ${(R.obstacles || []).length} מכשולים</div>
+          <div><b>מלאי:</b> ${I.rows.length ? I.rows.length + ' סוגי פריטים' : I.text ? 'תיאור חופשי' : '—'}</div></div>
+          <div id="wzMapBox"></div><p class="dlg-sub">ה-AI יציע תכנית לאישור לפני שמשהו נבנה. ${SCN.items.length ? 'המוצרים שכבר בסצנה יישארו, אלא אם תבקשו אחרת בתכנית.' : ''}</p>`;
+        q('#wzMapBox').innerHTML = wzMap();
+      }
+    };
+    q('#wzPrev').onclick = () => { B.step = Math.max(0, B.step - 1); draw(); };
+    q('#wzNext').onclick = async () => {
+      if (B.step < 5) { B.step++; draw(); return; }
+      if (!server) { err('התכנון עם AI זמין רק בגרסה שעולה ל-Vercel.'); return; }
+      const b = q('#wzNext'); b.disabled = true; b.textContent = 'מתכנן…'; err('');
+      try { const d = await designFlow(wzPlanText(B)); close(); openDesignDialog(d); }
+      catch (e) { b.disabled = false; b.textContent = 'תכנן את החלל'; err(e.message); }
+    };
+    draw();
+  });
+}
 function openSceneAI() {
   openDialog(`
     <h3>בנייה בקול</h3>
@@ -8329,7 +8498,7 @@ function renderSceneTypes() {
 // ---- saved scenes: base (products only) and ready (with the full render brief and its images) ----
 function sceneSnap() {
   const s = SCN.items.find(i => i.id === SCN.sel); if (s) s.cfg = capCfg(s.type);
-  return { room:deep(SCN.room), next:SCN.next, shots:deep(SCN.shots || []), zones:deep(SCN.zones || []),
+  return { room:deep(SCN.room), next:SCN.next, shots:deep(SCN.shots || []), zones:deep(SCN.zones || []), brief:deep(SCN.brief || null),
     items:SCN.items.map(({ id, type, cfg, x, z, y, rot, hidden, name, contents, zone, onStep }) => deep({ id, type, cfg, x, z, y:y || 0, rot, hidden:!!hidden, name, contents:contents || '', ...(zone ? { zone } : {}), ...(onStep ? { onStep } : {}) })) };
 }
 async function uploadImage(src, kind) {
@@ -8361,7 +8530,7 @@ function loadScene(name) {
   const sc = lib.scenes[name]; if (!sc) return;
   if (mode !== 'scene') panels.find(p => p.dataset.mode === 'scene').querySelector('.head').click();
   releaseBody(); if (FREE.on) setFree(false);
-  SCN.room = deep(sc.scene.room); SCN.items = deep(sc.scene.items); SCN.zones = deep(sc.scene.zones || []); SCN.next = sc.scene.next || SCN.items.length + 1;
+  SCN.room = deep(sc.scene.room); SCN.brief = deep(sc.scene.brief || null); SCN.items = deep(sc.scene.items); SCN.zones = deep(sc.scene.zones || []); SCN.next = sc.scene.next || SCN.items.length + 1;
   SCN.shots = deep(sc.scene.shots || []); renderShots && renderShots(); SCN.sel = null; SCN.editType = null; sceneUndo.length = 0;
   rebuild(); renderScene();
   if (sc.camera) setTimeout(() => goShot(sc.camera), 60);
