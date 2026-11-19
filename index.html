@@ -527,6 +527,8 @@
   .wztable { overflow:auto; max-height:40vh; } .wztable table { width:100%; border-collapse:collapse; font-size:12px; } .wztable th { text-align:start; color:var(--muted); font-weight:500; padding:4px; }
   .wztable td { padding:3px; vertical-align:middle; } .wztable td:first-child { min-width:130px; } .wzdim { display:flex; gap:3px; align-items:center; } .wzdim input { width:54px; } .wztable td input[data-f=qty] { width:64px; }
   .wztable .opdel { border:0; background:none; cursor:pointer; color:var(--muted); }
+  .wzh4 { margin:14px 0 6px; font-size:14px; } .wzgap { font-size:11px; color:#b5651d; } .wzwhy { font-size:11px; color:var(--muted); } .wztable td input[data-need] { width:64px; }
+  .wzlogotog { margin-top:8px; font-size:13px; color:var(--ink); }
   .wzsum { display:flex; flex-direction:column; gap:6px; font-size:14px; }
   .dlg-sub { font-size:13px; color:var(--muted); margin:0 0 12px; line-height:1.5; }
   .fld { display:block; font-size:13px; color:var(--muted); margin:8px 0; }
@@ -2929,6 +2931,22 @@ const obConcMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#c9c6c
 const obPipeMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#9ea4a9'), roughness:0.35, metalness:0.65 });
 const obGypMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#f1efeb'), roughness:0.9 });
 const obGypNewMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#f6f6f4'), roughness:0.85, transparent:true, opacity:0.82 });
+// the business logo (from the planning wizard) as a sign high on the back wall (or a side wall)
+const LOGO_TEX = { url:'', tex:null };
+function buildLogoSign(world) {
+  const B = SCN.brief, R = SCN.room; if (!B || !B.biz || !B.biz.logo || B.biz.showLogo === false) return;
+  const wall = R.back ? 'back' : R.left ? 'left' : R.right ? 'right' : null; if (!wall) return;
+  if (LOGO_TEX.url !== B.biz.logo) { LOGO_TEX.url = B.biz.logo; LOGO_TEX.tex = new THREE.TextureLoader().load(B.biz.logo, (t) => { t.colorSpace = THREE.SRGBColorSpace; LOGO_TEX.asp = t.image.width / t.image.height; rebuild(true); }); }
+  const asp = LOGO_TEX.asp || 2.5, w = Math.min(1.4, 0.5 * asp), h = w / asp;
+  const g = new THREE.Group(); world.add(g);
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(w + 0.16, h + 0.16, 0.02), new THREE.MeshStandardMaterial({ color:0xffffff, roughness:0.5 }));
+  const pic = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map:LOGO_TEX.tex, transparent:true, roughness:0.6 })); pic.position.z = 0.011;
+  g.add(plate, pic);
+  const y = Math.min(WALL_H / 1000 - h / 2 - 0.2, 2.25);
+  if (wall === 'back') g.position.set(0, y, -R.D / 2000 + 0.012);
+  else if (wall === 'left') { g.position.set(-R.W / 2000 + 0.012, y, 0); g.rotation.y = Math.PI / 2; }
+  else { g.position.set(R.W / 2000 - 0.012, y, 0); g.rotation.y = -Math.PI / 2; }
+}
 const OBST_PARTS = [];                    // every mesh of an obstacle, for Ctrl + drag
 function buildObstacles(world) {
   const R = SCN.room; OBST_PARTS.length = 0;
@@ -3022,7 +3040,7 @@ function buildScene() {
   if (R.back) buildRoomWall(world, 'back', W, new THREE.Vector3(0, 0, -D/2), 0);
   if (R.left) buildRoomWall(world, 'left', D, new THREE.Vector3(-W/2, 0, 0), Math.PI/2);
   if (R.right) buildRoomWall(world, 'right', D, new THREE.Vector3(W/2, 0, 0), -Math.PI/2);
-  buildObstacles(world);
+  buildObstacles(world); buildLogoSign(world);
   for (const o of (R.openings || []).filter(o => o.wall === 'front')) {        // the front wall is not drawn: the opening shows as a strip on the floor
     const p = openPlace(o), m = new THREE.Mesh(new THREE.BoxGeometry(p.w, 0.006, 0.14), o.kind === 'door' ? opAlumMat : opFrameMat);
     m.position.set(p.c, 0.003, D/2 - 0.07); world.add(m);
@@ -3438,7 +3456,8 @@ function describeScene() {
       : o.kind === 'pipe' ? (o.axis === 'y' ? `a vertical grey metal pipe ${Math.round(o.dia/10)} cm thick, floor to ceiling, ${at}` : `a horizontal grey metal pipe ${Math.round(o.dia/10)} cm thick and ${Math.round(o.len/10)} cm long, ${Math.round(o.y/10)} cm above the floor, running ${o.axis === 'x' ? 'across' : 'along the depth of'} the room, ${at}`)
       : `a plain white gypsum partition wall ${Math.round(o.len/10)} cm long and ${Math.round(o.t/10)} cm thick, ${(o.h || WALL_H) >= WALL_H ? 'floor to ceiling' : Math.round(o.h/10) + ' cm high (not up to the ceiling)'}, running ${o.axis === 'x' ? 'across' : 'along the depth of'} the room, ${at}`; });
   const scanTxt = R.scan && R.scan.en ? `The room looks like the real one in the room reference photos: ${R.scan.en}\n` : '';
-  const lines = [`${scanTxt}${obTxt.length ? 'Fixed elements that must appear exactly where they are in the base image: ' + obTxt.join('; ') + '.\n' : ''}${opTxt.length ? 'Openings that must appear exactly where they are in the base image: ' + opTxt.join('; ') + '.\n' : ''}A realistic interior scene: a room about ${R.W/1000} x ${R.D/1000} m with a smooth floor${walls.length ? ' and plain light walls (' + walls.join(', ') + ')' : ''}. It contains ${SCN.items.filter(i => !i.hidden).length} products, arranged exactly as in the image:`];
+  const logoTxt = SCN.brief && SCN.brief.biz && SCN.brief.biz.logo && SCN.brief.biz.showLogo !== false ? `A white sign with the business logo${SCN.brief.biz.name ? ` (${SCN.brief.biz.name})` : ''} hangs high on the ${R.back ? 'back' : R.left ? 'left' : 'right'} wall exactly as in the base image – keep its artwork exactly as it is.\n` : '';
+  const lines = [`${scanTxt}${logoTxt}${obTxt.length ? 'Fixed elements that must appear exactly where they are in the base image: ' + obTxt.join('; ') + '.\n' : ''}${opTxt.length ? 'Openings that must appear exactly where they are in the base image: ' + opTxt.join('; ') + '.\n' : ''}A realistic interior scene: a room about ${R.W/1000} x ${R.D/1000} m with a smooth floor${walls.length ? ' and plain light walls (' + walls.join(', ') + ')' : ''}. It contains ${SCN.items.filter(i => !i.hidden).length} products, arranged exactly as in the image:`];
   const saved = capAll(), m = mode;
   SCN.items.filter(i => !i.hidden).forEach((it, k) => {
     applyCfg(it.type, it.id === SCN.sel ? capCfg(it.type) : it.cfg);
@@ -8053,7 +8072,7 @@ function footOf(type, cfg) {                           // the product's footprin
   const f = { w:Math.round(s.x * 1000), d:Math.round(s.z * 1000), h:Math.round(s.y * 1000) }; FOOT.set(k, f); return f;
 }
 const ZONE_KIND = { workstations:'שורת עמדות', workstation_island:'אי עמדות גב אל גב', wall_storage:'אחסון לאורך קיר', island:'אי במרכז', benches:'שולחנות עבודה', carts:'עגלות', decor:'עציצים' };
-const WALL_HEB = { back:'האחורי', left:'השמאלי', right:'הימני', front:'הקדמי' };
+const WALL_HEB = { back:'האחורי', left:'השמאלי', right:'הימני', front:'הקדמי', gypsum:'הגבס' };
 const AISLE = 1200, SIDE_AISLE = 900;
 const fullSettings = (st) => ({ wb_variant:null, wb_tools:null, wb_top:null, stand_type:null, base:null, height_cm:null, comp:null, arc:null, bin_layout:null, shelf_bins:null, fill_model:null, fill_to_cm:null, wings:null, cols:null, top:null, tena_size:null, doors:null, unit_bins:null, md_color:null, align:null, tech_variant:null, door_bins:null, door_acc:null, furn_kind:null, furn_w_cm:null, ...(st || {}) });
 function zoneCfg(type, st) { return cfgFromPlan({ type, saved_model:'', settings:fullSettings(st), base:deep(DEF_CFG(type)) }); }
@@ -8088,6 +8107,22 @@ function layoutDesign(plan, room) {
     left:{ L:D, rot:90, rect:(a0, a1, t0, t1) => ({ x0:t0, x1:t1, z0:a0, z1:a1 }) },
     right:{ L:D, rot:270, rect:(a0, a1, t0, t1) => ({ x0:W - t1, x1:W - t0, z0:a0, z1:a1 }) },
   };
+  // both faces of every gypsum wall are walls too (a new one first: it is built for the storage)
+  const GYP = [];
+  [...(room.obstacles || [])].filter(o => o.kind === 'gypsum').sort((a, b) => (b.status === 'new') - (a.status === 'new')).forEach((o, k) => {
+    const b = obstBox(o);
+    if (o.axis === 'z') {
+      WALL['g' + k + 'l'] = { L:b.z1 - b.z0, rot:270, rect:(a0, a1, t0, t1) => ({ x0:b.x0 - t1, x1:b.x0 - t0, z0:b.z0 + a0, z1:b.z0 + a1 }) };
+      WALL['g' + k + 'r'] = { L:b.z1 - b.z0, rot:90, rect:(a0, a1, t0, t1) => ({ x0:b.x1 + t0, x1:b.x1 + t1, z0:b.z0 + a0, z1:b.z0 + a1 }) };
+      GYP.push('g' + k + 'l', 'g' + k + 'r');
+    } else {
+      WALL['g' + k + 'f'] = { L:b.x1 - b.x0, rot:0, rect:(a0, a1, t0, t1) => ({ x0:b.x0 + a0, x1:b.x0 + a1, z0:b.z1 + t0, z1:b.z1 + t1 }) };
+      WALL['g' + k + 'b'] = { L:b.x1 - b.x0, rot:180, rect:(a0, a1, t0, t1) => ({ x0:b.x0 + a0, x1:b.x0 + a1, z0:b.z0 - t1, z1:b.z0 - t0 }) };
+      GYP.push('g' + k + 'f', 'g' + k + 'b');
+    }
+  });
+  const ROOMW = ['back', 'left', 'right', 'front'];
+  const wallsFor = (z) => z.wall === 'gypsum' ? (GYP.length ? GYP : ROOMW) : z.wall ? [z.wall] : [...GYP, ...ROOMW];
   const put = (z, seg, r) => { placed.push({ ...r, h:seg.h, zone:z.id });
     out.push({ type:seg.type, cfg:seg.cfg, rot:seg.rot, x:(r.x0 + r.x1) / 2, z:(r.z0 + r.z1) / 2, zone:z.id, name:seg.name, contents:z.contents || '' }); };
   // a run of segments side by side along a wall: the first offset (by align) where all of them are free
@@ -8102,6 +8137,21 @@ function layoutDesign(plan, room) {
       if (rs.every((r, i) => free(r, segs[i].h))) { rs.forEach((r, i) => put(z, { ...segs[i], rot:(F.rot + (segs[i].turn || 0)) % 360 }, r)); return true; }
     }
     return false;
+  }
+  // the same, but each segment on its own: around columns, pipes, doors – from the align point outwards
+  function spreadOnWall(z, wall, seg, n, gap) {
+    const F = WALL[wall]; if (!F || seg.along > F.L) return 0;
+    const want = z.align === 'start' ? 0 : z.align === 'end' ? F.L : F.L / 2, spots = [];
+    for (let a = 0; a + seg.along <= F.L + 1; a += 50) spots.push(a);
+    spots.sort((p, q) => Math.abs(p + seg.along / 2 - want) - Math.abs(q + seg.along / 2 - want));
+    let k = 0;
+    for (const a of spots) {
+      if (k >= n) break;
+      const r = F.rect(a, a + seg.along, seg.t0 || 0, (seg.t0 || 0) + seg.depth);
+      if (!free(r, seg.h)) continue;
+      put(z, { ...seg, name:seg.name + ' ' + (k + 1), rot:(F.rot + (seg.turn || 0)) % 360 }, r); k++;
+    }
+    return k;
   }
   // a block (w x d) in the free middle: as close to the centre as possible, an aisle all round
   function blockInMiddle(w, d) {
@@ -8131,7 +8181,7 @@ function layoutDesign(plan, room) {
         for (let i = 0; i < n; i++) { s2.push(seg(i)); if (pt && (i < n - 1 || pt.ends)) s2.push(pseg(p++)); }
         return s2; };
       if (z.kind === 'workstations') {
-        const walls = z.wall ? [z.wall] : ['back', 'left', 'right', 'front'];
+        const walls = wallsFor(z);
         let n = n0 || Math.max(1, Math.floor((WALL[walls[0]].L - 1200) / (stF.w + (pF ? pF.d + 60 : 0))));
         asked = n;
         for (; n >= 1 && !made; n--) for (const w of walls) if (runOnWall(z, w, build(n), 30)) { made = n; break; }
@@ -8154,11 +8204,17 @@ function layoutDesign(plan, room) {
     } else if (z.kind === 'wall_storage' || z.kind === 'benches') {
       const type = z.kind === 'benches' ? (prod.type === 'wb' ? 'wb' : 'furn') : prod.type || 'mdoor';
       const cfg = zoneCfg(type, z.kind === 'benches' && type === 'furn' ? { furn_kind:'bench', furn_w_cm:(prod.settings && prod.settings.furn_w_cm) || 200 } : prod.settings), f = footOf(type, cfg);
-      const gap = type === 'wall' ? 60 : 20, walls = z.wall ? [z.wall] : ['back', 'left', 'right', 'front'];
+      const gap = type === 'wall' ? 60 : 20, walls = wallsFor(z);
       let n = n0 || Math.min(30, Math.floor((WALL[walls[0]].L + gap) / (f.w + gap)));
       asked = n;
       const segs = (k) => Array.from({ length:k }, (_, i) => ({ type, cfg, along:f.w, depth:f.d, h:f.h, name:nameOf(type === 'furn' ? 'שולחן' : TYPE_NAME[type], i) }));
-      for (; n >= 1 && !made; n--) for (const w of walls) if (runOnWall(z, w, segs(n), gap)) { made = n; break; }
+      for (const w of walls) if (runOnWall(z, w, segs(n), gap)) { made = n; break; }          // all side by side on one wall
+      if (!made) {                                                   // else: around what is in the way, then on to the next walls
+        const seg = { type, cfg, along:f.w, depth:f.d, h:f.h, name:`${z.name} – ${type === 'furn' ? 'שולחן' : TYPE_NAME[type]}` };
+        const order = z.wall ? [...walls, ...[...GYP, ...ROOMW].filter(w => !walls.includes(w))] : walls, used = [];
+        for (const w of order) { if (made >= n) break; const k = spreadOnWall(z, w, seg, n - made, gap); if (k) { made += k; used.push(w); } }
+        if (z.wall && used.some(w => !walls.includes(w))) warn.push(`"${z.name}": לא הכול נכנס על הקיר שנבחר – חלק עבר ל${used.filter(w => !walls.includes(w)).map(w => 'קיר ' + (WALL_HEB[w] || 'הגבס')).join(', ')}`);
+      }
       if (type === 'wall') out.filter(o => o.zone === z.id).forEach(o => { o.y = 0.9; });     // wall racks hang at 90 cm
     } else if (z.kind === 'island') {
       const type = prod.type || 'quad', cfg = zoneCfg(type, prod.settings), f = footOf(type, cfg);
@@ -8269,14 +8325,27 @@ function framePhoto(q) {
   toast(`מוכן לצילום קטלוג – לחץ Render (יחס ${PHOTO_PREF.ratio || '4:5'})`);
 }
 // ask the designer, show the plan, build it on approval
-async function designFlow(text) {
+async function designFlow(text, needs) {
   const R = SCN.room, sel = SCN.items.find(i => i.id === SCN.sel); if (sel) sel.cfg = capCfg(sel.type);
   const others = SCN.items.filter(i => !i.zone && !i.hidden).map(i => ({ name:i.name, type:i.type, x_cm:Math.round((i.x + R.W/2000) * 100), z_cm:Math.round((i.z + R.D/2000) * 100) }));
   const room = { width_m:R.W / 1000, depth_m:R.D / 1000, back:!!R.back, left:!!R.left, right:!!R.right, front:!!R.front,
     openings:(R.openings || []).map(o => ({ kind:o.kind, type:o.type, wall:o.wall, width_cm:Math.round(o.w/10), offset_cm:Math.round(o.off/10) })), obstacles:obstAI(R) };
-  const plan = await api('/api/design', { text, room, zones:SCN.zones || [], others });
+  const ask = (t, zones) => api('/api/design', { text:t, room, zones, others, ...(needs && needs.length ? { needs } : {}) });
+  let d = designTry(await ask(text, SCN.zones || []));
+  // check: what the engine could not place goes back to the AI once, with the numbers – it adjusts the zones
+  const short = (x) => Object.values(x.lay.res || {}).reduce((a, r) => a + Math.max(0, (r.asked || 0) - (r.made || 0)), 0);
+  if (short(d) > 0) {
+    const fb = (d.plan.zones || []).map(z => { const r = d.lay.res[z.id] || {}; return r.asked && r.made < r.asked ? `- zone ${z.id} "${z.name}" (${z.kind}${z.wall ? ', wall ' + z.wall : ''}): asked ${r.asked}, placed ${r.made}` : null; }).filter(Boolean).join('\n');
+    try {
+      const d2 = designTry(await ask(`${text}\n\nLAYOUT CHECK – the app tried your plan and could NOT place everything:\n${fb}\nAdjust the zones (other walls, the gypsum walls, split a zone, smaller or fewer products, an island in the middle) so that everything fits; keep what worked. If it truly cannot fit, keep the most important and explain in notes.`, d.plan.zones || []));
+      if (short(d2) < short(d)) { d2.fixed = true; d = d2; }
+    } catch (e) { /* keep the first plan */ }
+  }
+  return d;
+}
+function designTry(plan) {
   // the planned room (with its openings) – the engine works on it before anything changes
-  const real = SCN.room, tmp = deep(real);
+  const R = SCN.room, real = SCN.room, tmp = deep(real);
   if (plan.room) { const r = plan.room; tmp.W = Math.max(2000, Math.min(60000, Math.round(r.width_m * 1000))); tmp.D = Math.max(2000, Math.min(60000, Math.round(r.depth_m * 1000))); tmp.back = r.back; tmp.left = r.left; tmp.right = r.right; tmp.front = r.front; }
   let lay;
   try {
@@ -8299,7 +8368,7 @@ function designApply(d) {
   renderScene();
 }
 function openDesignDialog(d) {
-  openDialog(`<h3>תכנית לסצנה</h3><div class="dplan">${designSummary(d.plan, d.lay, d.room)}</div>
+  openDialog(`<h3>תכנית לסצנה</h3>${d.fixed ? '<p class="dlg-sub">✓ התכנית נבדקה ותוקנה אוטומטית – בגרסה הראשונה לא הכול נכנס.</p>' : ''}<div class="dplan">${designSummary(d.plan, d.lay, d.room)}</div>
     <div class="dlg-actions"><button class="btn primary" id="dsOk">אשר ובנה</button><button class="btn" data-close>ביטול</button></div>`, (card, close) => {
     card.querySelector('#dsOk').onclick = () => { close(); designApply(d); toast(`נבנו ${d.lay.items.length} פריטים · Ctrl+Z מבטל`); };
   });
@@ -8333,6 +8402,70 @@ function wzMap() {
     <text x="${W/2}" y="${-pad * 0.3}" font-size="${fs}" text-anchor="middle" fill="#6b747c">אחורי · ${(W/1000).toFixed(1)} מ'</text>
     <text x="${W/2}" y="${D + pad * 0.8}" font-size="${fs}" text-anchor="middle" fill="#6b747c">קדמי (מצלמה)</text></svg>`;
 }
+// ---------- need calculation: the inventory table → which products and how many (by Royi's mapping, in code – not the AI) ----------
+// tilt-bin capacities are estimated from the unit sizes (MODELS) until the catalogue volumes are filled in here
+const BIN_L = Object.fromEntries(Object.entries(MODELS).map(([n, m]) => [n, Math.round((m.W / +n - 8) * (m.H - 12) * (m.D - 10) / 1e5) / 10]));   // litres per bin
+const BIN_IN = (n) => { const m = MODELS[n]; return [m.W / +n - 8, m.H - 12, m.D - 10]; };                                                      // inner w, h, d (mm)
+const HOUSE = { wall:{ he:'מתלה קיר 200', type:'wall', settings:{ height_cm:200 }, stack:1850 }, tamb:{ he:'ארון מתכת מאובטח לרב תא', type:'tamb', settings:{}, stack:1650 },
+  stand:{ he:'עגלה דו צדדית 180', type:'stand', settings:{ stand_type:'double', height_cm:180, base:'wheels' }, stack:2900 } };
+const NEED_RULE = {        // per kind: the product, its capacity, and what is missing from the catalogue
+  small_parts:{ bins:6 }, electronics:{ bins:9 }, consumables:{ bins:4 },
+  hand_tools:{ type:'tech', settings:{ tech_variant:3, door_acc:'tools' }, he:'ארון עבודה טכני (גב מחורר, כלים בדלתות)', perQty:35, litres:300 },
+  power_tools:{ type:'tech', settings:{ tech_variant:1 }, he:'ארון עבודה טכני – 4 מדפים', perQty:12, litres:410 },
+  chemicals:{ type:'tech', settings:{ tech_variant:4 }, he:'ארון עבודה טכני נעול (מגירות + מדפים)', perQty:20, litres:250 },
+  documents:{ type:'mtamb', settings:{}, he:'ארון תריס', perQty:60, litres:450 },
+  personal:{ type:'lock', settings:{}, he:'לוקר 6 דלתות', perQty:6 },
+  mobile:{ type:'excl', settings:{}, he:'עגלת EXCLUSIVE', perQty:20, litres:80 },
+  boxed_goods:{ type:'mdoor', settings:{ md_color:'7035' }, he:'ארון 4 מדפים (זמני)', perQty:16, litres:380, gap:'מדפים לעומס בינוני / לה פורטצה / HUNI – עוד לא בקטלוג' },
+  long_items:{ type:'mdoor', settings:{ md_color:'7035' }, he:'ארון 4 מדפים (זמני)', perQty:20, litres:380, gap:'מדפים לפריטים ארוכים – עוד לא בקטלוג' },
+  heavy:{ type:'mdoor', settings:{ md_color:'7035' }, he:'ארון 4 מדפים (זמני)', perQty:8, litres:380, gap:'מידוף כבד (עד ~800 ק"ג למדף) – אין עדיין פתרון במערכת' },
+};
+function computeNeeds(rows) {
+  const out = [], warn = [], units = { wall:[], tamb:[], stand:[] };     // units: one entry per tilt-bin unit (its model)
+  const vol = (r) => r.length_cm && r.width_cm && r.height_cm ? r.length_cm * r.width_cm * r.height_cm / 1000 : null;   // litres
+  const add = (key, type, settings, he, count, why, gap) => {
+    const k = key || type + JSON.stringify(settings); const e = out.find(o => o.key === k);
+    if (e) { e.count += count; e.why.push(why); } else out.push({ key:k, type, settings, he, count, why:[why], gap });
+  };
+  rows.forEach(r => {
+    const name = r.name || KIND_HE[r.kind] || 'פריט', rule = NEED_RULE[r.kind];
+    if (!rule) { warn.push(`"${name}" – לא משויך למוצר. כתבו לי במה מאחסנים אותו.`); return; }
+    if (!r.qty) warn.push(`"${name}" – חסרה כמות, חושב כאילו יש 1.`);
+    const qty = r.qty || 1, v = vol(r);
+    if (rule.bins) {                                                    // tilt bins: the smallest model the item fits into
+      const dims = [r.length_cm, r.width_cm, r.height_cm].every(Boolean) ? [r.length_cm, r.width_cm, r.height_cm].map(x => x * 10).sort((a, b) => a - b) : null;
+      const fits = (n) => { const b = BIN_IN(n).sort((a, c) => a - c); return dims.every((d, i) => d <= b[i]); };
+      const models = [9, 6, 5, 4, 3, 2];
+      const n = dims ? (models.find(fits) || 2) : rule.bins;
+      if (dims && !fits(n)) warn.push(`"${name}" גדול מכל תא של רב תא – כדאי מדף או ארגז.`);
+      const per = v ? Math.max(1, Math.floor(BIN_L[n] * 0.7 / v)) : 1;
+      const bins = Math.ceil(qty / per), u = Math.ceil(bins / n);
+      const where = /נעול|יקר|מאובטח|סגור/.test(r.notes || '') ? 'tamb' : r.freq === 'daily' && rows.length > 2 ? 'stand' : 'wall';
+      for (let i = 0; i < u; i++) units[where].push(n);
+      add('bins-' + n, 'unit', { unit_bins:n }, `רב תא ${n} (${n} תאים ליחידה)`, u, `${name}: ${bins} תאים${per > 1 ? ` (~${per} בתא)` : ''}`);
+      return;
+    }
+    const byVol = v && rule.litres ? Math.ceil(qty * v / rule.litres) : 0, byQty = rule.perQty ? Math.ceil(qty / rule.perQty) : 0;
+    const c = Math.max(1, byVol || byQty);
+    if (r.kind === 'heavy' && r.weight_kg && r.weight_kg * qty > 300) warn.push(`"${name}" – משקל כולל ${r.weight_kg * qty} ק"ג: צריך מידוף כבד.`);
+    add(null, rule.type, rule.settings, rule.he, c, `${name}${r.qty ? ' × ' + r.qty : ''}`, rule.gap);
+  });
+  // the tilt-bin units go into housings: stack them by height
+  const housings = [];
+  for (const [h, list] of Object.entries(units)) {
+    if (!list.length) continue;
+    const H = HOUSE[h]; let n = 0, left = 0; const comps = [];
+    list.sort((a, b) => a - b).forEach(m => { const uh = MODELS[m].H; if (uh > left) { n++; left = H.stack; comps.push({}); } left -= uh; const c = comps[comps.length - 1]; c[m] = (c[m] || 0) + 1; });
+    const comp = Object.entries(comps[0]).map(([model, count]) => ({ model:+model, count }));
+    housings.push({ key:'house-' + h, type:H.type, settings:{ ...H.settings, comp }, he:H.he, count:n, why:[`${list.length} יחידות רב תא`], house:true });
+  }
+  return { needs:[...housings, ...out.filter(o => o.type !== 'unit')], units:out.filter(o => o.type === 'unit'), warn };
+}
+function wzNeeds(B) {                       // the computed needs, with the counts the user changed
+  const n = computeNeeds(B.inv.rows || []), o = B.needCount || {};
+  n.needs.forEach(x => { if (o[x.key] !== undefined) x.count = o[x.key]; });
+  return n;
+}
 function wzPlanText(B) {
   const rows = B.inv.rows.map(r => `- ${r.name} (${KIND_HE[r.kind] || r.kind})${r.length_cm || r.width_cm || r.height_cm ? `, ${[r.length_cm, r.width_cm, r.height_cm].map(v => v || '?').join('×')} ס"מ` : ''}${r.qty ? `, כמות ${r.qty}${r.unit && r.unit !== 'pcs' ? ' ' + r.unit : ''}` : ''}${r.weight_kg ? `, ${r.weight_kg} ק"ג` : ''}${r.freq ? `, שליפה ${FREQ_HE[r.freq]}` : ''}${r.notes ? ` – ${r.notes}` : ''}`).join('\n');
   return `תכנן את כל החלל לפי האפיון:\nעסק: ${B.biz.name || '—'}${B.biz.field ? ` (${B.biz.field})` : ''}\nסוג החלל: ${WZ_SPACE[B.space.type] || B.space.type || '—'}${B.space.purpose ? `\nלמה ישמש: ${B.space.purpose}` : ''}\n`
@@ -8361,10 +8494,12 @@ function openWizard(at) {
         body.innerHTML = `<h3>העסק</h3><p class="dlg-sub">שם העסק לא חייב להופיע בתמונה. אם תעלו לוגו, הוא יוצג בסצנה כשלט על קיר.</p>
           <label class="wzf">שם העסק<input id="wzName" value="${wzEsc(B.biz.name)}" placeholder="למשל: מוסך כהן"></label>
           <label class="wzf">תחום<input id="wzField" value="${wzEsc(B.biz.field)}" placeholder="למשל: תיקון רכבים, אלקטרוניקה, מעבדת שיניים"></label>
-          <div class="wzf">לוגו (לא חובה)<div class="wzlogo">${B.biz.logo ? `<img src="${B.biz.logo}" alt="לוגו">` : '<span>אין לוגו</span>'}<label class="btn">העלאה<input type="file" id="wzLogo" accept="image/*" hidden></label>${B.biz.logo ? '<button class="btn" id="wzLogoDel">הסרה</button>' : ''}</div></div>`;
+          <div class="wzf">לוגו (לא חובה)<div class="wzlogo">${B.biz.logo ? `<img src="${B.biz.logo}" alt="לוגו">` : '<span>אין לוגו</span>'}<label class="btn">העלאה<input type="file" id="wzLogo" accept="image/*" hidden></label>${B.biz.logo ? '<button class="btn" id="wzLogoDel">הסרה</button>' : ''}</div>
+          ${B.biz.logo ? `<label class="sstog wzlogotog"><input type="checkbox" id="wzLogoShow"${B.biz.showLogo === false ? '' : ' checked'}><span>להציג את הלוגו כשלט על הקיר בסצנה</span></label>` : ''}</div>`;
         q('#wzName').oninput = (e) => B.biz.name = e.target.value; q('#wzField').oninput = (e) => B.biz.field = e.target.value;
-        q('#wzLogo').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; B.biz.logo = await imgToData(f, 480, 'image/png'); draw(); };
-        if (q('#wzLogoDel')) q('#wzLogoDel').onclick = () => { B.biz.logo = ''; draw(); };
+        q('#wzLogo').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; B.biz.logo = await imgToData(f, 480, 'image/png'); rebuild(true); draw(); };
+        if (q('#wzLogoDel')) q('#wzLogoDel').onclick = () => { B.biz.logo = ''; rebuild(true); draw(); };
+        if (q('#wzLogoShow')) q('#wzLogoShow').onchange = (e) => { B.biz.showLogo = e.target.checked; rebuild(true); };
       } else if (s === 1) {
         body.innerHTML = `<h3>החלל</h3><div class="wzchips" id="wzType">${Object.entries(WZ_SPACE).map(([k, t]) => `<button class="${B.space.type === k ? 'on' : ''}" data-v="${k}">${t}</button>`).join('')}</div>
           <label class="wzf">למה ישמש החלל ומה חשוב לכם<textarea id="wzPurpose" rows="3" placeholder="למשל: 6 טכנאים עובדים במקביל, צריך גישה מהירה לחלקים קטנים, כלים יקרים נעולים">${wzEsc(B.space.purpose)}</textarea></label>`;
@@ -8426,14 +8561,19 @@ function openWizard(at) {
         body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { I.rows.splice(+b.dataset.del, 1); draw(); });
         q('#wzRow').onclick = () => { I.rows.push({ name:'', kind:'other', length_cm:null, width_cm:null, height_cm:null, qty:null, unit:'pcs', weight_kg:null, freq:null, notes:'', from_photo:false }); draw(); };
       } else {
-        const R = SCN.room, I = B.inv;
+        const R = SCN.room, I = B.inv, need = wzNeeds(B);
         body.innerHTML = `<h3>סיכום</h3><div class="wzsum">
           <div><b>עסק:</b> ${wzEsc(B.biz.name) || '—'}${B.biz.field ? ' · ' + wzEsc(B.biz.field) : ''}${B.biz.logo ? ' · יש לוגו' : ''}</div>
           <div><b>חלל:</b> ${WZ_SPACE[B.space.type] || '—'}${B.space.purpose ? ' – ' + wzEsc(B.space.purpose) : ''}</div>
           <div><b>מידות:</b> ${R.W/1000} × ${R.D/1000} מ' · ${(R.openings || []).length} פתחים · ${(R.obstacles || []).length} מכשולים</div>
           <div><b>מלאי:</b> ${I.rows.length ? I.rows.length + ' סוגי פריטים' : I.text ? 'תיאור חופשי' : '—'}</div></div>
+          ${need.needs.length ? `<h4 class="wzh4">מה צריך (מחושב מהמלאי)</h4><div class="wztable"><table><thead><tr><th>מוצר</th><th>כמות</th><th>בשביל</th></tr></thead><tbody>
+            ${need.needs.map(n => `<tr><td>${wzEsc(n.he)}${n.gap ? `<div class="wzgap">⚠ ${wzEsc(n.gap)}</div>` : ''}</td><td><input type="number" min="0" data-need="${wzEsc(n.key)}" value="${n.count}"></td><td class="wzwhy">${n.why.map(wzEsc).join(' · ')}</td></tr>`).join('')}
+            </tbody></table></div>${need.units.length ? `<div class="wzwhy">רב תא: ${need.units.map(u => `${u.count} × ${wzEsc(u.he)}`).join(' · ')} – הנפחים לפי הערכה מהמידות, עד שיוזנו נפחי הקטלוג.</div>` : ''}` : ''}
+          ${need.warn.length ? `<div class="wzq">${need.warn.map(t => `<div>${wzEsc(t)}</div>`).join('')}</div>` : ''}
           <div id="wzMapBox"></div><p class="dlg-sub">ה-AI יציע תכנית לאישור לפני שמשהו נבנה. ${SCN.items.length ? 'המוצרים שכבר בסצנה יישארו, אלא אם תבקשו אחרת בתכנית.' : ''}</p>`;
         q('#wzMapBox').innerHTML = wzMap();
+        body.querySelectorAll('[data-need]').forEach(el => el.onchange = () => { (B.needCount = B.needCount || {})[el.dataset.need] = Math.max(0, Math.round(+el.value || 0)); });
       }
     };
     q('#wzPrev').onclick = () => { B.step = Math.max(0, B.step - 1); draw(); };
@@ -8441,7 +8581,7 @@ function openWizard(at) {
       if (B.step < 5) { B.step++; draw(); return; }
       if (!server) { err('התכנון עם AI זמין רק בגרסה שעולה ל-Vercel.'); return; }
       const b = q('#wzNext'); b.disabled = true; b.textContent = 'מתכנן…'; err('');
-      try { const d = await designFlow(wzPlanText(B)); close(); openDesignDialog(d); }
+      try { const n = wzNeeds(B); const d = await designFlow(wzPlanText(B), n.needs.filter(x => x.count > 0).map(x => ({ type:x.type, settings:x.settings, count:x.count, name:x.he, for:x.why.join('; ') }))); close(); openDesignDialog(d); }
       catch (e) { b.disabled = false; b.textContent = 'תכנן את החלל'; err(e.message); }
     };
     draw();

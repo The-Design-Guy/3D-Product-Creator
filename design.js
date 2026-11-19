@@ -42,7 +42,7 @@ LAYOUT RULES (the engine applies them; plan with them in mind):
 - Main aisle 120–150 cm, side aisles ≥ 90 cm. Nothing in front of a door (1 m clear). Tall cabinets not under windows.
 - Cabinets, racks, benches and workstation rows go against walls (back to the wall). Gondolas / stands / quads / back-to-back workstation islands go in the free middle.
 - A workstation row: desks side by side along the wall with a partition between every two desks (partition.ends true = also one at each end of the row).
-- room.obstacles: columns, pipes and gypsum walls (boxes in cm from the left / back wall). Nothing may stand on them; the engine routes around them. Take them into account when choosing zones and counts (a column in the middle splits the free floor). A gypsum wall with to_build true is a NEW wall built for the storage: cabinets and racks may stand against both of its faces. One with removable true may be mentioned in notes as an option to remove if it blocks a better layout. A tap (water_point) is an opportunity: keep its wall area reachable, and mention in notes that a profile system with a sink (3 cm profiles) could go there – that product is not in the catalogue yet.
+- room.obstacles: columns, pipes and gypsum walls (boxes in cm from the left / back wall). Nothing may stand on them; the engine routes around them. Take them into account when choosing zones and counts (a column in the middle splits the free floor). A gypsum wall with to_build true is a NEW wall built for the storage: cabinets and racks may stand against both of its faces – use wall "gypsum" for a zone that goes on it. One with removable true may be mentioned in notes as an option to remove if it blocks a better layout. A tap (water_point) is an opportunity: keep its wall area reachable, and mention in notes that a profile system with a sink (3 cm profiles) could go there – that product is not in the catalogue yet.
 - Do not overfill: leave the room usable. If the user gives counts, use them; otherwise choose sensible counts for the room size (e.g. 10 x 10 m assembly hall → ~6–10 stations, 2–4 tall cabinets, 2–4 carts).
 `;
 
@@ -56,6 +56,7 @@ export default async function handler(req, res) {
   const room = req.body?.room || {};
   const zones = Array.isArray(req.body?.zones) ? req.body.zones.slice(0, 30) : [];
   const others = Array.isArray(req.body?.others) ? req.body.others.slice(0, 60) : [];
+  const needs = Array.isArray(req.body?.needs) ? req.body.needs.slice(0, 20) : [];
 
   const settings = { type:'object', additionalProperties:false,
     required:['comp', 'cols', 'top', 'base', 'stand_type', 'height_cm', 'tena_size', 'doors', 'md_color', 'bin_layout', 'tech_variant', 'door_acc', 'furn_kind', 'width_cm', 'wb_variant', 'wb_tools', 'wb_top'],
@@ -86,7 +87,7 @@ export default async function handler(req, res) {
       name:{ type:'string', description:'Hebrew name of the zone, e.g. "עמדות הרכבה"' },
       kind:{ type:'string', enum:['workstations', 'workstation_island', 'wall_storage', 'island', 'benches', 'carts', 'decor'],
         description:'workstations: a row of desks along a wall with partitions between them · workstation_island: two rows of desks back to back in the middle, partitions across · wall_storage: cabinets / racks / gondolas side by side along a wall · island: products in rows in the free middle of the room with aisles · benches: workbenches along a wall (product wb, or furn bench) · carts: mobile carts / stands next to another zone (near) · decor: plants in free corners' },
-      wall:nul({ type:'string', enum:['back', 'left', 'right', 'front'], description:'workstations / wall_storage / benches: the wall (as seen from the front of the room: back = facing the viewer)' }),
+      wall:nul({ type:'string', enum:['back', 'left', 'right', 'front', 'gypsum'], description:'workstations / wall_storage / benches: the wall (as seen from the front of the room: back = facing the viewer); gypsum = against the gypsum wall(s) in room.obstacles (both faces); null = the app picks (gypsum walls first)' }),
       align:nul({ type:'string', enum:['start', 'center', 'end'], description:'where along the wall: start = the left end (back / front wall) or the back end (side walls); null = center' }),
       count:nul({ type:'integer', description:'how many products (stations for workstation zones); null = as many as fit' }),
       rows:nul({ type:'integer', description:'island: number of rows (null = the app decides)' }),
@@ -120,8 +121,9 @@ export default async function handler(req, res) {
     'A new space ("תיצור לי…", "תכנן לי…", a size of a room) → clear_scene true, set the room (all four walls true unless the user says open), add a door on the front wall (double, 160) if the user did not mention doors, and plan zones for the whole space.',
     'Every zone needs a product (except workstation zones: product = the furn station / desk, partition = the partitions). Keep settings minimal: only what matters; the rest null.',
     'Write names, understood and notes in the language of the request. Never invent products that are not in the list.',
+    ...(needs.length ? ['REQUIRED PRODUCTS are given (computed from the client\'s inventory): the storage zones must contain exactly these product types with these counts and settings (you may split one into several zones, e.g. two walls). Do not add other storage products; workstations, benches, carts and decor only if the request asks for them. If they cannot all fit in the room, keep the most important ones and say in notes what is missing and why.'] : []),
   ].join('\n');
-  const user = `Room now: ${JSON.stringify(room)}\nZones now: ${JSON.stringify(zones)}\nOther products in the scene (not in zones): ${JSON.stringify(others)}\n\nRequest:\n${text}`;
+  const user = `Room now: ${JSON.stringify(room)}\nZones now: ${JSON.stringify(zones)}\nOther products in the scene (not in zones): ${JSON.stringify(others)}\n${needs.length ? `REQUIRED PRODUCTS: ${JSON.stringify(needs)}\n` : ''}\nRequest:\n${text}`;
   try {
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method:'POST',
