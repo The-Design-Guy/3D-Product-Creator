@@ -10,7 +10,7 @@ const TEXT_MODEL = process.env.OPENAI_DESIGN_MODEL || process.env.OPENAI_TEXT_MO
 
 const PTYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn', 'lock', 'wb'];
 
-const KNOWLEDGE = `
+export const KNOWLEDGE = `
 You are an interior / industrial layout designer for Huliot / Medikup storage products. You plan a space as ZONES; the app places the products.
 
 PRODUCTS (type – Hebrew name – footprint W x D cm, height – what it is good for):
@@ -47,17 +47,8 @@ LAYOUT RULES (the engine applies them; plan with them in mind):
 `;
 
 const nul = (t) => ({ anyOf:[t, { type:'null' }] });
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error:'method not allowed' });
-  if (!isAdmin(req)) return res.status(401).json({ error:'נדרש מצב ניהול' });
-  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error:'OPENAI_API_KEY is not set' });
-  const text = String(req.body?.text || '').slice(0, 4000);
-  if (!text.trim()) return res.status(400).json({ error:'אין טקסט לפרש' });
-  const room = req.body?.room || {};
-  const zones = Array.isArray(req.body?.zones) ? req.body.zones.slice(0, 30) : [];
-  const others = Array.isArray(req.body?.others) ? req.body.others.slice(0, 60) : [];
-  const needs = Array.isArray(req.body?.needs) ? req.body.needs.slice(0, 20) : [];
-
+// the plan schema (shared with /api/recreate)
+export function planSchema() {
   const settings = { type:'object', additionalProperties:false,
     required:['comp', 'cols', 'top', 'base', 'stand_type', 'height_cm', 'tena_size', 'doors', 'md_color', 'bin_layout', 'tech_variant', 'door_acc', 'furn_kind', 'width_cm', 'wb_variant', 'wb_tools', 'wb_top'],
     properties:{
@@ -81,7 +72,7 @@ export default async function handler(req, res) {
     } };
   const product = { type:'object', additionalProperties:false, required:['type', 'settings'], properties:{ type:{ type:'string', enum:PTYPES }, settings } };
   const zone = { type:'object', additionalProperties:false,
-    required:['id', 'name', 'kind', 'wall', 'align', 'count', 'rows', 'product', 'partition', 'desk_cm', 'near', 'contents'],
+    required:['id', 'name', 'kind', 'wall', 'align', 'offset_cm', 'count', 'rows', 'product', 'partition', 'desk_cm', 'near', 'contents'],
     properties:{
       id:{ type:'string', description:'short stable id, e.g. "z1"; keep the ids of zones that already exist' },
       name:{ type:'string', description:'Hebrew name of the zone, e.g. "עמדות הרכבה"' },
@@ -89,6 +80,7 @@ export default async function handler(req, res) {
         description:'workstations: a row of desks along a wall with partitions between them · workstation_island: two rows of desks back to back in the middle, partitions across · wall_storage: cabinets / racks / gondolas side by side along a wall · island: products in rows in the free middle of the room with aisles · benches: workbenches along a wall (product wb, or furn bench) · carts: mobile carts / stands next to another zone (near) · decor: plants in free corners' },
       wall:nul({ type:'string', enum:['back', 'left', 'right', 'front', 'gypsum'], description:'workstations / wall_storage / benches: the wall (as seen from the front of the room: back = facing the viewer); gypsum = against the gypsum wall(s) in room.obstacles (both faces); null = the app picks (gypsum walls first)' }),
       align:nul({ type:'string', enum:['start', 'center', 'end'], description:'where along the wall: start = the left end (back / front wall) or the back end (side walls); null = center' }),
+      offset_cm:nul({ type:'number', description:'where the run starts along its wall, in cm from the start end (left end of back / front, back end of the side walls) – for recreating a real space exactly; null = by align' }),
       count:nul({ type:'integer', description:'how many products (stations for workstation zones); null = as many as fit' }),
       rows:nul({ type:'integer', description:'island: number of rows (null = the app decides)' }),
       product:nul(product),
@@ -114,6 +106,21 @@ export default async function handler(req, res) {
       zones:{ type:'array', items:zone, description:'the FULL list of zones after this request (keep the existing ones that the request does not change)' },
       notes:{ type:'string', description:'short design notes for the user in the language of the request (why this layout); can be empty' },
     } };
+
+  return { schema, zone, product, settings };
+}
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error:'method not allowed' });
+  if (!isAdmin(req)) return res.status(401).json({ error:'נדרש מצב ניהול' });
+  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error:'OPENAI_API_KEY is not set' });
+  const text = String(req.body?.text || '').slice(0, 4000);
+  if (!text.trim()) return res.status(400).json({ error:'אין טקסט לפרש' });
+  const room = req.body?.room || {};
+  const zones = Array.isArray(req.body?.zones) ? req.body.zones.slice(0, 30) : [];
+  const others = Array.isArray(req.body?.others) ? req.body.others.slice(0, 60) : [];
+  const needs = Array.isArray(req.body?.needs) ? req.body.needs.slice(0, 20) : [];
+
+  const { schema } = planSchema();
 
   const system = [
     KNOWLEDGE,
