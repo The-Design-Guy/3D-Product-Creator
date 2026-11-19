@@ -1295,7 +1295,9 @@
       <div class="seg2" id="wbVar"><button data-v="1" class="on">2 מגירות</button><button data-v="2">2 מגירות + גב</button><button data-v="3">4 מגירות + גב</button></div>
       <div class="lbl">משטח</div>
       <div class="seg2" id="wbTop"><button data-v="green" class="on">ירוק אנטי־סטטי</button><button data-v="white">לבן</button></div>
-      <div id="wbToolSec"><div class="lbl">על הקיר המחורר</div>
+      <div id="wbToolSec"><div class="lbl">משולשי המדף האמצעי</div>
+      <div class="seg2" id="wbBr"><button data-v="up" class="on">מעל המדף</button><button data-v="down">מתחת למדף</button></div>
+      <div class="lbl">על הקיר המחורר</div>
       <div class="seg2" id="wbTools"><button data-v="none" class="on">כלום</button><button data-v="tools">כלי עבודה</button></div></div>
       <div class="use">משטח עץ 50 מ"מ בציפוי אנטי־סטטי עם קנט שחור, גובה עבודה 84 ס"מ (170 עם הגב). לחיצה על מגירה פותחת אותה.</div>
       <div class="slot"></div>
@@ -2731,7 +2733,7 @@ function syncUI(t) {
   setSeg('stHandle', stand.handle); setSeg('stBrake', stand.brake); syncWheelOpts();
   setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0');
   setSeg('quBase', QD.base); setSeg('quTop', QD.top || 'black'); setSeg('exTop', EXS.excl.top || 'black'); setSeg('ptTop', EXS.part.top || 'black');
-  setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; setSeg('mdColor', MD.color); setSeg('tcVar', String(TC.variant)); setSeg('fuKind', FU.kind); setSeg('wbVar', String(WB.variant)); setSeg('wbTools', WB.tools); setSeg('wbTop', WB.top || 'green'); $('wbToolSec').hidden = WB.variant === 1; setSeg('fuW', String(FU.w)); $('fuDeskSec').hidden = !['station', 'desk', 'bench'].includes(FU.kind);
+  setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; setSeg('mdColor', MD.color); setSeg('tcVar', String(TC.variant)); setSeg('fuKind', FU.kind); setSeg('wbVar', String(WB.variant)); setSeg('wbTools', WB.tools); setSeg('wbTop', WB.top || 'green'); setSeg('wbBr', WB.br || 'up'); $('wbToolSec').hidden = WB.variant === 1; setSeg('fuW', String(FU.w)); $('fuDeskSec').hidden = !['station', 'desk', 'bench'].includes(FU.kind);
   setSeg('arcModel', ARC.model); setSeg('arcColor', ARC.color); setSeg('arcDiv', ARC.div ? '1' : '0');
   $('ptWide').checked = !!EXS.part.wide; setSeg('exSide', EXS.excl.side || 'left'); setSeg('ptSide', EXS.part.side || 'left'); setSeg('ptCols', EXS.part.cols || 2);
   for (const v of ['delux', 'smart']) { const px = v === 'smart' ? 'sm' : 'tn';
@@ -3826,7 +3828,7 @@ function buildFurn() {
 }
 // ---------- שולחן עבודה מאסיבי (300MYWB09): 150 × 75, work top at 84, 170 with the back ----------
 //   1 – a hanging 2-drawer unit · 2 – the same + a blue perforated back with 2 shelves · 3 – a 4-drawer floor cabinet + the back
-const WB0 = { variant:1, tools:'none', top:'green' };
+const WB0 = { variant:1, tools:'none', top:'green', br:'up' };
 const WB = { ...WB0 };
 const WB_VAR = { 1:'ארונית 2 מגירות', 2:'2 מגירות + גב מחורר', 3:'4 מגירות + גב מחורר' };
 const wbFrame = new THREE.MeshStandardMaterial({ color:0xd3d8d2, roughness:0.45, metalness:0.25 });
@@ -3892,8 +3894,9 @@ function buildWb() {
     holes(midY + 40, TOPB - 80 - midY - 40); holes(TOPY + (v === 2 ? 140 : 230), midY - 30 - TOPY - (v === 2 ? 140 : 230));
     for (const sx of [-1, 1]) {
       tri(130, 300, sx * (W/2 - 30), TOPY, PZ + 15, false);                                // gusset on the worktop
-      tri(SD - 20, 200, sx * (W/2 - 30), TOPB - 8, PZ + 15, true);                         // top shelf bracket
-      tri(SD - 30, 200, sx * (W/2 - 30), midY, PZ + 15, true);                             // middle shelf bracket
+      tri(SD - 20, 100, sx * (W/2 - 30), TOPB - 8, PZ + 15, true);                         // top shelf bracket (under it)
+      if (WB.br === 'down') tri(SD - 30, 100, sx * (W/2 - 30), midY - 7, PZ + 15, true);   // middle shelf brackets: under the shelf …
+      else tri(SD - 30, 100, sx * (W/2 - 30), midY + 7, PZ + 15, false);                   // … or (as on the real bench) standing on it
     }
     box(W, 16, SD, 0, TOPB - 8, PZ + SD/2 + 15, wbBlue);                                   // top shelf
     box(W - 80, 14, SD - 10, 0, midY, PZ + (SD - 10)/2 + 15, wbBlue); box(W - 80, 50, 12, 0, midY + 18, PZ + SD + 5, wbBlue);   // middle shelf with a lip
@@ -3912,7 +3915,7 @@ function describeWb() {
   const v = WB.variant;
   return `A heavy-duty industrial workbench, 1500 mm wide and 750 mm deep, work surface at 840 mm: a 50 mm thick top with a ${WB.top === 'white' ? 'plain white laminate' : 'green anti-static (ESD) laminate'} surface and a black rubber edge band with rounded corners, on a light grey steel frame of flat rectangular legs with side rails low down and levelling feet. `
     + (v === 3 ? 'Under the right side a free-standing light grey drawer cabinet 560 x 650 x 740 mm on small feet with 4 drawers and a key lock on the top front bar of the cabinet (2 shallow on top, 2 deep below), royal-blue drawer fronts with a full-width silver pull handle along the bottom edge of each front. ' : `Hanging under the right side of the top, a light grey drawer cabinet ${v === 1 ? '450 wide, 320 high' : '540 wide, 360 high'} with 2 drawers and a key lock on the cabinet's top front bar, royal-blue fronts with a full-width silver pull handle along the bottom edge of each front; the space below it is open. `)
-    + (v >= 2 ? `At the back of the top, a royal-blue steel back up to 1700 mm overall height: two side posts, a perforated panel with square holes in a uniform grid, triangular gussets on the worktop, a middle shelf with a front lip and a top shelf, both on triangular brackets.${WB.tools === 'tools' ? ' A set of chrome spanners, a red screwdriver and a few hooks hang on the perforated board.' : ' Nothing hangs on the board.'}` : 'No back panel.');
+    + (v >= 2 ? `At the back of the top, a royal-blue steel back up to 1700 mm overall height: two side posts, a perforated panel with square holes in a uniform grid, triangular gussets on the worktop, a middle shelf with a front lip on small triangular brackets ${WB.br === 'down' ? 'under it' : 'standing on top of it against the posts'}, and a top shelf on small brackets under it.${WB.tools === 'tools' ? ' A set of chrome spanners, a red screwdriver and a few hooks hang on the perforated board.' : ' Nothing hangs on the board.'}` : 'No back panel.');
 }
 function describeFurn() {
   const k = FU.kind, W = Math.round((FU.w || 1600) / 10);
@@ -4466,6 +4469,7 @@ segGroup('fuKind', (v) => { FU.kind = v; rebuild(); });
 segGroup('wbVar', (v) => { WB.variant = +v; rebuild(true); });
 segGroup('wbTools', (v) => { WB.tools = v; rebuild(true); });
 segGroup('wbTop', (v) => { WB.top = v; rebuild(true); });
+segGroup('wbBr', (v) => { WB.br = v; rebuild(true); });
 segGroup('fuW', (v) => { FU.w = +v; rebuild(true); });
 segGroup('arcModel', (v) => { ARC.model = +v; if (ARC.model > 2) ARC.div = false; rebuild(true); });
 segGroup('arcColor', (v) => { ARC.color = v; rebuild(true); });
@@ -5071,7 +5075,7 @@ function fileStem() {
   if (mode === 'tech') return `technical-cabinet-v${TC.variant}`;
   if (mode === 'lock') return `locker-6-doors`;
   if (mode === 'furn') return `furniture-${FU.kind}-${FU.w}`;
-  if (mode === 'wb') return `workbench-v${WB.variant}-${WB.tools}-${WB.top || 'green'}`;
+  if (mode === 'wb') return `workbench-v${WB.variant}-${WB.tools}-${WB.top || 'green'}-${WB.br || 'up'}`;
   if (mode === 'arc') return `pick-bins-${ARC.model}-${ARC.cols}x${ARC.rows}-${ARC.color}`;
   if (mode === 'quad') return `four-sided-tilt-bin-stand-${Math.round(stackHeight(QD.comp)/10)}-${QD.base}`;
   if (mode === 'excl') return `exclusive-cart-${Math.round(exTotal('excl')/10)}`;
@@ -6769,7 +6773,7 @@ const HEADS = {
     // the tambour opens to 90% while the shelves are set (still showing), and goes back afterwards
     open:() => { const S = METAL.mtamb, was = S.target; S.target = TBX.MAXO * 0.9; return () => { S.target = was; }; } }],
   mdoor:[{ seg:'mdColor', l:'צבע' }],
-  wb:[{ seg:'wbVar', l:'גרסה' }, { seg:'wbTop', l:'משטח' }, { seg:'wbTools', l:'על הלוח', if:() => WB.variant > 1 }],
+  wb:[{ seg:'wbVar', l:'גרסה' }, { seg:'wbTop', l:'משטח' }, { seg:'wbBr', l:'משולשים', if:() => WB.variant > 1 }, { seg:'wbTools', l:'על הלוח', if:() => WB.variant > 1 }],
   furn:[{ seg:'fuW', l:'רוחב', if:() => ['station', 'desk', 'bench'].includes(FU.kind) }],
   tech:[{ seg:'tcVar', l:'גרסה' }, { seg:'tcAcc', l:'בדלתות', if:() => techZones(TC) }],
   arc:[{ seg:'arcModel', l:'דגם' }, { seg:'arcColor', l:'צבע' }, { seg:'arcDiv', l:'מחיצת אורך', if:() => ARC.model <= 2 }],
