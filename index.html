@@ -3732,6 +3732,11 @@ function rebuild(keepCamera = false) {
     renderExcl(mode);
     if (mode === 'excl') { const i = document.getElementById('exHandle'); i.value = EXS.excl.handleOff/10; document.getElementById('exHandleVal').textContent = `${Math.round(eb.hy/10)} ס"מ`; }
     else { const i = document.getElementById('ptHandle'); i.value = EXS.part.handleH/10; document.getElementById('ptHandleVal').textContent = `${Math.round(eb.hy/10)} ס"מ`; }
+  } else if (mode === 'arc') {
+    const ab = buildArc(), M = ARC_MODELS[ARC.model];
+    world.add(ab.group); drawers = []; rods = [];
+    if (!keepCamera) frame(Math.max(M.W, M.D) + 120, M.H + 60, false);
+    document.getElementById('dims').innerHTML = `ארקלית ${ARC.model} · רוחב <b>${M.W/10}</b> · עומק <b>${M.D/10}</b> · גובה <b>${M.H/10}</b> ס"מ`;
   } else if (mode === 'wall') {
     const wb = buildWall();
     world.add(wb.group); drawers = wb.drawers; rods = wb.rods;
