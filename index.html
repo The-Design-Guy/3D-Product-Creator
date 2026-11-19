@@ -159,6 +159,12 @@
   .sstog { display:inline-flex; align-items:center; gap:7px; flex:none; font-size:13px; font-weight:700; cursor:pointer; height:36px; padding:0 12px; border:1px solid var(--line); border-radius:10px; background:#fff; }
   .sstog input { accent-color:var(--acc); width:16px; height:16px; }
   .arshelf { flex:none; font-size:13px; font-weight:700; color:var(--muted); height:36px; display:inline-flex; align-items:center; padding:0 12px; border:1px dashed var(--line); border-radius:10px; }
+  .ararc { display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .ararc .arlbl { font-size:12px; color:var(--muted); margin-inline-start:6px; }
+  .ararc .arseg { display:inline-flex; border:1px solid var(--line); border-radius:9px; overflow:hidden; }
+  .ararc .arseg button { border:0; background:#fff; font:inherit; font-size:12px; padding:6px 9px; cursor:pointer; border-inline-start:1px solid var(--line); }
+  .ararc .arseg button:first-child { border-inline-start:0; }
+  .ararc .arseg button.on { background:var(--ink); color:#fff; }
   .arshelf.on { color:#fff; background:var(--acc); border:1px solid var(--acc); }
   body.has-strip .vbar { bottom:calc(var(--fh) + 64px); }
   .body > .inner { overflow:hidden; min-height:0; }
@@ -2599,8 +2605,8 @@ function applyCfg(t, c) {
   else if (t === 'excl' || t === 'part') { for (const k in EXS[t]) delete EXS[t][k]; Object.assign(EXS[t], deep(c.exs)); }
   else if (t === 'quad') { for (const k in QD) delete QD[k]; Object.assign(QD, { base:'wheels', top:'black' }, deep(c.qd)); }
   else if (t === 'tamb') { for (const k of ['comp', 'side', 'shelves', 'extra', 'items']) delete TB[k]; Object.assign(TB, deep(c.tb)); tbMigrate(TB); TB.closure = TB.closure || 'tambour'; TB.doors = TB.doors || [0, 0]; if (TB.acc === undefined) TB.acc = true; }
-  else if (t === 'mtamb') Object.assign(MT, deep(c.mt));
-  else if (t === 'mdoor') Object.assign(MD, deep(c.md));
+  else if (t === 'mtamb') { MT.arc = []; MT.arcFloor = null; Object.assign(MT, deep(c.mt)); }
+  else if (t === 'mdoor') { MD.arc = []; MD.arcFloor = null; Object.assign(MD, deep(c.md)); }
   else if (t === 'arc') { Object.assign(ARC, ARC0, c.arc || {}); ARC.cols = ARC.rows = 1; }
   else { const v = t === 'smart' ? 'smart' : 'delux'; for (const k in TN[v]) delete TN[v][k]; Object.assign(TN[v], deep(c.tn)); tena = TN[v]; }
 }
@@ -3183,40 +3189,80 @@ function describeScene() {
 
 // ---------- ארקליות: open-front plastic pick bins, stacked in columns ----------
 const ARC_GAP = 2, ARC_NEST = 6;                     // between columns; how much a bin sits into the one below
-const arcBlue = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#1c5fd0'), roughness:0.42, clearcoat:0.25, clearcoatRoughness:0.5 });
-const arcGrey = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#4b5157'), roughness:0.5, clearcoat:0.15, clearcoatRoughness:0.6 });
-const arcLabel = new THREE.MeshStandardMaterial({ color:new THREE.Color('#e3e8ee'), roughness:0.75 });
+const arcBlue = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#1446c4'), roughness:0.38, clearcoat:0.3, clearcoatRoughness:0.45 });
+const arcGrey = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#36393d'), roughness:0.5, clearcoat:0.15, clearcoatRoughness:0.6 });
+const arcBlueIn = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#0f39a6'), roughness:0.5, clearcoat:0.1 });   // recessed panels: a shade darker
+const arcGreyIn = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#2c2f32'), roughness:0.55 });
 const ARC_GEO = new Map();                           // one set of geometries per model (shared by every bin)
+// proportions taken from the drawing of ארקלית 2 (350 x 210 x 196): side view from the back (-D/2) to the front (+D/2)
+//   flat top to 76% of the depth, a 54° slope down to the front lip at 44% of the height, a short vertical front,
+//   and under it the foot is chamfered back (the base is 12% shorter than the top)
+// per model (from the drawings): where the slope starts (share of the depth from the back), the front lip and the chamfer
+// heights (share of the height), how far back the foot starts, the two side ribs, where the diagonal rib starts on the slope
+const ARC_SHAPE = {
+  1:{ zs:0.84, hf:0.39, hc:0.29, zb:0.10, r1:0.30, r2:0.62, dg:0.04, back:'handle' },
+  2:{ zs:0.763, hf:0.44, hc:0.24, zb:0.117, r1:0.34, r2:0.66, dg:0.32, back:'panel' },
+  3:{ zs:0.836, hf:0.43, hc:0.34, zb:0.14, r1:0.19, r2:0.61, dg:0.5, back:'none' },
+  4:{ zs:0.825, hf:0.39, hc:0.2, zb:0.08, r1:0.18, r2:0.53, dg:null, back:'none' },        // no diagonal rib
+};
+function arcProfile(D, H, m = 2) {
+  const S = ARC_SHAPE[m] || ARC_SHAPE[2];
+  return { zf:D/2 - 0.015*D, zs:-D/2 + S.zs*D, hf:S.hf*H, hc:S.hc*H, zb:D/2 - S.zb*D, zr1:-D/2 + S.r1*D, zr2:-D/2 + S.r2*D, dg:S.dg, back:S.back };
+}
 function arcGeos(m) {
   if (ARC_GEO.has(m)) return ARC_GEO.get(m);
-  const { D, W, H } = ARC_MODELS[m], t = Math.max(2, Math.round(W / 90)), hf = H * 0.44;
-  const side = (h, th) => {                           // the side profile: low front, sloped edge, full height at the back
-    const sh = new THREE.Shape(), z0 = -D/2, z1 = D/2, k = h / H;
-    [[z0, 0], [z1, 0], [z1, hf * k], [z1 - 0.07*D, hf * k], [z1 - 0.38*D, h], [z0, h]].forEach(([z, y], i) => i ? sh.lineTo(-z, y) : sh.moveTo(-z, y));
+  const { D, W, H } = ARC_MODELS[m], t = Math.max(2, Math.round(W / 100)), P = arcProfile(D, H, m), rw = Math.max(3, W * 0.03), Wb = W - 2*rw;
+  const side = (h, th) => {                          // the side wall, as seen from the side
+    const sh = new THREE.Shape(), k = h / H;
+    [[-D/2, 0], [P.zb, 0], [P.zf, P.hc * k], [P.zf, P.hf * k], [P.zs, h], [-D/2, h]].forEach(([z, y], i) => i ? sh.lineTo(-z, y) : sh.moveTo(-z, y));
     const g = new THREE.ExtrudeGeometry(sh, { depth:th, bevelEnabled:false }); g.rotateY(Math.PI / 2); g.translate(-th/2, 0, 0); return g;
   };
+  const rim = rw * 1.1, slopeL = Math.hypot(P.zf - P.zs, H - P.hf), chamL = Math.hypot(P.zf - P.zb, P.hc);
+  const dTop = { z:P.zs + (P.zf - P.zs) * (P.dg || 0), y:H - (H - P.hf) * (P.dg || 0) - rw }, dBot = { z:P.zr2 + D*0.015, y:H*0.04 };
   const G = {
-    side:side(H, t), div:side(H * 0.92, Math.max(1.5, t * 0.7)),
-    bottom:new THREE.BoxGeometry(W, t, D), front:new THREE.BoxGeometry(W, hf, t), back:new THREE.BoxGeometry(W, H, t),
-    rimF:new THREE.BoxGeometry(W, t * 1.6, t * 3.2), rimS:new THREE.BoxGeometry(t * 2.6, t * 1.6, 0.62 * D), rimB:new THREE.BoxGeometry(W, t * 1.6, t * 3),
-    handle:new THREE.BoxGeometry(W * 0.36, H * 0.1, t * 4), label:new THREE.BoxGeometry(W * 0.5, hf * 0.3, 1.2), rib:new THREE.BoxGeometry(t, H * 0.86, t * 1.4),
-    t, hf,
+    side:side(H, t), div:side(H * 0.9, Math.max(1.5, t * 0.8)),
+    bottom:new THREE.BoxGeometry(Wb, t, P.zb + D/2), back:new THREE.BoxGeometry(Wb, H, t),
+    front:new THREE.BoxGeometry(Wb, P.hf - P.hc, t), cham:new THREE.BoxGeometry(Wb - 2*rw, t, chamL),
+    // the rolled rim: a flange all round the top, out over the sides
+    rimFront:new THREE.BoxGeometry(W, rim * 1.5, D * 0.05), rimFlat:new THREE.BoxGeometry(rw * 1.6, rim, P.zs + D/2), rimSlope:new THREE.BoxGeometry(rw * 1.6, rim, slopeL), rimBack:new THREE.BoxGeometry(W, rim, rw * 1.6),
+    label:new THREE.BoxGeometry(Wb * 0.5, H * 0.13, 1.4), labelEdge:new THREE.BoxGeometry(t, H * 0.15, t * 1.4),
+    pocket:new THREE.BoxGeometry(Wb * 0.29, (P.hf - P.hc) * 0.62, 1.4), pocketRib:new THREE.BoxGeometry(t * 1.6, (P.hf - P.hc) * 0.8, t * 1.6),
+    handle:new THREE.BoxGeometry(Wb * 0.36, H * 0.17, D * 0.045),
+    rib:new THREE.BoxGeometry(t * 2.6, H * 0.9, D * 0.04), diag:new THREE.BoxGeometry(t * 2.4, D * 0.03, 1),
+    ledge:new THREE.BoxGeometry(t * 1.6, H * 0.045, P.zb + D/2), panel:new THREE.BoxGeometry(Wb * 0.42, H * 0.92, t),
+    t, P, rw, Wb, rim, slopeL, slopeA:Math.atan2(H - P.hf, P.zf - P.zs), chamA:Math.atan2(P.hc, P.zf - P.zb), dTop, dBot,
   };
   ARC_GEO.set(m, G); return G;
 }
 function makeArcBin(m, mat, div) {
-  const { D, W, H } = ARC_MODELS[m], G = arcGeos(m), t = G.t, hf = G.hf, g = new THREE.Group();
+  const { D, W, H } = ARC_MODELS[m], G = arcGeos(m), t = G.t, P = G.P, Wb = G.Wb, g = new THREE.Group(), inMat = mat === arcGrey ? arcGreyIn : arcBlueIn;
   const add = (geo, x, y, z, mm = mat) => { const o = new THREE.Mesh(geo, mm); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; g.add(o); return o; };
-  add(G.side, -W/2 + t/2, 0, 0); add(G.side, W/2 - t/2, 0, 0);
-  add(G.bottom, 0, t/2, 0);
-  add(G.front, 0, hf/2, D/2 - t/2);
+  const bar = (geo, x, z0, y0, z1, y1) => { const d = add(geo, x, (y0 + y1) / 2, (z0 + z1) / 2); d.scale.z = Math.hypot(z1 - z0, y1 - y0); d.rotation.x = -Math.atan2(y1 - y0, z1 - z0); return d; };
+  for (const sx of [-1, 1]) {
+    add(G.side, sx * (Wb/2 - t/2), 0, 0);
+    // rim along the top of the side: flat, then down the slope
+    add(G.rimFlat, sx * (Wb/2 + G.rw * 0.2), H - G.rim/2, (-D/2 + P.zs) / 2);
+    const r = add(G.rimSlope, sx * (Wb/2 + G.rw * 0.2), (P.hf + H) / 2 - G.rim/2, (P.zf + P.zs) / 2); r.rotation.x = G.slopeA;
+    // outside the side: two flat vertical ribs, the diagonal rib from the slope down to the foot of the second one, the ledge at the foot
+    for (const z of [P.zr1, P.zr2]) add(G.rib, sx * (Wb/2 + t * 1.0), H * 0.045 + H * 0.45, z);
+    if (P.dg !== null) bar(G.diag, sx * (Wb/2 + t * 0.9), G.dBot.z, G.dBot.y, G.dTop.z, G.dTop.y);
+    add(G.ledge, sx * (Wb/2 + t * 0.5), H * 0.0225, (-D/2 + P.zb) / 2);
+  }
+  add(G.bottom, 0, t/2, (-D/2 + P.zb) / 2);
   add(G.back, 0, H/2, -D/2 + t/2);
-  add(G.rimF, 0, hf - t*0.8, D/2 - t*1.6);
-  add(G.rimS, -W/2 + t*1.3, H - t*0.8, -D/2 + 0.31*D); add(G.rimS, W/2 - t*1.3, H - t*0.8, -D/2 + 0.31*D);
-  add(G.rimB, 0, H - t*0.8, -D/2 + t*1.5);
-  add(G.handle, 0, H - H*0.05, -D/2 + t*3);
-  add(G.label, 0, hf * 0.42, D/2 + 0.6, arcLabel);
-  for (const z of [-0.32*D, -0.08*D]) for (const sx of [-1, 1]) add(G.rib, sx * (W/2 + t*0.5), H*0.43, z);
+  if (P.back === 'handle') add(G.handle, 0, H - G.rim - H * 0.085, -D/2 + t + D * 0.0225);   // the hand-hold block at the top of the back wall
+  else if (P.back === 'panel') add(G.panel, 0, H * 0.46, -D/2 + t * 1.5);                                     // the raised hanging panel in the back wall
+  add(G.rimBack, 0, H - G.rim/2, -D/2 + G.rw * 0.5);
+  // the front: a vertical face under the lip (with the label), and under it the foot chamfered back
+  add(G.front, 0, (P.hc + P.hf) / 2, P.zf - t/2);
+  const c = add(G.cham, 0, P.hc / 2, (P.zb + P.zf) / 2 - t/2); c.rotation.x = -G.chamA;
+  add(G.rimFront, 0, P.hf - G.rim * 0.5, P.zf + D * 0.008);
+  const ly = P.hc + (P.hf - P.hc) * 0.45;
+  if (m === 1) {                                                                       // the big one: three panels across the front, ribs between them
+    for (const k of [-1, 0, 1]) add(G.pocket, k * Wb * 0.31, ly, P.zf + 0.6, inMat);
+    for (const k of [-1.5, -0.5, 0.5, 1.5]) add(G.pocketRib, k * Wb * 0.31, ly, P.zf + t * 0.6);
+  }
+  else { add(G.label, 0, ly, P.zf + 0.6, inMat); for (const sx of [-1, 1]) add(G.labelEdge, sx * Wb * 0.26, ly, P.zf + t * 0.5); }
   if (div && ARC_MODELS[m].div) add(G.div, 0, t, 0);
   return g;
 }
@@ -3234,6 +3280,44 @@ function describeArc() {
   const M = ARC_MODELS[ARC.model];
   return `One single open-front plastic pick bin ("ארקלית ${ARC.model}", ${M.code}), ${M.D} mm deep, ${M.W} mm wide, ${M.H} mm high, injection-moulded ${ARC.color === 'grey' ? 'dark grey' : 'bright blue'} polypropylene with a slightly glossy finish: a low front wall with a label window, sides that slope up from the low front to the full height at the back, small vertical ribs on the outside of the sides, a thick rim, and a moulded hanging lip on the back.${ARC.div && M.div ? ' It has one lengthwise divider down the middle, from front to back, splitting it into a left and a right half.' : ''}`;
 }
+
+// ---------- ארקליות on the shelves of a tambour / 2-door cabinet ----------
+const ARC_IN_CAB = [2, 3, 4];
+const ARC_RIM = 3;                                   // how much the rims of two bins standing side by side overlap, mm                        // ארקלית 1 (50 cm deep) does not fit these cabinets
+function arcShelfRoom(S, i) {                        // free height above shelf i (or the floor), mm
+  if (i === 'floor') return (S.list.length ? Math.min(...S.list) : TBX.H - TBX.TOP) - tbFloor();
+  const y = S.list[i] + TBX.SHELF, above = S.list.filter((o, j) => j !== i && o > S.list[i]);
+  return (above.length ? Math.min(...above) : TBX.H - TBX.TOP) - y;     // bins may reach right up to the next shelf
+}
+function arcFit(S, i, inW) {                         // how many columns / rows of the chosen bin this shelf takes
+  const a = i === 'floor' ? S.arcFloor : S.arc && S.arc[i]; if (!a || !ARC_MODELS[a.m]) return null;
+  const M = ARC_MODELS[a.m], maxC = Math.max(0, Math.floor((inW - M.W) / (M.W - ARC_RIM)) + 1), room = arcShelfRoom(S, i);   // rims side by side overlap a little: 6 × #3 across, as in the real cabinet
+  const maxR = room < M.H ? 0 : 1 + Math.floor((room - M.H) / (M.H - ARC_NEST));
+  return { M, cols:a.cols ? Math.min(a.cols, maxC) : maxC, rows:a.rows ? Math.min(a.rows, maxR) : maxR, maxC, maxR };
+}
+function arcOnShelves(root, S, inW, zBack, shelfD) {
+  if (!S.arc && !S.arcFloor) return;
+  const mat = arcBlue, z = zBack + shelfD - 4;          // fronts in line with the front of the shelf
+  const place = (i, y0) => {
+    const f = arcFit(S, i, inW); if (!f || !f.cols || !f.rows) return;
+    const m = i === 'floor' ? S.arcFloor.m : S.arc[i].m;
+    for (let c = 0; c < f.cols; c++) for (let r = 0; r < f.rows; r++) {
+      const b = makeArcBin(m, mat, false);
+      b.position.set(-inW/2 + f.M.W/2 + c * (f.M.W - ARC_RIM), y0 + r * (f.M.H - ARC_NEST), z - f.M.D/2); root.add(b);
+    }
+  };
+  S.list.forEach((y, i) => place(i, y + TBX.SHELF));
+  place('floor', tbFloor());
+}
+// two ready layouts (shelves bottom-up, on the 25 mm hole grid):
+//   mixed – floor 4 x #2; 4 x 2 #2; 6 x 2 #3; 6 x 3 #3; top 4 x 2 #2
+//   full  – #3 only, 6 across: floor 3 high; 3; 2; 3; top 2 (as in the photo of the four cabinets)
+const ARC_CAB_LAYOUTS = {
+  mixed:{ he:'מעורב', list:[270, 695, 995, 1395], floor:{ m:2, rows:1, cols:4 }, arc:[{ m:2, rows:2, cols:4 }, { m:3, rows:2, cols:6 }, { m:3, rows:3, cols:6 }, { m:2, rows:2, cols:4 }] },
+  full:{ he:'ארקלית 3 בלבד', list:[445, 845, 1145, 1545], floor:{ m:3, rows:3, cols:6 }, arc:[{ m:3, rows:3, cols:6 }, { m:3, rows:2, cols:6 }, { m:3, rows:3, cols:6 }, { m:3, rows:2, cols:6 }] },
+};
+function arcLayout(S, key) { const L = ARC_CAB_LAYOUTS[key]; S.list = [...L.list]; S.arc = deep(L.arc); S.arcFloor = { ...L.floor }; S.layout = key; }
+const arcLayoutOf = (S) => S && S.layout === 'full' ? 'ארקלית 3 בלבד' : 'מעורב';
 
 // ---------- Metal cabinets (shared builder) ----------
 //   tamb  : ארון מתכת מאובטח לרב תא (tilt-bin family) – tilt bins + optional shelves; tambour OR hinged doors with a pegboard inside
@@ -3386,7 +3470,10 @@ function buildMetal(k) {
         }
       }
     });
-  } else S.list.forEach((y, i) => shelf(y, i));
+  } else {
+    S.list.forEach((y, i) => shelf(y, i));
+    arcOnShelves(root, S, inW, zBack, shelfD);
+  }
   // front
   let slats = null, doors = null;
   if (closure === 'tambour') {
@@ -3506,7 +3593,7 @@ function renderMetal(k) {
     const row = document.createElement('div'); row.className = 'srow';
     row.innerHTML = `<span class="sname" style="cursor:default">מדף ${k2 + 1}</span><input class="num" type="number" step="2.5" min="10" max="185" value="${(y/10).toFixed(1)}" aria-label="גובה המדף בס&quot;מ" style="width:80px"><span class="use" style="margin:0 4px">ס"מ</span><button class="sb" aria-label="הסרת מדף">✕</button>`;
     row.querySelector('input').onchange = (e) => { S.list[i] = clampShelf(S.list, i, snapNear(+e.target.value * 10)); rebuild(true); };
-    row.querySelector('.sb').onclick = () => { S.list.splice(i, 1); rebuild(true); };
+    row.querySelector('.sb').onclick = () => { S.list.splice(i, 1); if (S.arc) S.arc.splice(i, 1); rebuild(true); };
     box.appendChild(row);
   });
   if (k === 'mtamb') { $('mtOpen').value = Math.round(S.target / TBX.MAXO * 100); }
@@ -3522,7 +3609,7 @@ function addShelf(S) {
   const ys = [tbFloor(), ...[...S.list].sort((a, b) => a - b), tbCeil()];
   let best = 0, at = 0; for (let i = 0; i < ys.length - 1; i++) if (ys[i + 1] - ys[i] > best) { best = ys[i + 1] - ys[i]; at = (ys[i] + ys[i + 1]) / 2; }
   if (best < 200) { toast('אין מקום למדף נוסף'); return; }
-  S.list.push(snapNear(at)); rebuild(true);
+  S.list.push(snapNear(at)); if (S.arc) S.arc[S.list.length - 1] = null; rebuild(true);
 }
 
 // ---------- animation ----------
@@ -4596,7 +4683,10 @@ function describe() {
       return `${shell} Every tilt bin unit has an injection-moulded light grey RAL 7035 body with clear transparent tilt-out bins. Inside, from the bottom: ${zs.join('; ') || 'empty'}.${peg}${flags.length ? ' ' + flags.join('; ') + '.' : ''}`;
     }
     const ys = [...S.list].sort((a, b) => a - b).map(y => Math.round(y/10));
-    return `${shell} Inside: ${ys.length} adjustable full-width steel shelves at ${ys.join(', ')} cm from the floor, on perforated uprights.${flags.filter(f => !/rod|label/.test(f)).length ? ' ' + flags.filter(f => !/rod|label/.test(f)).join('; ') + '.' : ''}`;
+    const inW = TBX.W - 2*TBX.SIDE, bins = S.list.map((y, i) => ({ y, f:arcFit(S, i, inW), a:S.arc && S.arc[i] })).filter(o => o.f && o.f.cols && o.f.rows).sort((p, q) => q.y - p.y)
+      .concat(S.arcFloor && arcFit(S, 'floor', inW) ? [{ y:tbFloor() - TBX.SHELF, f:arcFit(S, 'floor', inW), a:S.arcFloor, floor:true }] : []).filter(o => o.f.cols && o.f.rows)
+      .map(o => `${o.floor ? 'on the floor of the cabinet' : `on the shelf at ${Math.round(o.y/10)} cm`}: ${o.f.cols} column${o.f.cols > 1 ? 's' : ''} x ${o.f.rows} high of open-front bright blue plastic pick bins ("ארקלית ${o.a.m}", ${o.f.M.W} mm wide, ${o.f.M.D} mm deep, ${o.f.M.H} mm high, stacked on each other, fronts flush with the shelf edge, from the left side)`);
+    return `${shell} Inside: ${ys.length} adjustable full-width steel shelves at ${ys.join(', ')} cm from the floor, on perforated uprights.${bins.length ? ' Bins standing on the shelves, from the top: ' + bins.join('; ') + '; the other shelves are empty.' : ''}${flags.filter(f => !/rod|label/.test(f)).length ? ' ' + flags.filter(f => !/rod|label/.test(f)).join('; ') + '.' : ''}`;
   }
   if (mode === 'quad') {
     const lv = qdLevels(), top = [...lv].reverse(), side = Math.max(600, ...lv.map(qdSide));
@@ -5245,8 +5335,8 @@ function closeSheet(now) {
 function groupVars(list) { const out = []; list.forEach(v => { const k = v.g || v.name, g = out.find(x => x.name === k); g ? g.vars.push(v) : out.push({ name:k, vars:[v] }); }); return out; }
 let ADD_OPEN = false, AD_TICK = 0;
 // product photos (from the Drive folder), per product; a card fades through them
-const PRODUCT_IMGS = {"arc": ["img/arc-0.webp", "img/arc-1.webp"], "bin2": ["img/bin2-0.webp"], "bin3": ["img/bin3-0.webp"], "bin4": ["img/bin4-0.webp"], "bin5": ["img/bin5-v2.webp"], "bin6": ["img/bin6-0.webp"], "bin9": ["img/bin9-0.webp"], "stand1": ["img/stand1-0.webp", "img/stand1-1.webp", "img/stand1-2.webp", "img/stand1-3.webp", "img/stand1-4.webp", "img/stand1-5.webp", "img/stand1-6.webp", "img/stand1-7.webp", "img/stand1-8.webp", "img/stand1-9.webp", "img/stand1-10.webp", "img/stand1-11.webp"], "stand2": ["img/stand2-0.webp", "img/stand2-1.webp"], "excl": ["img/excl-0.webp", "img/excl-1.webp"], "quad": ["img/quad-0.webp", "img/quad-1.webp", "img/quad-2.webp", "img/quad-3.webp"], "part": ["img/part-0.webp", "img/part-1.webp", "img/part-2.webp", "img/part-3.webp", "img/part-4.webp", "img/part-5.webp", "img/part-6.webp"], "delux": ["img/delux-0.webp", "img/delux-1.webp", "img/delux-2.webp", "img/delux-3.webp", "img/delux-4.webp", "img/delux-5.webp", "img/delux-6.webp", "img/delux-7.webp", "img/delux-8.webp", "img/delux-9.webp", "img/delux-10.webp", "img/delux-11.webp", "img/delux-12.webp", "img/delux-13.webp", "img/delux-14.webp", "img/delux-15.webp", "img/delux-16.webp", "img/delux-17.webp"], "smart": ["img/smart-0.webp", "img/smart-1.webp", "img/smart-2.webp"], "wall": ["img/wall-0.webp", "img/wall-1.webp", "img/wall-2.webp", "img/wall-3.webp", "img/wall-4.webp", "img/wall-5.webp", "img/wall-6.webp"], "tamb": ["img/tamb-0.webp", "img/tamb-1.webp", "img/tamb-2.webp", "img/tamb-3.webp", "img/tamb-4.webp", "img/tamb-5.webp"]};
-const IMG_KEY = { 'ארקליות':'arc', 'מתקן חד צדדי':'stand1', 'עגלה דו צדדית':'stand2', 'עגלת EXCLUSIVE':'excl', 'מעמד 4 דפנות':'quad', 'מחיצת EXCLUSIVE':'part', 'תא נע DELUXE':'delux', 'תא נע SMART':'smart', 'מתלי קיר':'wall', 'ארון מאובטח לרב תא':'tamb' };
+const PRODUCT_IMGS = {"mtarc": ["img/mtarc-1.webp", "img/mtarc-0.webp"], "mdarc": ["img/mdarc-0.webp", "img/mdarc-1.webp", "img/mdarc-2.webp"], "arc": ["img/arc-0.webp", "img/arc-1.webp"], "bin2": ["img/bin2-0.webp"], "bin3": ["img/bin3-0.webp"], "bin4": ["img/bin4-0.webp"], "bin5": ["img/bin5-v2.webp"], "bin6": ["img/bin6-0.webp"], "bin9": ["img/bin9-0.webp"], "stand1": ["img/stand1-0.webp", "img/stand1-1.webp", "img/stand1-2.webp", "img/stand1-3.webp", "img/stand1-4.webp", "img/stand1-5.webp", "img/stand1-6.webp", "img/stand1-7.webp", "img/stand1-8.webp", "img/stand1-9.webp", "img/stand1-10.webp", "img/stand1-11.webp"], "stand2": ["img/stand2-0.webp", "img/stand2-1.webp"], "excl": ["img/excl-0.webp", "img/excl-1.webp"], "quad": ["img/quad-0.webp", "img/quad-1.webp", "img/quad-2.webp", "img/quad-3.webp"], "part": ["img/part-0.webp", "img/part-1.webp", "img/part-2.webp", "img/part-3.webp", "img/part-4.webp", "img/part-5.webp", "img/part-6.webp"], "delux": ["img/delux-0.webp", "img/delux-1.webp", "img/delux-2.webp", "img/delux-3.webp", "img/delux-4.webp", "img/delux-5.webp", "img/delux-6.webp", "img/delux-7.webp", "img/delux-8.webp", "img/delux-9.webp", "img/delux-10.webp", "img/delux-11.webp", "img/delux-12.webp", "img/delux-13.webp", "img/delux-14.webp", "img/delux-15.webp", "img/delux-16.webp", "img/delux-17.webp"], "smart": ["img/smart-0.webp", "img/smart-1.webp", "img/smart-2.webp"], "wall": ["img/wall-0.webp", "img/wall-1.webp", "img/wall-2.webp", "img/wall-3.webp", "img/wall-4.webp", "img/wall-5.webp", "img/wall-6.webp"], "tamb": ["img/tamb-0.webp", "img/tamb-1.webp", "img/tamb-2.webp", "img/tamb-3.webp", "img/tamb-4.webp", "img/tamb-5.webp"]};
+const IMG_KEY = { 'ארון תריס עם ארקליות':'mtarc', 'ארון 2 דלתות עם ארקליות':'mdarc', 'ארקליות':'arc', 'מתקן חד צדדי':'stand1', 'עגלה דו צדדית':'stand2', 'עגלת EXCLUSIVE':'excl', 'מעמד 4 דפנות':'quad', 'מחיצת EXCLUSIVE':'part', 'תא נע DELUXE':'delux', 'תא נע SMART':'smart', 'מתלי קיר':'wall', 'ארון מאובטח לרב תא':'tamb' };
 function productImgs(f) {
   const v = f.vars[0];
   if (v.t === 'unit') return [2, 3, 4, 5, 6, 9].flatMap(n => PRODUCT_IMGS['bin' + n] || []);   // all the bin sizes, one after another
@@ -5272,6 +5362,8 @@ const PRODUCT_OPTS = {
       def:(c) => c.tn.slide && c.tn.slide.on ? 'עם' : 'בלי', if:(c) => c.tn.size === 4 || c.tn.size === 10 }],
   'ארקליות':[{ l:'דגם', vars:(v) => 'ארקלית ' + v.cfg.arc.model },
     { l:'צבע', ch:[['כחול', C2(c => c.arc.color = 'blue')], ['אפור', C2(c => c.arc.color = 'grey')]], def:(c) => c.arc.color === 'grey' ? 'אפור' : 'כחול' }],
+  'ארון תריס עם ארקליות':[{ l:'סידור', ch:Object.entries(ARC_CAB_LAYOUTS).map(([k, L]) => [L.he, C2(c => arcLayout(c.mt, k))]), def:(c) => arcLayoutOf(c.mt) }],
+  'ארון 2 דלתות עם ארקליות':[{ l:'סידור', ch:Object.entries(ARC_CAB_LAYOUTS).map(([k, L]) => [L.he, C2(c => arcLayout(c.md, k))]), def:(c) => arcLayoutOf(c.md) }],
   'ארון 4 מדפים':[{ l:'צבע', ch:[['RAL 7035', C2(c => c.md.color = '7035')], ['כחול', C2(c => c.md.color = 'blue')]], def:(c) => c.md.color === 'blue' ? 'כחול' : 'RAL 7035' }],
 };
 // the photo of a chosen setup, when there is one (otherwise the model's own picture)
@@ -5289,6 +5381,8 @@ function photoFor(f, c) {
     case 'תא נע SMART': return g('smart', 0);
     case 'ארון מאובטח לרב תא': return g('tamb', 0);
     case 'ארקליות': return c.arc.color === 'grey' ? g('arc', 1) : g('arc', 0);
+    case 'ארון 2 דלתות עם ארקליות': return g('mdarc', 0);
+    case 'ארון תריס עם ארקליות': return g('mtarc', 0);
   }
   return null;
 }
@@ -5682,7 +5776,9 @@ function addFamilies() {
     { id:'metal', name:'ארונות מתכת', vars:[
       { t:'tamb', name:'ארון מאובטח לרב תא', kw:'ארון מתכת תריס נעילה secure cabinet', cfg:C('tamb') },
       { t:'mtamb', name:'ארון תריס', kw:'ארון מתכת תריס tambour cabinet', cfg:C('mtamb') },
-      { t:'mdoor', name:'ארון 4 מדפים', kw:'ארון מתכת דלתות מדפים shelves cabinet', cfg:C('mdoor') } ] },
+      { t:'mdoor', name:'ארון 4 מדפים', kw:'ארון מתכת דלתות מדפים shelves cabinet', cfg:C('mdoor') },
+      { t:'mtamb', name:'ארון תריס עם ארקליות', kw:'ארון תריס ארקליות אחסוניות tambour pick bins', cfg:C('mtamb', c => arcLayout(c.mt, 'mixed')) },
+      { t:'mdoor', name:'ארון 2 דלתות עם ארקליות', kw:'ארון דלתות ארקליות אחסוניות doors pick bins', cfg:C('mdoor', c => { arcLayout(c.md, 'mixed'); c.md.color = '7035'; }) } ] },
   ];
 }
 // ---- live preview of the product being set up: drag to turn, wheel to zoom, click a bin to open it ----
@@ -6229,20 +6325,42 @@ const ARR = { cam:null, shelf:null };
 function buildArrange(it, body) {
   const bins = (ITEM_DRAWERS.get(it.id) || []).length > 0, S = metalState(), shelves = S && S.list;
   body.innerHTML = (bins ? `<label class="sstog"><input type="checkbox" id="arOpen"><span>כל התאים פתוחים</span></label>` : '')
-    + (shelves ? `<span class="arshelf" id="arShelf"></span>` : '')
+    + (shelves ? `<span class="arshelf" id="arShelf"></span>${S !== TB ? '<button class="arshelf arfloor" id="arFloor">רצפת הארון</button>' : ''}<span class="ararc" id="arArc"></span>` : '')
     + `<span class="sshint">${bins ? 'לחיצה על תא פותחת / סוגרת' : ''}${bins && (TAMB || DOORS) ? ' · ' : ''}${TAMB ? 'גרירה על התריס' : DOORS ? 'לחיצה / גרירה על דלת' : ''}${shelves ? ' · גרירת מדף, או R / F' : ''}</span>`;
+  const fl = $('arFloor'); if (fl) fl.onclick = () => { ARR.shelf = ARR.shelf === 'floor' ? null : 'floor'; syncArrange(); };
   const o = $('arOpen'); if (o) { o.checked = $('openAll').checked; o.onchange = () => { $('openAll').checked = o.checked; $('openAll').dispatchEvent(new Event('change', { bubbles:true })); }; }
   syncArrange();
 }
 function syncArrange() {
   const el = $('arShelf'); if (!el) return;
-  const S = metalState();
-  if (ARR.shelf == null || !S || !S.list || S.list[ARR.shelf] === undefined) { el.textContent = 'בחרו מדף'; el.classList.remove('on'); return; }
+  const S = metalState(), fl = $('arFloor');
+  if (fl) fl.classList.toggle('on', ARR.shelf === 'floor');
+  if (ARR.shelf === 'floor' && S) { el.textContent = 'בחרו מדף'; el.classList.remove('on'); arcArrange(S); return; }
+  if (ARR.shelf == null || !S || !S.list || S.list[ARR.shelf] === undefined) { el.textContent = 'בחרו מדף'; el.classList.remove('on'); arcArrange(S); return; }
   const order = S.list.map((y, i) => ({ y, i })).sort((a, b) => b.y - a.y).findIndex(x => x.i === ARR.shelf) + 1;   // shelf 1 = the top one
   el.textContent = `מדף ${order} · ${(S.list[ARR.shelf] / 10).toFixed(1)} ס"מ`; el.classList.add('on');
+  arcArrange(S);
+}
+// the bins on the selected shelf: model, columns, rows (0 = as many as fit)
+function arcArrange(S) {
+  const box = $('arArc'); if (!box) return;
+  if (!S || S === TB || ARR.shelf == null) { box.innerHTML = ''; return; }
+  const i = ARR.shelf, a = (i === 'floor' ? S.arcFloor : S.arc && S.arc[i]) || null, f = arcFit(S, i, TBX.W - 2*TBX.SIDE);
+  const seg = (k, opts, cur) => `<span class="arseg" data-k="${k}">${opts.map(([v, t]) => `<button data-v="${v}" class="${String(cur) === String(v) ? 'on' : ''}">${t}</button>`).join('')}</span>`;
+  const nums = (n) => [['0', 'מלא'], ...Array.from({ length:n }, (_, j) => [String(j + 1), String(j + 1)])];
+  box.innerHTML = `<span class="arlbl">ארקליות</span>${seg('m', [['0', 'בלי'], ...ARC_IN_CAB.map(m => [String(m), '#' + m])], a ? a.m : 0)}`
+    + (a && f ? `<span class="arlbl">עמודות</span>${seg('cols', nums(f.maxC), a.cols || 0)}<span class="arlbl">שכבות</span>${seg('rows', nums(Math.max(1, f.maxR)), a.rows || 0)}` : '');
+  box.querySelectorAll('.arseg button').forEach(b => b.onclick = () => {
+    const k = b.parentNode.dataset.k, v = +b.dataset.v;
+    S.arc = S.arc || []; for (let j = 0; j < S.list.length; j++) if (S.arc[j] === undefined) S.arc[j] = null;
+    const val = k === 'm' ? (v ? { m:v, cols:a ? a.cols : 0, rows:a ? a.rows : 0 } : null) : { ...a, [k]:v };
+    if (i === 'floor') S.arcFloor = val; else S.arc[i] = val;
+    const it = SCN.items.find(x => x.id === SCN.sel); if (it) it.cfg = capCfg(it.type);
+    rebuild(true); syncArrange();
+  });
 }
 function arrangeKey(code, shift) {
-  const S = metalState(); if (!S || !S.list || ARR.shelf == null || S.list[ARR.shelf] === undefined) return false;
+  const S = metalState(); if (!S || !S.list || ARR.shelf == null || ARR.shelf === 'floor' || S.list[ARR.shelf] === undefined) return false;
   const k = code.replace(/^Key/, ''); if (k !== 'R' && k !== 'F') return false;
   S.list[ARR.shelf] = clampShelf(S.list, ARR.shelf, S.list[ARR.shelf] + (k === 'R' ? 1 : -1) * (shift ? 100 : 25));   // 2.5 cm steps, Shift: 10 cm
   rebuild(true); syncArrange(); flashKey(k); return true;
@@ -6979,6 +7097,17 @@ function cfgFromPlan(p) {
       if (a.color) cfg.arc.color = a.color; if (a.divider !== null && a.divider !== undefined) cfg.arc.div = !!a.divider && cfg.arc.model <= 2;
       break; }
   }
+  if ((p.type === 'mtamb' || p.type === 'mdoor') && st.bin_layout && ARC_CAB_LAYOUTS[st.bin_layout]) arcLayout(p.type === 'mtamb' ? cfg.mt : cfg.md, st.bin_layout);
+  if ((p.type === 'mtamb' || p.type === 'mdoor') && st.shelf_bins && st.shelf_bins.length) {    // bins on the shelves: shelf 1 = the top one
+    const S = p.type === 'mtamb' ? cfg.mt : cfg.md, order = S.list.map((y, i) => ({ y, i })).sort((a, b) => b.y - a.y);
+    S.arc = S.list.map((_, i) => (S.arc && S.arc[i]) || null);
+    for (const b of st.shelf_bins) {
+      const val = b.model && ARC_IN_CAB.includes(b.model) ? { m:b.model, cols:b.cols || 0, rows:b.rows || 0 } : null;
+      if (b.shelf === 0) { S.arcFloor = val; continue; }                                   // 0 = the floor of the cabinet
+      const o = order[(b.shelf || 1) - 1]; if (!o) continue;
+      S.arc[o.i] = val;
+      if (b.model === 1) AI_WARN.push('ארקלית 1 לא נכנסת לעומק הארון'); }
+  }
   if (st.fill_model && ['stand', 'wall', 'excl', 'part', 'quad'].includes(p.type)) {
     const fixed = Object.fromEntries((st.comp || []).filter(c => c.count > 0 && c.model !== st.fill_model).map(c => [c.model, c.count]));
     const c = fillComp(p.type, cfg, fixed, st.fill_model, st.fill_to_cm ? st.fill_to_cm * 10 : 0);
@@ -7671,7 +7800,7 @@ const EN = {
   'סיבוב':'Rotate', 'זווית':'Angle', 'רוחב החדר במטרים':'Room width in metres', 'עומק החדר במטרים':'Room depth in metres',
   'קליק בוחר מוצר. קליק או גרירה על תא, דלת או תריס של המוצר הבחור פותחים וסוגרים אותם (גרירה למטה פותחת תא, למעלה סוגרת; התריס זז עם העכבר). ✥ מפעיל הזזה: גרירה על הרצפה, חיצים – ס"מ לפי כיוון המוצר (Shift – 10 ס"מ), החזקת הלחצן על המוצר + גלגלת – גובה. מוצר לא נכנס לקיר או למוצר אחר – נעצר במגע. קו ורוד = מיושר עם מוצר אחר. קליק על הרצפה משחרר. Ctrl+Z מבטל.':'Click selects a product. Clicking or dragging a bin, door or tambour of the selected product opens / closes it (drag down opens a bin, up closes it; the tambour follows the pointer). ✥ turns on moving: drag on the floor, arrows – 1 cm in the product\'s own directions (Shift – 10 cm), hold the button on the product + wheel – height. A product never goes into a wall or another product – it stops on contact. Pink line = lined up with another product. Click the floor to release. Ctrl+Z undoes.',
   'לרב תא בודד בוחרים את מספר התאים בלשונית "רב תא" לפני ההוספה.':'For a single tilt bin, choose the number of bins in the "Tilt bin" tab before adding it.',
-  'צמוד ל':'Touching the ', 'קיר אחורי':'back wall', 'קיר שמאלי':'left wall', 'קיר ימני':'right wall', 'ול':' and the ', 'מוצרים':'products', 'חדר':'room', "מ'":'m', 'עגלת רב-תא EXCLUSIVE':'Exclusive Tilt Bin cart', 'מחיצת EXCLUSIVE מודולרית':'Modular Exclusive Partition', 'מעמד 4 דפנות':'Four-sided stand', 'מתקן חד צדדי':'Single-sided stand', 'מתקן חד צדדי – רגליים':'Single-sided stand – legs', 'מתקן חד צדדי – גלגלים':'Single-sided stand – wheels', 'תא נע DELUXE':'GONDOLA DELUXE', 'תא נע SMART':'GONDOLA SMART', 'כנפיים':'wings', 'הוספת מוצרים':'Add products', 'ארקליות':'Pick bins', 'ארקלית 1':'Pick bin 1', 'ארקלית 2':'Pick bin 2', 'ארקלית 3':'Pick bin 3', 'ארקלית 4':'Pick bin 4', 'דגם':'Model', 'שורות':'Rows', 'מחיצת אורך':'Lengthwise divider', 'עם מחיצה':'With divider', 'אפור':'Grey', 'דלתות וחלונות':'Doors & windows', 'אין עדיין דלתות או חלונות בחדר.':'No doors or windows in the room yet.', '+ דלת':'+ Door', '+ חלון':'+ Window', 'דלת':'Door', 'חלון':'Window', 'דלת רגילה':'Door', 'דלת כפולה':'Double door', 'דלת הזזה מזכוכית':'Glass sliding door', 'מעבר פתוח':'Open doorway', 'חלון רגיל':'Window', 'ויטרינה':'Shop window', 'חלון גבוה צר':'High narrow window', 'אחורי':'Back', 'שמאלי':'Left', 'ימני':'Right', 'מהקיר השמאלי (ס"מ)':'From the left wall (cm)', 'מהקיר האחורי (ס"מ)':'From the back wall (cm)', 'רוחב (ס"מ)':'Width (cm)', 'גובה (ס"מ)':'Height (cm)', 'גובה מהרצפה (ס"מ)':'Above the floor (cm)', 'הסרה':'Remove', 'הרינדור עדיין רץ – אפשר לחזור אליו מהלשונית ⋮':'The render is still running – reopen it from the ⋮ tab', 'הגדרות מצלמה':'Camera settings', 'צילום מוצר':'Product photo', 'צילום מוצר – המוצר לבד, על רקע שקוף':'Product photo – the product on its own, transparent background', 'חזרה לסצנה':'Back to the scene', 'הארכיון':'Archive', 'הארכיון: שמירה ושחזור של סצנות':'Archive: save and restore scenes', 'שמור סצנה':'Save scene', 'שחזר סצנה':'Restore scene', 'שלב א׳ בלבד, או כל הגדרות הסצנה':'Stage 1 only, or all the scene settings', 'כל הסצנות השמורות, עם תמונה':'All the saved scenes, with a picture', 'שמירת סצנה':'Save a scene', 'שם הסצנה':'Scene name', 'שלב א׳ בלבד':'Stage 1 only', 'החדר, המוצרים, המיקומים והמצלמה':'The room, products, positions and camera', 'כל הגדרות הסצנה':'All the scene settings', 'כולל התאורה, הבריף לרינדור והתמונות':'Including the lighting, the render brief and the pictures', 'שחזור סצנה':'Restore a scene', 'מעבר עם העכבר על סצנה מציג אותה כאן':'Hover a scene to see it here', 'לסצנה הזו אין עדיין תמונה':'This scene has no picture yet', 'סצנה מלאה':'Full scene', 'שלב א׳':'Stage 1', 'שמירת סצנות זמינה במצב ניהול':'Saving scenes is available in admin mode', 'עדיין אין סצנות שמורות.':'No saved scenes yet.', 'סגירת הפאנל':'Close the panel', 'פתיחת הפאנל':'Open the panel', 'הפאנל':'Panel', 'גררו את השמש על הכיפה':'Drag the sun across the dome', 'גררו את השמש':'Drag the sun', 'סוג האור':'Type of light', 'עוצמה וצל':'Strength and shadow', 'רכות הצל':'Shadow softness', 'איפוס תאורה':'Reset lighting', 'חד':'Sharp', 'רך':'Soft', 'רך מאוד':'Very soft', 'איפוס זווית הצילום':'Reset the camera angle', 'המצלמה חוזרת לזווית ברירת המחדל':'The camera goes back to the default angle', 'איפוס הסצנה':'Reset the scene', 'כל המוצרים יוסרו – מתחילים סצנה חדשה':'All products are removed – a new scene starts', 'זוויות צילום שמורות':'Saved camera angles', 'שמור זווית צילום':'Save camera angle', 'אפס לברירת מחדל':'Reset to default', '— בחרו זווית שמורה —':'— pick a saved angle —', 'אין עדיין זוויות שמורות':'No saved angles yet', 'מחיקת הזווית':'Delete the angle', 'שמירת זווית צילום':'Save a camera angle', 'נשמרת רק הזווית של המצלמה (מיקום, כיוון ועדשה) – לא הסצנה. אפשר להשתמש בה בכל סצנה.':'Only the camera angle is saved (position, direction and lens) – not the scene. It can be used in any scene.', 'שם הזווית':'Angle name', 'בלי מוצר בחור: W / S קדימה ואחורה, A / D לצדדים, R / F למעלה ולמטה, Q / E עדשה, Z / C סיבוב (Shift – מהר).':'With no product selected: W / S forward and back, A / D sideways, R / F up and down, Q / E lens, Z / C turn (Shift – faster).', 'קדמי':'Front', 'קיר קדמי':'Front wall', 'קיר אחורי':'Back wall', 'קיר שמאלי':'Left wall', 'קיר ימני':'Right wall', 'רצפה':'Floor', 'צילום החדר':'Scan the room', 'מצלמה':'Camera', 'סורקים ברקוד בטלפון, מצלמים את החדר ב־360° – והסצנה נבנית לפי החדר האמיתי.':'Scan the code with a phone, film the room in 360° – and the scene is built from the real room.', 'בשלב הזה הברקוד מוכן; הצילום והניתוח בטלפון יגיעו בשלב הבא.':'The code is ready; filming and analysis on the phone come in the next step.', 'החדר':'The room', 'מוצרים בסצנה':'Products in the scene', 'מצלמה':'Camera', 'סצנות שמורות':'Saved scenes', 'ביטול הבחירה (Esc)':'Deselect (Esc)', 'ביטול הבחירה':'Deselect', 'הוספה לסצנה':'Add to the scene', 'מספר תאים':'Bins per set', 'גררו לסצנה':'Drag into the scene', 'שחור':'Black', 'לבן':'White', 'רגליים':'Legs', 'עם':'With', 'כחול':'Blue', 'הרכב הכנפיים':'Wing layout', 'זיהוי כנפיים':'Identify wings', 'סיום':'Done', 'הסר הכל':'Remove all', 'הרכב כנף שמור…':'Saved wing layout…', 'שמור הרכב זה':'Save this layout', 'שם ההרכב':'Layout name', 'שמירה':'Save', 'לא בעומק הזה':'Not at this depth', 'אין מקום בגובה':'No height left', 'בחרו כנף קודם':'Pick a wing first', 'כל התאים פתוחים':'All bins open', 'בחרו מדף':'Pick a shelf', 'לחיצה על תא פותחת / סוגרת':'Click a bin to open / close it', 'גרירה על התריס':'drag the shutter', 'לחיצה / גרירה על דלת':'click / drag a door', ' · גרירת מדף, או R / F':' · drag a shelf, or R / F', 'הרכב התאים':'Bin layout', 'עומק בסיס':'Base depth', 'דלתות הזזה':'Sliding doors', 'בלי':'Without', 'עם דלתות הזזה':'With sliding doors', 'הרכב התאים והמדפים':'Bins and shelves', 'מיקום ומספר המדפים':'Shelves – number and position', 'מספר תאים בסט':'Bins per set', 'צבע הגג':'Top colour', 'ידית':'Handle', 'בסיס':'Base', 'גלגלים':'Wheels', 'מספר טורים':'Columns', 'קיר':'Wall', 'עומק':'Depth', 'יישור':'Alignment', 'צבע':'Colour', 'תוכן התאים ברינדור':'Bin contents in the render', 'תאים':'bins', 'טורים':'columns', 'הועתק – Ctrl+V מדביק':'Copied – Ctrl+V pastes', 'אחורה (לקיר האחורי)':'Back (toward the back wall)', 'שמאלה':'Left', 'קדימה':'Forward', 'ימינה':'Right', 'סיבוב נגד כיוון השעון':'Turn counter-clockwise', 'סיבוב עם כיוון השעון':'Turn clockwise', 'גובה':'Height', 'סיבוב 5° · Shift 45°':'Turn 5° · Shift 45°', 'סיבוב':'Rotation', 'Shift = צעד של 10 ס"מ':'Shift = 10 cm steps', 'ס"מ':'cm', 'מצב עריכה':'Edit mode', 'מצב הזזה':'Move mode', 'מצב סידור':'Arrange mode', 'מצב סידור – דלתות, מדפים, תאים':'Arrange mode – doors, shelves, bins', 'שכפול (Ctrl+D)':'Duplicate (Ctrl+D)', 'מחיקה (Delete)':'Delete (Delete)', 'מצב עריכה ':'Edit mode', 'הגדרות המוצר יופיעו כאן':'The product settings will appear here', 'מקשי ההזזה והמיקום יופיעו כאן':'The move keys and position will appear here', 'סידור דלתות, מדפים ותאים יופיע כאן':'Arranging doors, shelves and bins will appear here', 'חזרה':'Back', 'חזרה לסצנה':'Back to the scene', 'רב תא':'Tilt bin', 'גררו לסצנה, או לחיצה כפולה להוספה במרכז':'Drag into the scene, or double-click to add it in the middle', 'וריאציות':'variations', 'סגירה':'Close', 'הוסף מוצר / מערכת זה / זו':'Add this product / system', 'פעמים':'times', 'כמה פעמים':'How many times', 'הוסף מוצר זה לסצנה':'Add this product to the scene', 'מספר הפעמים שיש להוסיף מערכת זו / מוצר זה לסצנה:':'How many times to add this system / product to the scene:',
+  'צמוד ל':'Touching the ', 'קיר אחורי':'back wall', 'קיר שמאלי':'left wall', 'קיר ימני':'right wall', 'ול':' and the ', 'מוצרים':'products', 'חדר':'room', "מ'":'m', 'עגלת רב-תא EXCLUSIVE':'Exclusive Tilt Bin cart', 'מחיצת EXCLUSIVE מודולרית':'Modular Exclusive Partition', 'מעמד 4 דפנות':'Four-sided stand', 'מתקן חד צדדי':'Single-sided stand', 'מתקן חד צדדי – רגליים':'Single-sided stand – legs', 'מתקן חד צדדי – גלגלים':'Single-sided stand – wheels', 'תא נע DELUXE':'GONDOLA DELUXE', 'תא נע SMART':'GONDOLA SMART', 'כנפיים':'wings', 'הוספת מוצרים':'Add products', 'מעורב':'Mixed', 'ארקלית 3 בלבד':'Pick bin 3 only', 'סידור':'Layout', 'רצפת הארון':'Cabinet floor', 'ארון תריס עם ארקליות':'Tambour cabinet with pick bins', 'ארון 2 דלתות עם ארקליות':'2-door cabinet with pick bins', 'מלא':'Full', 'עמודות':'Columns', 'שכבות':'Layers', 'ארקליות':'Pick bins', 'ארקלית 1':'Pick bin 1', 'ארקלית 2':'Pick bin 2', 'ארקלית 3':'Pick bin 3', 'ארקלית 4':'Pick bin 4', 'דגם':'Model', 'שורות':'Rows', 'מחיצת אורך':'Lengthwise divider', 'עם מחיצה':'With divider', 'אפור':'Grey', 'דלתות וחלונות':'Doors & windows', 'אין עדיין דלתות או חלונות בחדר.':'No doors or windows in the room yet.', '+ דלת':'+ Door', '+ חלון':'+ Window', 'דלת':'Door', 'חלון':'Window', 'דלת רגילה':'Door', 'דלת כפולה':'Double door', 'דלת הזזה מזכוכית':'Glass sliding door', 'מעבר פתוח':'Open doorway', 'חלון רגיל':'Window', 'ויטרינה':'Shop window', 'חלון גבוה צר':'High narrow window', 'אחורי':'Back', 'שמאלי':'Left', 'ימני':'Right', 'מהקיר השמאלי (ס"מ)':'From the left wall (cm)', 'מהקיר האחורי (ס"מ)':'From the back wall (cm)', 'רוחב (ס"מ)':'Width (cm)', 'גובה (ס"מ)':'Height (cm)', 'גובה מהרצפה (ס"מ)':'Above the floor (cm)', 'הסרה':'Remove', 'הרינדור עדיין רץ – אפשר לחזור אליו מהלשונית ⋮':'The render is still running – reopen it from the ⋮ tab', 'הגדרות מצלמה':'Camera settings', 'צילום מוצר':'Product photo', 'צילום מוצר – המוצר לבד, על רקע שקוף':'Product photo – the product on its own, transparent background', 'חזרה לסצנה':'Back to the scene', 'הארכיון':'Archive', 'הארכיון: שמירה ושחזור של סצנות':'Archive: save and restore scenes', 'שמור סצנה':'Save scene', 'שחזר סצנה':'Restore scene', 'שלב א׳ בלבד, או כל הגדרות הסצנה':'Stage 1 only, or all the scene settings', 'כל הסצנות השמורות, עם תמונה':'All the saved scenes, with a picture', 'שמירת סצנה':'Save a scene', 'שם הסצנה':'Scene name', 'שלב א׳ בלבד':'Stage 1 only', 'החדר, המוצרים, המיקומים והמצלמה':'The room, products, positions and camera', 'כל הגדרות הסצנה':'All the scene settings', 'כולל התאורה, הבריף לרינדור והתמונות':'Including the lighting, the render brief and the pictures', 'שחזור סצנה':'Restore a scene', 'מעבר עם העכבר על סצנה מציג אותה כאן':'Hover a scene to see it here', 'לסצנה הזו אין עדיין תמונה':'This scene has no picture yet', 'סצנה מלאה':'Full scene', 'שלב א׳':'Stage 1', 'שמירת סצנות זמינה במצב ניהול':'Saving scenes is available in admin mode', 'עדיין אין סצנות שמורות.':'No saved scenes yet.', 'סגירת הפאנל':'Close the panel', 'פתיחת הפאנל':'Open the panel', 'הפאנל':'Panel', 'גררו את השמש על הכיפה':'Drag the sun across the dome', 'גררו את השמש':'Drag the sun', 'סוג האור':'Type of light', 'עוצמה וצל':'Strength and shadow', 'רכות הצל':'Shadow softness', 'איפוס תאורה':'Reset lighting', 'חד':'Sharp', 'רך':'Soft', 'רך מאוד':'Very soft', 'איפוס זווית הצילום':'Reset the camera angle', 'המצלמה חוזרת לזווית ברירת המחדל':'The camera goes back to the default angle', 'איפוס הסצנה':'Reset the scene', 'כל המוצרים יוסרו – מתחילים סצנה חדשה':'All products are removed – a new scene starts', 'זוויות צילום שמורות':'Saved camera angles', 'שמור זווית צילום':'Save camera angle', 'אפס לברירת מחדל':'Reset to default', '— בחרו זווית שמורה —':'— pick a saved angle —', 'אין עדיין זוויות שמורות':'No saved angles yet', 'מחיקת הזווית':'Delete the angle', 'שמירת זווית צילום':'Save a camera angle', 'נשמרת רק הזווית של המצלמה (מיקום, כיוון ועדשה) – לא הסצנה. אפשר להשתמש בה בכל סצנה.':'Only the camera angle is saved (position, direction and lens) – not the scene. It can be used in any scene.', 'שם הזווית':'Angle name', 'בלי מוצר בחור: W / S קדימה ואחורה, A / D לצדדים, R / F למעלה ולמטה, Q / E עדשה, Z / C סיבוב (Shift – מהר).':'With no product selected: W / S forward and back, A / D sideways, R / F up and down, Q / E lens, Z / C turn (Shift – faster).', 'קדמי':'Front', 'קיר קדמי':'Front wall', 'קיר אחורי':'Back wall', 'קיר שמאלי':'Left wall', 'קיר ימני':'Right wall', 'רצפה':'Floor', 'צילום החדר':'Scan the room', 'מצלמה':'Camera', 'סורקים ברקוד בטלפון, מצלמים את החדר ב־360° – והסצנה נבנית לפי החדר האמיתי.':'Scan the code with a phone, film the room in 360° – and the scene is built from the real room.', 'בשלב הזה הברקוד מוכן; הצילום והניתוח בטלפון יגיעו בשלב הבא.':'The code is ready; filming and analysis on the phone come in the next step.', 'החדר':'The room', 'מוצרים בסצנה':'Products in the scene', 'מצלמה':'Camera', 'סצנות שמורות':'Saved scenes', 'ביטול הבחירה (Esc)':'Deselect (Esc)', 'ביטול הבחירה':'Deselect', 'הוספה לסצנה':'Add to the scene', 'מספר תאים':'Bins per set', 'גררו לסצנה':'Drag into the scene', 'שחור':'Black', 'לבן':'White', 'רגליים':'Legs', 'עם':'With', 'כחול':'Blue', 'הרכב הכנפיים':'Wing layout', 'זיהוי כנפיים':'Identify wings', 'סיום':'Done', 'הסר הכל':'Remove all', 'הרכב כנף שמור…':'Saved wing layout…', 'שמור הרכב זה':'Save this layout', 'שם ההרכב':'Layout name', 'שמירה':'Save', 'לא בעומק הזה':'Not at this depth', 'אין מקום בגובה':'No height left', 'בחרו כנף קודם':'Pick a wing first', 'כל התאים פתוחים':'All bins open', 'בחרו מדף':'Pick a shelf', 'לחיצה על תא פותחת / סוגרת':'Click a bin to open / close it', 'גרירה על התריס':'drag the shutter', 'לחיצה / גרירה על דלת':'click / drag a door', ' · גרירת מדף, או R / F':' · drag a shelf, or R / F', 'הרכב התאים':'Bin layout', 'עומק בסיס':'Base depth', 'דלתות הזזה':'Sliding doors', 'בלי':'Without', 'עם דלתות הזזה':'With sliding doors', 'הרכב התאים והמדפים':'Bins and shelves', 'מיקום ומספר המדפים':'Shelves – number and position', 'מספר תאים בסט':'Bins per set', 'צבע הגג':'Top colour', 'ידית':'Handle', 'בסיס':'Base', 'גלגלים':'Wheels', 'מספר טורים':'Columns', 'קיר':'Wall', 'עומק':'Depth', 'יישור':'Alignment', 'צבע':'Colour', 'תוכן התאים ברינדור':'Bin contents in the render', 'תאים':'bins', 'טורים':'columns', 'הועתק – Ctrl+V מדביק':'Copied – Ctrl+V pastes', 'אחורה (לקיר האחורי)':'Back (toward the back wall)', 'שמאלה':'Left', 'קדימה':'Forward', 'ימינה':'Right', 'סיבוב נגד כיוון השעון':'Turn counter-clockwise', 'סיבוב עם כיוון השעון':'Turn clockwise', 'גובה':'Height', 'סיבוב 5° · Shift 45°':'Turn 5° · Shift 45°', 'סיבוב':'Rotation', 'Shift = צעד של 10 ס"מ':'Shift = 10 cm steps', 'ס"מ':'cm', 'מצב עריכה':'Edit mode', 'מצב הזזה':'Move mode', 'מצב סידור':'Arrange mode', 'מצב סידור – דלתות, מדפים, תאים':'Arrange mode – doors, shelves, bins', 'שכפול (Ctrl+D)':'Duplicate (Ctrl+D)', 'מחיקה (Delete)':'Delete (Delete)', 'מצב עריכה ':'Edit mode', 'הגדרות המוצר יופיעו כאן':'The product settings will appear here', 'מקשי ההזזה והמיקום יופיעו כאן':'The move keys and position will appear here', 'סידור דלתות, מדפים ותאים יופיע כאן':'Arranging doors, shelves and bins will appear here', 'חזרה':'Back', 'חזרה לסצנה':'Back to the scene', 'רב תא':'Tilt bin', 'גררו לסצנה, או לחיצה כפולה להוספה במרכז':'Drag into the scene, or double-click to add it in the middle', 'וריאציות':'variations', 'סגירה':'Close', 'הוסף מוצר / מערכת זה / זו':'Add this product / system', 'פעמים':'times', 'כמה פעמים':'How many times', 'הוסף מוצר זה לסצנה':'Add this product to the scene', 'מספר הפעמים שיש להוסיף מערכת זו / מוצר זה לסצנה:':'How many times to add this system / product to the scene:',
   'פקודה קולית למוצר הזה':'Voice command for this product', 'מספר טורים':'Columns', 'מספר כנפיים':'Wings', 'תריס פתוח':'Tambour open', 'דלתות פתוחות':'Doors open', 'זהה כנפיים':'Identify wings', 'זהה מגירות':'Identify bins',
   'כנף':'Wing', 'סטים':'sets', 'המספר = מספר הסטים (יחידות רב תא) בכנף':'The number = how many sets (tilt-bin units) are in the wing', 'קטגוריות':'Categories', 'גוררים לסיבוב · גלגלת לזום · לחיצה על תא פותחת אותו':'Drag to turn · wheel to zoom · click a bin to open it', 'בחזרה לסצנה':'Back to the scene', 'בחרו מוצר מהשורה למעלה כדי להגדיר אותו.':'Pick a product in the row above to set it up.',
   'בחרו מוצר כדי לראות אותו כאן':'Hover a product to see it here', 'כך זה ייראה':'This is how it will look', 'רב תא בודד – מוכן להוספה.':'A single tilt bin – ready to add.', 'רבי תאים':'Tilt bins', 'עגלות ומעמדים לרב תא':'Carts & stands', 'מחיצות ותאים נעים':'Partitions & gondolas', 'מתלי קיר':'Wall racks',

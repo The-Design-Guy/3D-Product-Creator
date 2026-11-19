@@ -22,7 +22,8 @@ Product types (type key – Hebrew name – footprint width x depth in cm with r
 - smart – "תא-נע SMART" – open steel gondola rack, 135 x 68, 210 cm high.
 - tamb – "ארון מתכת מאובטח לרב תא" – 67 x 45, 195 high, tambour (roller shutter) front, a stack of tilt bins inside – comp (models 3,4,5,6,9), align (back / front).
 - mtamb – "ארון תריס" – metal tambour cabinet with shelves, 90 x 45, 195 high.
-- arc – "ארקליות" – a free-standing block of stacked open-front plastic pick bins (like Huliot's "אחסוניות"): settings.arc = model (1: 50.4 deep x 30.7 wide x 19.4 high cm, 2: 35 x 21 x 19.6, 3: 23.8 x 14.5 x 12.9, 4: 17 x 9.6 x 8), cols (bins side by side, 1–8), rows (bins stacked, 1–12; or height_cm and the app works out the rows), color blue (default) / grey, divider (one lengthwise divider, models 1–2 only).
+- arc – "ארקליות" / "ארקלית" – ONE single open-front plastic pick bin (like Huliot's "אחסוניות"): settings.arc = model (1: 50.4 deep x 30.7 wide x 19.4 high cm, 2: 35 x 21 x 19.6, 3: 23.8 x 14.5 x 12.9, 4: 17 x 9.6 x 8), color blue (default) / grey, divider (one lengthwise divider, models 1–2 only); cols, rows, height_cm stay null. Several bins = count (side by side with row), or more adds; a bin on top of something = y_cm.
+- Pick bins (ארקליות 2, 3, 4 – not 1, too deep) can stand on the shelves of mtamb and mdoor: settings.shelf_bins. "ארון תריס עם ארקליות" / "ארון 2 דלתות עם ארקליות" = that cabinet with shelf_bins (no layout given → bin_layout 'mixed'; "מלא בארקליות 3" / "רק ארקלית 3" → bin_layout 'full'; shelf_bins changes single shelves after it): model 2, cols 4, rows 1).
 - mdoor – "ארון 4 מדפים" – metal cabinet with 2 hinged doors, 90 x 40, 195 high – md_color (blue / 7035 = light grey).
 comp = how many tilt-bin units of each model, e.g. [{model:4,count:9}] (model = number of bins in the unit: 2,3,4,5,6,9; bigger ones at the bottom automatically). For "add one more level of #5" give the FULL new comp.
 Names people use (Hebrew speech, also with transcription mistakes):
@@ -30,7 +31,7 @@ Names people use (Hebrew speech, also with transcription mistakes):
 - stand: "מעמד", "מתקן", "מתקן חד צדדי" (stand_type single), "עגלה דו צדדית" / "מתקן דו צדדי" (double), "מעמד רב תא".
 - excl: "עגלת אקסקלוסיב", "עגלת EXCLUSIVE", "אקסקלוסיב" (a cart). part: "מחיצה", "מחיצת אקסקלוסיב", "מחיצת EXCLUSIVE" ("טורים" = cols; "משני הצדדים" = it is double-sided anyway).
 - quad: "מעמד 4 דפנות", "מגדל", "ארבע צדדי". wall: "מתלה קיר", "מתלי קיר" (also mis-heard as "מתחי קיר", "מטלה קיר"). "של שני מטר" / "2 מ'" = height_cm 200.
-- arc: "ארקליות", "ארקלית 2", "אחסוניות", "ארגזי ליקוט", "קיר של ארקליות". "4 טורים של ארקלית 3, 6 בגובה" → cols 4, rows 6.
+- arc: "ארקליות", "ארקלית 2", "אחסונית", "ארגז ליקוט". "4 ארקליות 3 בשורה" → add arc model 3, count 4, row x.
 - tena: "תא נע", "תא-נע דלוקס", "דלוקס", "DELUXE" – sized by WINGS: "דלוקס 4 כנפיים" = tena_size 4, "7 כנפיים" = 7, "10 כנפיים" = 10.
 - smart: "תא נע סמארט", "סמארט", "SMART". tamb: "ארון מאובטח", "ארון רב תא מאובטח". mtamb: "ארון תריס". mdoor: "ארון מדפים", "ארון 4 מדפים", "ארון דלתות".
 Rows of tilt bins: "השורות הראשונות" / "השורה הראשונה" = the BOTTOM rows (counted from the floor up). Bigger models always sit lower.
@@ -58,7 +59,7 @@ export default async function handler(req, res) {
 
   const settings = nul({
     type:'object', additionalProperties:false,
-    required:['stand_type', 'base', 'height_cm', 'comp', 'arc', 'fill_model', 'fill_to_cm', 'wings', 'cols', 'top', 'tena_size', 'doors', 'unit_bins', 'md_color', 'align'],
+    required:['stand_type', 'base', 'height_cm', 'comp', 'arc', 'bin_layout', 'shelf_bins', 'fill_model', 'fill_to_cm', 'wings', 'cols', 'top', 'tena_size', 'doors', 'unit_bins', 'md_color', 'align'],
     properties:{
       stand_type:nul({ type:'string', enum:['single', 'double'] }),
       base:nul({ type:'string', enum:['wheels', 'legs'] }),
@@ -67,6 +68,10 @@ export default async function handler(req, res) {
       arc:nul({ type:'object', additionalProperties:false, required:['model', 'cols', 'rows', 'height_cm', 'color', 'divider'], properties:{
         model:nul({ type:'integer', enum:[1, 2, 3, 4] }), cols:nul({ type:'integer' }), rows:nul({ type:'integer' }), height_cm:nul({ type:'number' }),
         color:nul({ type:'string', enum:['blue', 'grey'] }), divider:nul({ type:'boolean' }) } }),
+      bin_layout:nul({ type:'string', enum:['mixed', 'full'], description:'mtamb / mdoor: a ready layout of pick bins (moves the shelves): mixed = floor 4 x #2, 4x2 #2, 6x2 #3, 6x3 #3, top 4x2 #2; full = only ארקלית 3, 6 across on the floor and every shelf' }),
+      shelf_bins:nul({ type:'array', description:'mtamb / mdoor: ארקליות standing on the shelves', items:{ type:'object', additionalProperties:false, required:['shelf', 'model', 'cols', 'rows'], properties:{
+        shelf:{ type:'integer', description:'1 = the top shelf, 2 the one under it …; 0 = the floor of the cabinet' }, model:nul({ type:'integer', enum:[2, 3, 4], description:'null = take the bins off this shelf' }),
+        cols:nul({ type:'integer', description:'null = as many as fit across' }), rows:nul({ type:'integer', description:'how many stacked; null = as many as fit' }) } } }),
       fill_model:nul({ type:'integer', enum:[2, 3, 4, 5, 6, 9], description:'"the rest" / "only" this model: the app adds as many as fit (up to fill_to_cm, or the product\'s height)' }),
       fill_to_cm:nul({ type:'number', description:'total height of the product asked for, in cm' }),
       wings:nul({ type:'array', items:{ type:'object', additionalProperties:false, required:['layer', 'model', 'count'], properties:{
