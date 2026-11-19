@@ -212,6 +212,7 @@
   .dplan { max-height:60vh; overflow:auto; font-size:14px; line-height:1.5; }
   .dplan .dzones { margin:6px 0; padding-inline-start:18px; display:flex; flex-direction:column; gap:6px; }
   .dplan .dwarn { color:#b45309; font-size:13px; }
+  .lkgrid { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:8px; } .lkgrid .btn { padding:8px 0; }
   .tchang { display:flex; align-items:center; gap:8px; justify-content:center; } .tchang .btn { width:36px; padding:0; } .tchang b { min-width:14px; text-align:center; }
   .toggles { display:grid; grid-template-columns:1fr 1fr; column-gap:18px; }
   .toggles .row:nth-child(2) { border-top:0; }
@@ -1257,6 +1258,19 @@
       <div id="fuDeskSec"><div class="lbl">רוחב (ס"מ)</div>
       <div class="seg2" id="fuW"><button data-v="1200">120</button><button data-v="1500">150</button><button data-v="1600" class="on">160</button><button data-v="2000">200</button></div></div>
       <div class="use">ריהוט כללי, לא מוצר מהקטלוג: עמדת מחשב = שולחן, שידת מגירות, מסך ומקלדת, וכיסא.</div>
+      <div class="slot"></div>
+    </div></div>
+  </div>
+  <div class="panel" id="pLock" data-mode="lock" data-family="metal" hidden>
+    <button class="head" aria-expanded="false">
+      <span class="ttl"><h1>לוקר 6 דלתות</h1><span class="sub" id="lkSub">90 × 45 × 195 ס"מ · 6 תאים נעולים · מדף ומוט תלייה בכל תא</span></span>
+      <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="body"><div class="inner">
+      <div class="lbl">דלתות (לחיצה על דלת במודל פותחת / סוגרת אותה)</div>
+      <div class="lkgrid" id="lkDoors"></div>
+      <div class="pair"><button class="btn" id="lkAll">כל הדלתות</button><button class="btn" id="lkNone">סגור הכל</button></div>
+      <div class="use">גוף אפור בהיר, דלתות כחולות. בכל דלת מנעול מפתח, ידית שקועה, פתחי אוורור ומסגרת לשלט; בפנים מראה, מדף ומוט תלייה.</div>
       <div class="slot"></div>
     </div></div>
   </div>
@@ -2637,7 +2651,7 @@ const ARC_MODELS = {
 const ARC0 = { model:2, cols:1, rows:1, color:'blue', div:false };     // one single bin per product
 const ARC = { ...ARC0 };
 const TYPE_NAME = { unit:'רב תא', stand:'מעמד', excl:'עגלת רב-תא EXCLUSIVE', part:'מחיצת EXCLUSIVE מודולרית', quad:'מעמד 4 דפנות',
-  wall:'מתלה קיר', tena:'תא-נע DELUX', smart:'תא-נע SMART', tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים', tech:'ארון עבודה טכני', arc:'ארקליות', furn:'ריהוט' };
+  wall:'מתלה קיר', tena:'תא-נע DELUX', smart:'תא-נע SMART', tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים', tech:'ארון עבודה טכני', arc:'ארקליות', furn:'ריהוט', lock:'לוקר 6 דלתות' };
 const SCN = { room:{ W:6000, D:5000, back:true, left:false, right:false }, items:[], sel:null, editType:null, next:1 };
 let SCENE_BUILD = false;
 const deep = (o) => JSON.parse(JSON.stringify(o));
@@ -2651,6 +2665,7 @@ function capCfg(t) {
   if (t === 'mtamb') return { mt:deep(MT) };
   if (t === 'mdoor') return { md:deep(MD) };
   if (t === 'tech') return { tc:deep(TC) };
+  if (t === 'lock') return { lk:deep(LK) };
   if (t === 'arc') return { arc:{ ...ARC } };
   if (t === 'furn') return { fu:{ ...FU } };
   return { tn:deep(TN[t === 'smart' ? 'smart' : 'delux']) };
@@ -2665,18 +2680,19 @@ function applyCfg(t, c) {
   else if (t === 'mtamb') { MT.arc = []; MT.arcFloor = null; Object.assign(MT, deep(c.mt)); }
   else if (t === 'mdoor') { MD.arc = []; MD.arcFloor = null; Object.assign(MD, deep(c.md)); }
   else if (t === 'tech') { techVariant(TC, 1); Object.assign(TC, deep(c.tc)); }
+  else if (t === 'lock') { Object.assign(LK, deep(LK0), deep(c.lk || {})); }
   else if (t === 'arc') { Object.assign(ARC, ARC0, c.arc || {}); ARC.cols = ARC.rows = 1; }
   else if (t === 'furn') Object.assign(FU, FU0, c.fu || {});
   else { const v = t === 'smart' ? 'smart' : 'delux'; for (const k in TN[v]) delete TN[v][k]; Object.assign(TN[v], deep(c.tn)); tena = TN[v]; }
 }
-const capAll = () => ({ arc:{ ...ARC }, current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD), tc:deep(TC), fu:{ ...FU }, qd:deep(QD) });
+const capAll = () => ({ arc:{ ...ARC }, current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD), tc:deep(TC), lk:deep(LK), fu:{ ...FU }, qd:deep(QD) });
 function restoreAll(a) {
   applyCfg('unit', a); applyCfg('stand', a); applyCfg('wall', a);
   applyCfg('excl', { exs:a.exs.excl }); applyCfg('part', { exs:a.exs.part });
   applyCfg('smart', { tn:a.tn.smart }); applyCfg('tena', { tn:a.tn.delux }); applyCfg('tamb', { tb:a.tb });
   if (a.arc) applyCfg('arc', { arc:a.arc });
   if (a.fu) applyCfg('furn', { fu:a.fu });
-  if (a.mt) applyCfg('mtamb', { mt:a.mt }); if (a.md) applyCfg('mdoor', { md:a.md }); if (a.tc) applyCfg('tech', { tc:a.tc }); if (a.qd) applyCfg('quad', { qd:a.qd });
+  if (a.mt) applyCfg('mtamb', { mt:a.mt }); if (a.md) applyCfg('mdoor', { md:a.md }); if (a.tc) applyCfg('tech', { tc:a.tc }); if (a.lk) applyCfg('lock', { lk:a.lk }); if (a.qd) applyCfg('quad', { qd:a.qd });
 }
 // the selected item's settings live in the globals while it is being edited
 function syncUI(t) {
@@ -2702,6 +2718,7 @@ function refreshEditor(t) {
   else if (t === 'tamb') renderTamb();
   else if (t === 'quad') renderQuad();
   else if (t === 'mtamb' || t === 'mdoor' || t === 'tech') renderMetal(t);
+  else if (t === 'lock') renderLocker();
 }
 const panelOf = (t) => panels.find(p => p.dataset.mode === t);
 let borrowed = null;                              // { body, panel }
@@ -3453,13 +3470,16 @@ const tcHang = (S) => [0, 1].map(d => ['bins', 'both'].includes(tcAccD(S, d)) ? 
 const tcTools = (S, d) => ['tools', 'both'].includes(tcAccD(S, d));
 const blockH = (b) => 50 + b.n * b.h;                             // a drawer block: a plate under it, the drawers, a plate over it
 const cabBlocks = (S) => (S && S.drawers || []).map(b => [b.y, b.y + blockH(b)]);
-const cabW = (k) => k === 'tamb' ? TB_W : k === 'tech' ? TCX.W : TBX.W;
+const cabW = (k) => k === 'tamb' ? TB_W : k === 'tech' ? TCX.W : k === 'lock' ? LK.W : TBX.W;
 const cabSide = (k) => k === 'tech' ? TCX.SIDE : TBX.SIDE;
 const cabInW = (k) => cabW(k) - 2 * cabSide(k);
-const METAL = { tamb:TB, mtamb:MT, mdoor:MD, tech:TC };
+// lock : לוקר 6 דלתות (metal-cabinets family) – 90 × 45 × 195, light grey body, blue doors, 3 × 2 lockable compartments
+const LK0 = { cols:3, rows:2, W:900, D:450, H:1950, doors:[0, 0, 0, 0, 0, 0] };
+const LK = deep(LK0);
+const METAL = { tamb:TB, mtamb:MT, mdoor:MD, tech:TC, lock:LK };
 const editKey = () => mode === 'scene' ? SCN.editType : mode;          // the product being edited (in a scene: the selected one)
 const metalState = () => METAL[editKey()];
-const closureOf = (k) => k === 'mtamb' ? 'tambour' : k === 'mdoor' || k === 'tech' ? 'doors' : TB.closure;
+const closureOf = (k) => k === 'mtamb' ? 'tambour' : k === 'mdoor' || k === 'tech' || k === 'lock' ? 'doors' : TB.closure;
 const depthOf = (k) => k === 'tech' ? TCX.D : closureOf(k) === 'doors' ? 400 : 450;
 const tbFloor = () => TBX.BASE;
 const tbCeil = () => TBX.H - TBX.TOP;
@@ -3539,6 +3559,7 @@ function placeSlats(slats, o, zf, hw) {
 }
 const DOOR_OPEN = THREE.MathUtils.degToRad(105);
 function buildMetal(k) {
+  if (k === 'lock') return buildLocker();
   const S = METAL[k], closure = closureOf(k);
   const g = new THREE.Group(); const root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
   const { H, BASE, TOP, BACK } = TBX, SIDE = cabSide(k), D = depthOf(k), W = cabW(k);
@@ -3649,6 +3670,58 @@ function buildMetal(k) {
   return { group:g, drawers:list, rods:rodList, slats, doors, shelves:{ meshes:shelfMeshes }, D };
 }
 function buildTamb() { return buildMetal('tamb'); }
+// ---------- locker: compartments with a door each (hinged on the right), a shelf and a hanging rod inside, a small mirror on the door ----------
+const lkBody = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#d8dbdc'), roughness:0.42, metalness:0.15, clearcoat:0.3, clearcoatRoughness:0.4 });
+const lkDoor = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#3f86c9'), roughness:0.45, metalness:0.2, clearcoat:0.35, clearcoatRoughness:0.35 });
+const lkCream = new THREE.MeshStandardMaterial({ color:0xece6d4, roughness:0.5 });
+const lkCreamIn = new THREE.MeshStandardMaterial({ color:0xc9c2ad, roughness:0.6 });
+const lkMirror = new THREE.MeshStandardMaterial({ color:0x9fb3bf, roughness:0.05, metalness:0.9 });
+const lkDark = new THREE.MeshStandardMaterial({ color:0x234f78, roughness:0.6 });
+function buildLocker() {
+  const S = LK, { W, D, H, cols, rows } = S;
+  const g = new THREE.Group(), root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
+  const box = (w, h, d, x, y, z, m = lkBody, par = root) => { const o = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)); o.position.set(x, y, z); par.add(o); return o; };
+  const SIDE = 18, BASE = 80, TOP = 30, BAR = 22, BACK = 10, inW = W - 2 * SIDE;
+  for (const sx of [-1, 1]) box(SIDE, H, D, sx * (W/2 - SIDE/2), H/2, 0);
+  box(inW, TOP, D, 0, H - TOP/2, 0); box(inW, BASE, D - 20, 0, BASE/2, -10); box(inW, H - BASE - TOP, BACK, 0, BASE + (H - BASE - TOP)/2, -D/2 + BACK/2);
+  const cw = (inW - (cols - 1) * BAR) / cols, rh = (H - BASE - TOP - (rows - 1) * BAR) / rows, zf = D/2;
+  for (let c = 1; c < cols; c++) box(BAR, H - BASE - TOP, D - BACK, -inW/2 + c * cw + (c - 0.5) * BAR, BASE + (H - BASE - TOP)/2, BACK/2);
+  for (let r = 1; r < rows; r++) box(inW, BAR, D - BACK, 0, BASE + r * rh + (r - 0.5) * BAR, BACK/2);
+  const dl = [];
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const idx = (rows - 1 - r) * cols + c;                  // 0 = top-left … the bottom row last
+    const x0 = -inW/2 + c * (cw + BAR), y0 = BASE + r * (rh + BAR), xc = x0 + cw/2;
+    // inside: a shelf low down, a hanging rod near the top
+    box(cw - 4, 14, D - BACK - 40, xc, y0 + rh * 0.3, -BACK/2 - 10);
+    const rod = shadowOn(new THREE.Mesh(new THREE.CylinderGeometry(9, 9, cw - 20, 12), zincMat)); rod.rotation.z = Math.PI/2; rod.position.set(xc, y0 + rh - 70, 0); root.add(rod);
+    // the door: hinged on its right edge, swings out
+    const dw = cw - 6, dh = rh - 6, pivot = new THREE.Group(); pivot.position.set(x0 + cw - 3, 0, zf); root.add(pivot);
+    const door = new THREE.Group(); pivot.add(door);
+    const cx = -dw/2, cy = y0 + 3 + dh/2;
+    box(dw, dh, 16, cx, cy, -8, lkDoor, door);
+    box(78, 34, 3, cx + dw * 0.1, y0 + dh - 70, 1, lkDark, door);                                     // label holder
+    box(36, 120, 6, -dw + 48, cy + dh * 0.05, 2, lkCream, door); box(22, 96, 3, -dw + 48, cy + dh * 0.05, 5.5, lkCreamIn, door);   // recessed handle
+    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 8, 18), zincMat); cyl.rotation.x = Math.PI/2; cyl.position.set(-dw + 48, cy - dh * 0.12, 3); door.add(cyl);
+    for (let v = 0; v < 6; v++) box(80, 5, 3, cx + dw * 0.1, y0 + 70 + v * 16, 1, lkDark, door);    // vents
+    box(115, 155, 6, cx - dw * 0.05, y0 + dh * 0.72, -19, lkCream, door); box(95, 135, 2, cx - dw * 0.05, y0 + dh * 0.72, -23, lkMirror, door);   // mirror inside
+    pivot.rotation.y = (S.doors[idx] || 0) * DOOR_OPEN;
+    const meshes = []; door.traverse(o => { if (o.isMesh) meshes.push(o); });
+    dl.push({ pivot, sd:1, idx, meshes });
+  }
+  return { group:g, drawers:[], rods:[], slats:null, doors:{ list:dl, meshes:dl.flatMap(d => d.meshes), drawers:[] }, shelves:{ meshes:[] }, D };
+}
+function renderLocker() {
+  const box = $('lkDoors'); if (!box) return;
+  const names = ['למעלה ימין', 'למעלה אמצע', 'למעלה שמאל', 'למטה ימין', 'למטה אמצע', 'למטה שמאל'];
+  // RTL grid: the first button sits on the right, so the order matches the cabinet as seen from the front
+  box.innerHTML = [2, 1, 0, 5, 4, 3].map(i => `<button class="btn${LK.doors[i] > 0.5 ? ' on' : ''}" data-i="${i}" title="${names[[2, 1, 0, 5, 4, 3].indexOf(i)]}">${i + 1}</button>`).join('');
+  box.querySelectorAll('button').forEach(b => b.onclick = () => { const i = +b.dataset.i; LK.doors[i] = LK.doors[i] > 0.5 ? 0 : 1; renderLocker(); lkSave(); });
+}
+function lkSave() { if (mode === 'scene') { const it = SCN.items.find(x => x.id === SCN.sel); if (it && it.type === 'lock') it.cfg = capCfg('lock'); } }
+function describeLocker() {
+  const open = LK.doors.map((v, i) => v > 0.5 ? i + 1 : 0).filter(Boolean);
+  return `A steel staff locker, 900 mm wide, 450 mm deep, 1950 mm high: a light grey powder-coated body with a plinth, and SIX lockable compartments in 3 columns x 2 rows, each closed by its own medium-blue steel door (sky blue, not navy) with light grey frame strips between the doors. Every door has a cream recessed pull handle near its left edge, a small key lock under it, a pressed label holder near the top and a set of horizontal ventilation louvres at the bottom; doors are hinged on the right. Inside every compartment: a shelf low down and a chrome hanging rod near the top; a small framed mirror on the inside of every door. ${open.length ? `Doors ${open.join(', ')} are open (numbered from the top-left, the top row first), the others closed.` : 'All doors are closed.'}`;
+}
 // ---------- generic furniture and props (not catalogue products): for building whole scenes ----------
 //   station – desk + drawer pedestal + monitor, keyboard, mouse + office chair (the user sits on the front side)
 //   desk – the desk alone · chair – an office chair · bench – industrial workbench with a pegboard · plant – a potted plant
@@ -3959,7 +4032,7 @@ function doorClick(ray) {
   const d = DOORS.list.find(x => x.meshes.includes(hit.object)); if (!d) return false;
   if (S.doors[d.idx] > 0.5 && drawerOut()) { doorBlocked(); return true; }
   S.doors[d.idx] = S.doors[d.idx] > 0.5 ? 0 : 1;
-  syncDoorBtns(editKey() === 'tamb' ? 'tb' : editKey() === 'tech' ? 'tc' : 'md', S);
+  if (editKey() === 'lock') { renderLocker(); lkSave(); const b = $('ssBody'); if (b && b._lkDraw && $('arLk')) b._lkDraw(); } else syncDoorBtns(editKey() === 'tamb' ? 'tb' : editKey() === 'tech' ? 'tc' : 'md', S);
   return true;
 }
 
@@ -3986,6 +4059,12 @@ function rebuild(keepCamera = false) {
     document.getElementById('dims').innerHTML =
       `מק"ט <b>${MODELS[current].sku}</b> · רוחב <b>${MODELS[current].W}</b> · גובה <b>${MODELS[current].H}</b> · עומק <b>${D}</b> מ"מ`;
     makeCellButtons(current);
+  } else if (mode === 'lock') {
+    const lb = buildLocker();
+    world.add(lb.group); drawers = []; rods = []; DOORS = lb.doors;
+    if (!keepCamera) frame(LK.W + 200, LK.H, true);
+    document.getElementById('dims').innerHTML = `לוקר 6 דלתות · רוחב <b>90</b> · עומק <b>45</b> · גובה <b>195</b> ס"מ · גוף אפור, דלתות כחולות`;
+    renderLocker();
   } else if (METAL[mode]) {
     const tb = buildMetal(mode);
     world.add(tb.group); drawers = tb.drawers; rods = tb.rods; TAMB = tb.slats; DOORS = tb.doors; SHELVES = tb.shelves;
@@ -4237,6 +4316,8 @@ document.getElementById('mtToggle').onclick = () => { MT.target = MT.target > TB
 document.getElementById('mtOpen').oninput = (e) => { MT.target = +e.target.value / 100 * TBX.MAXO; };
 document.getElementById('mtAdd').onclick = () => addShelf(MT);
 document.getElementById('mdAdd').onclick = () => addShelf(MD);
+document.getElementById('lkAll').onclick = () => { LK.doors = LK.doors.map(() => 1); renderLocker(); lkSave(); };
+document.getElementById('lkNone').onclick = () => { LK.doors = LK.doors.map(() => 0); renderLocker(); lkSave(); };
 const TECH_VAR = { 1:'4 מדפים', 2:'8 מדפים', 3:'מגירה אחת', 4:'3 מגירות' };
 [['tcDoorR', 1], ['tcDoorL', 0]].forEach(([id, i]) => document.getElementById(id).onclick = () => { if (TC.doors[i] > 0.5 && drawerOut()) { doorBlocked(); return; } TC.doors[i] = TC.doors[i] > 0.5 ? 0 : 1; syncDoorBtns('tc', TC); });
 document.getElementById('tcAdd').onclick = () => addShelf(TC);
@@ -4347,7 +4428,7 @@ function applyOpenAll(e) {
   if (SHEET_DRAFT && PV.on) { PV.drawers.forEach(d => on ? openDrawer(d) : closeDrawer(d)); return; }
   const S = mode === 'scene' ? null : METAL[mode];
   // on a rebuild only opening is applied; closing needs the switch itself
-  if (S && (on || e)) { if (TAMB) S.target = on ? TBX.MAXO : 0; if (DOORS) { S.doors = on ? [1, 1] : [0, 0]; syncDoorBtns(mode === 'tamb' ? 'tb' : 'md', S); } }   // open the tambour / doors too
+  if (S && (on || e)) { if (TAMB) S.target = on ? TBX.MAXO : 0; if (DOORS) { S.doors = S.doors.map(() => on ? 1 : 0); if (mode === 'lock') renderLocker(); else syncDoorBtns(mode === 'tamb' ? 'tb' : 'md', S); } }   // open the tambour / doors too
   if (isCab() && mode !== 'scene' && slideOn() && (on || e)) { tena.slide.open = on ? [1, 0, 1, 0] : [0, 0, 0, 0]; if (SLD) SLD.st = tena.slide; syncSlideBtns(); }
   drawers.forEach(d => on ? openDrawer(d) : closeDrawer(d));
   syncCells();
@@ -4858,6 +4939,7 @@ function fileStem() {
   if (mode === 'mtamb') return `tambour-metal-cabinet`;
   if (mode === 'mdoor') return `4-shelf-metal-cabinet-${MD.color}`;
   if (mode === 'tech') return `technical-cabinet-v${TC.variant}`;
+  if (mode === 'lock') return `locker-6-doors`;
   if (mode === 'furn') return `furniture-${FU.kind}-${FU.w}`;
   if (mode === 'arc') return `pick-bins-${ARC.model}-${ARC.cols}x${ARC.rows}-${ARC.color}`;
   if (mode === 'quad') return `four-sided-tilt-bin-stand-${Math.round(stackHeight(QD.comp)/10)}-${QD.base}`;
@@ -4979,6 +5061,7 @@ function describe() {
   if (mode === 'scene') return describeScene();
   if (mode === 'arc') return describeArc();
   if (mode === 'furn') return describeFurn();
+  if (mode === 'lock') return describeLocker();
   const base = 'Wall-mounted tilt-bin storage unit: injection-moulded body in light grey RAL 7035 (matte, slightly satin), with clear transparent polystyrene tilt-out bins';
   const flags = [];
   if ($('backWall').checked && mode === 'part') flags.push('the end without the handle touches a plain light wall at a right angle, so the partition juts out from the wall into the room, smooth floor');
@@ -5656,8 +5739,8 @@ function closeSheet(now) {
 function groupVars(list) { const out = []; list.forEach(v => { const k = v.g || v.name, g = out.find(x => x.name === k); g ? g.vars.push(v) : out.push({ name:k, vars:[v] }); }); return out; }
 let ADD_OPEN = false, AD_TICK = 0;
 // product photos (from the Drive folder), per product; a card fades through them
-const PRODUCT_IMGS = {"mt": ["img/mtarc2-4.webp?v=2"], "tech": ["img/tech-0.webp", "img/tech-1.webp", "img/tech-2.webp", "img/tech-3.webp"], "mtarc": ["img/mtarc2-0.webp?v=2", "img/mtarc2-1.webp?v=2", "img/mtarc2-2.webp?v=2", "img/mtarc2-3.webp?v=2", "img/mtarc2-4.webp?v=2"], "mdarc": ["img/mdarc2-0.webp", "img/mdarc2-1.webp", "img/mdarc2-2.webp", "img/mdarc2-3.webp"], "arc": ["img/arcb-1.webp?v=2", "img/arcb-2.webp?v=2", "img/arcb-3.webp?v=2", "img/arcb-4.webp?v=2"], "bin2": ["img/tb2.webp"], "bin3": ["img/tb3.webp"], "bin4": ["img/tb4.webp"], "bin5": ["img/tb5.webp"], "bin6": ["img/tb6.webp"], "bin9": ["img/tb9.webp"], "stand1": ["img/stand1-0.webp", "img/stand1-1.webp", "img/stand1-2.webp", "img/stand1-3.webp", "img/stand1-4.webp", "img/stand1-5.webp", "img/stand1-6.webp", "img/stand1-7.webp", "img/stand1-8.webp", "img/stand1-9.webp", "img/stand1-10.webp", "img/stand1-11.webp"], "stand2": ["img/stand2-0.webp", "img/stand2-1.webp"], "excl": ["img/excl-0.webp", "img/excl-1.webp"], "quad": ["img/quad-0.webp", "img/quad-1.webp", "img/quad-2.webp", "img/quad-3.webp"], "part": ["img/part-0.webp", "img/part-1.webp", "img/part-2.webp", "img/part-3.webp", "img/part-4.webp", "img/part-5.webp", "img/part-6.webp"], "delux": ["img/delux-0.webp", "img/delux-1.webp", "img/delux-2.webp", "img/delux-3.webp", "img/delux-4.webp", "img/delux-5.webp", "img/delux-6.webp", "img/delux-7.webp", "img/delux-8.webp", "img/delux-9.webp", "img/delux-10.webp", "img/delux-11.webp", "img/delux-12.webp", "img/delux-13.webp", "img/delux-14.webp", "img/delux-15.webp", "img/delux-16.webp", "img/delux-17.webp"], "smart": ["img/smart-0.webp", "img/smart-1.webp", "img/smart-2.webp"], "wall": ["img/wall-0.webp", "img/wall-1.webp", "img/wall-2.webp", "img/wall-3.webp", "img/wall-4.webp", "img/wall-5.webp", "img/wall-6.webp"], "tamb": ["img/tamb2-0.webp?v=2", "img/tamb2-1.webp?v=2", "img/tamb2-2.webp?v=2", "img/tamb2-3.webp?v=2", "img/tamb2-4.webp?v=2", "img/tamb2-5.webp?v=2"]};
-const IMG_KEY = { 'ארון תריס':'mt', 'ארון עבודה טכני':'tech', 'ארון תריס עם ארקליות':'mtarc', 'ארון 2 דלתות עם ארקליות':'mdarc', 'ארקליות':'arc', 'מתקן חד צדדי':'stand1', 'עגלה דו צדדית':'stand2', 'עגלת EXCLUSIVE':'excl', 'מעמד 4 דפנות':'quad', 'מחיצת EXCLUSIVE':'part', 'תא נע DELUXE':'delux', 'תא נע SMART':'smart', 'מתלי קיר':'wall', 'ארון מאובטח לרב תא':'tamb' };
+const PRODUCT_IMGS = {"lock": ["img/lock-0.webp", "img/lock-1.webp", "img/lock-2.webp"], "mt": ["img/mtarc2-4.webp?v=2"], "tech": ["img/tech-0.webp", "img/tech-1.webp", "img/tech-2.webp", "img/tech-3.webp"], "mtarc": ["img/mtarc2-0.webp?v=2", "img/mtarc2-1.webp?v=2", "img/mtarc2-2.webp?v=2", "img/mtarc2-3.webp?v=2", "img/mtarc2-4.webp?v=2"], "mdarc": ["img/mdarc2-0.webp", "img/mdarc2-1.webp", "img/mdarc2-2.webp", "img/mdarc2-3.webp"], "arc": ["img/arcb-1.webp?v=2", "img/arcb-2.webp?v=2", "img/arcb-3.webp?v=2", "img/arcb-4.webp?v=2"], "bin2": ["img/tb2.webp"], "bin3": ["img/tb3.webp"], "bin4": ["img/tb4.webp"], "bin5": ["img/tb5.webp"], "bin6": ["img/tb6.webp"], "bin9": ["img/tb9.webp"], "stand1": ["img/stand1-0.webp", "img/stand1-1.webp", "img/stand1-2.webp", "img/stand1-3.webp", "img/stand1-4.webp", "img/stand1-5.webp", "img/stand1-6.webp", "img/stand1-7.webp", "img/stand1-8.webp", "img/stand1-9.webp", "img/stand1-10.webp", "img/stand1-11.webp"], "stand2": ["img/stand2-0.webp", "img/stand2-1.webp"], "excl": ["img/excl-0.webp", "img/excl-1.webp"], "quad": ["img/quad-0.webp", "img/quad-1.webp", "img/quad-2.webp", "img/quad-3.webp"], "part": ["img/part-0.webp", "img/part-1.webp", "img/part-2.webp", "img/part-3.webp", "img/part-4.webp", "img/part-5.webp", "img/part-6.webp"], "delux": ["img/delux-0.webp", "img/delux-1.webp", "img/delux-2.webp", "img/delux-3.webp", "img/delux-4.webp", "img/delux-5.webp", "img/delux-6.webp", "img/delux-7.webp", "img/delux-8.webp", "img/delux-9.webp", "img/delux-10.webp", "img/delux-11.webp", "img/delux-12.webp", "img/delux-13.webp", "img/delux-14.webp", "img/delux-15.webp", "img/delux-16.webp", "img/delux-17.webp"], "smart": ["img/smart-0.webp", "img/smart-1.webp", "img/smart-2.webp"], "wall": ["img/wall-0.webp", "img/wall-1.webp", "img/wall-2.webp", "img/wall-3.webp", "img/wall-4.webp", "img/wall-5.webp", "img/wall-6.webp"], "tamb": ["img/tamb2-0.webp?v=2", "img/tamb2-1.webp?v=2", "img/tamb2-2.webp?v=2", "img/tamb2-3.webp?v=2", "img/tamb2-4.webp?v=2", "img/tamb2-5.webp?v=2"]};
+const IMG_KEY = { 'לוקר 6 דלתות':'lock', 'ארון תריס':'mt', 'ארון עבודה טכני':'tech', 'ארון תריס עם ארקליות':'mtarc', 'ארון 2 דלתות עם ארקליות':'mdarc', 'ארקליות':'arc', 'מתקן חד צדדי':'stand1', 'עגלה דו צדדית':'stand2', 'עגלת EXCLUSIVE':'excl', 'מעמד 4 דפנות':'quad', 'מחיצת EXCLUSIVE':'part', 'תא נע DELUXE':'delux', 'תא נע SMART':'smart', 'מתלי קיר':'wall', 'ארון מאובטח לרב תא':'tamb' };
 function productImgs(f) {
   const v = f.vars[0];
   if (v.t === 'unit') return [2, 3, 4, 5, 6, 9].flatMap(n => PRODUCT_IMGS['bin' + n] || []);   // all the bin sizes, one after another
@@ -5714,6 +5797,7 @@ function photoFor(f, c) {
     case 'ארון תריס': return MT_CLOSED(c) ? g('mt', 0) : null;          // the closed photo – only while nothing shows inside
     case 'ארון תריס עם ארקליות': return g('mtarc', c.mt && c.mt.layout === 'full' ? 2 : 0);      // the photo of the chosen layout
     case 'ארון עבודה טכני': return g('tech', c.tc.variant - 1);
+    case 'לוקר 6 דלתות': return c.lk && c.lk.doors.some(v => v > 0.5) ? g('lock', 1) : g('lock', 0);
   }
   return null;
 }
@@ -6116,6 +6200,7 @@ function addFamilies() {
       { t:'mdoor', name:'ארון 4 מדפים', kw:'ארון מתכת דלתות מדפים shelves cabinet', cfg:C('mdoor') },
       { t:'mtamb', name:'ארון תריס עם ארקליות', kw:'ארון תריס ארקליות אחסוניות tambour pick bins', cfg:C('mtamb', c => arcLayout(c.mt, 'mixed')) },
       { t:'mdoor', name:'ארון 2 דלתות עם ארקליות', kw:'ארון דלתות ארקליות אחסוניות doors pick bins', cfg:C('mdoor', c => { arcLayout(c.md, 'mixed'); c.md.color = '7035'; }) },
+      { t:'lock', name:'לוקר 6 דלתות', kw:'לוקר לוקרים ארון הלבשה ארון עובדים locker', cfg:C('lock', c => { c.lk = deep(LK0); }) },
       ...[1, 2, 3, 4].map(v => ({ t:'tech', g:'ארון עבודה טכני', name:'ארון עבודה טכני – ' + TECH_VAR[v], kw:'ארון עבודה טכני מגירות מדפים לוח כלים ארקליות technical workshop cabinet drawers', cfg:C('tech', c => techVariant(c.tc, v)) })) ] },
   ];
 }
@@ -6292,16 +6377,16 @@ function syncVol() {
 }
 // which switches this product has: security rod / doors / open all / labels / identify
 function sheetSwitches(t) {
-  const bins = !['mtamb', 'mdoor', 'tech'].includes(t), wings = t === 'tena' || t === 'smart';
-  const doors = t === 'mdoor' || t === 'tech' || t === 'tamb' || t === 'mtamb' || (t === 'tena' && tena.slide && tena.slide.on);
+  const bins = !['mtamb', 'mdoor', 'tech', 'lock'].includes(t), wings = t === 'tena' || t === 'smart';
+  const doors = t === 'mdoor' || t === 'tech' || t === 'lock' || t === 'tamb' || t === 'mtamb' || (t === 'tena' && tena.slide && tena.slide.on);
   $('rod').closest('.row').hidden = !bins; $('openAll').closest('.row').hidden = !bins; $('labelsOn').closest('.row').hidden = !bins;
   $('pvDoorsRow').hidden = !doors; $('pvDoorsTxt').textContent = t === 'tamb' || t === 'mtamb' ? 'תריס פתוח' : 'דלתות פתוחות';
-  const S = METAL[t]; $('pvDoors').checked = S ? (t === 'mdoor' || t === 'tech' ? S.doors.some(Boolean) : S.target > 0) : !!(tena.slide && tena.slide.open && tena.slide.open.some(Boolean));
+  const S = METAL[t]; $('pvDoors').checked = S ? (t === 'mdoor' || t === 'tech' || t === 'lock' ? S.doors.some(Boolean) : S.target > 0) : !!(tena.slide && tena.slide.open && tena.slide.open.some(Boolean));
   $('pvIdentRow').hidden = !bins && !wings; $('pvIdentTxt').textContent = wings ? 'זהה כנפיים' : 'זהה מגירות'; $('pvIdent').checked = false; PV.ident = false;
 }
 $('pvDoors').onchange = (e) => {
   const t = PV.type, on = e.target.checked, S = METAL[t];
-  if (t === 'mdoor' || t === 'tech') S.doors = on ? [1, 1] : [0, 0];
+  if (t === 'mdoor' || t === 'tech' || t === 'lock') S.doors = S.doors.map(() => on ? 1 : 0);
   else if (S) { S.target = S.open = on ? TBX.MAXO : 0; }
   else if (tena.slide) tena.slide.open = on ? [1, 0, 1, 0] : [0, 0, 0, 0];
   pvBuild();
@@ -6668,6 +6753,13 @@ function buildArrange(it, body) {
   const openTog = bins ? `<label class="sstog"><input type="checkbox" id="arOpen"><span>${S === TC ? 'כל המגירות פתוחות' : 'כל התאים פתוחים'}</span></label>` : '';
   if (!zones) {                                     // no shelves: the old strip
     body.innerHTML = openTog + `<span class="sshint">${bins ? 'לחיצה על תא פותחת / סוגרת' : ''}${bins && (TAMB || DOORS) ? ' · ' : ''}${TAMB ? 'גרירה על התריס' : DOORS ? 'לחיצה / גרירה על דלת' : ''}</span>`;
+    if (S === LK) {                                  // locker: a toggle for every door, in the order seen from the front
+      body.innerHTML = `<span class="arlbl">דלתות</span><span class="arzones" id="arLk"></span><button class="hd" id="arLkAll"><span>כולן</span></button><span class="sshint">לחיצה על דלת במודל פותחת / סוגרת</span>`;
+      const draw = () => { $('arLk').innerHTML = [0, 1, 2, 3, 4, 5].map(i => `<button class="hd${LK.doors[i] > 0.5 ? ' arsel' : ''}" data-i="${i}"><span>${i < 3 ? 'עליונה' : 'תחתונה'} ${['שמאל', 'אמצע', 'ימין'][i % 3]}</span><b>${LK.doors[i] > 0.5 ? 'פתוחה' : 'סגורה'}</b></button>`).join('');
+        $('arLk').querySelectorAll('button').forEach(b => b.onclick = () => { const i = +b.dataset.i; LK.doors[i] = LK.doors[i] > 0.5 ? 0 : 1; lkSave(); draw(); }); };
+      $('arLkAll').onclick = () => { const on = !LK.doors.every(v => v > 0.5); LK.doors = LK.doors.map(() => on ? 1 : 0); lkSave(); draw(); };
+      draw(); body._lkDraw = draw;
+    }
   } else {
     // one row: every place that can hold something is a chip; a chip opens its choices upward
     body.innerHTML = openTog + `<span class="arzones" id="arZones"></span><span class="sshint">${DOORS ? 'לחיצה על דלת פותחת / סוגרת' : TAMB ? 'גרירה על התריס' : ''} · גרירת מדף, או R / F</span>`;
@@ -7111,7 +7203,7 @@ function scenePayload(text) {
       x_cm:Math.round((i.x + R.W/2000) * 100), z_cm:Math.round((i.z + R.D/2000) * 100), rot:i.rot, width_cm:Math.round(e.ex * 200), depth_cm:Math.round(e.ez * 200),
       comp:cfgComp(i.type, cfg), cols:i.type === 'part' ? cfg.exs && cfg.exs.cols : undefined, top:(cfg.exs || cfg.qd || {}).top,
       bins_per_row_by_face:Object.fromEntries(Object.entries(faces).map(([k, rows]) => [k, rows.map(r => r.length)])),
-      has_doors:i.type === 'mdoor' || i.type === 'tech' || (i.type === 'tena' && !!(cfg.tn && cfg.tn.slide && cfg.tn.slide.on)), has_tambour:i.type === 'tamb' || i.type === 'mtamb',
+      has_doors:i.type === 'mdoor' || i.type === 'tech' || i.type === 'lock' || (i.type === 'tena' && !!(cfg.tn && cfg.tn.slide && cfg.tn.slide.on)), has_tambour:i.type === 'tamb' || i.type === 'mtamb',
       arc:i.type === 'arc' ? cfg.arc : undefined,
       contents:i.contents || '', y_cm:Math.round(yOf(i) * 100), against_walls:touchWall(i), zone:i.zone || undefined,
       wings:(i.type === 'tena' || i.type === 'smart') && cfg.tn && cfg.tn.bySize && cfg.tn.bySize[cfg.tn.size || 4] ? cfg.tn.bySize[cfg.tn.size || 4].wings.map(w => ({ layer:w.layer, comp:w.comp })) : undefined };
@@ -7257,6 +7349,7 @@ function executeOps0(ops, walled, WROT) {
         const open = o.open !== false;
         if (o.op === 'tambour' && (it.type === 'tamb' || it.type === 'mtamb')) { METAL[it.type].target = open ? TBX.MAXO : 0; done++; }
         else if (it.type === 'tech') { const w = o.which || 'all'; if (!open) (ITEM_DRAWERS.get(it.id) || []).forEach(d => { if (d.userData.slide) d.userData.target = 0; }); TC.doors = [w === 'right' ? TC.doors[0] : +open, w === 'left' ? TC.doors[1] : +open]; syncDoorBtns('tc', TC); done++; }
+        else if (it.type === 'lock') { const n = o.door; LK.doors = LK.doors.map((v, i) => n ? (i === n - 1 ? +open : v) : +open); renderLocker(); lkSave(); done++; }
         else if (it.type === 'mdoor') { const w = o.which || 'all'; MD.doors = [w === 'right' ? MD.doors[0] : +open, w === 'left' ? MD.doors[1] : +open]; syncDoorBtns('md', MD); done++; }
         else if (it.type === 'tena' && tena.slide && tena.slide.on) { tena.slide.open = open ? [1, 0, 1, 0] : [0, 0, 0, 0]; if (SLD) SLD.st = tena.slide; syncSlideBtns(); done++; }
         else if (it.type === 'tamb' || it.type === 'mtamb') { METAL[it.type].target = open ? TBX.MAXO : 0; done++; }
@@ -8579,7 +8672,7 @@ const EN_EL = [
   ['#pUnit h1', 'TILT BIN'], ['#pStand h1', 'STANDING UNIT'], ['#pWall h1', 'WALL MOUNT UNIT'],
   ['#pTena h1', 'GONDOLA DELUX'], ['#pExcl h1', 'EXCLUSIVE TILT BIN CART'], ['#pPart h1', 'MODULAR EXCLUSIVE PARTITION'], ['#pTamb h1', 'SECURED TILT BIN METAL CABINET'], ['#pSmart h1', 'GONDOLA SMART'], ['.tab[data-f="tilt"]', 'TILT BIN FAMILY'],
   ['#pQuad h1', 'FOUR-SIDED TILT BIN STAND'],
-  ['#pMtamb h1', 'TAMBOUR METAL CABINET'], ['#pMdoor h1', '4-SHELF METAL CABINET'], ['#pTech h1', 'TECHNICAL WORK CABINET'], ['#pFurn h1', 'FURNITURE & PROPS'], ['.tab[data-f="furn"]', 'FURNITURE'], ['.tab[data-f="metal"]', 'METAL CABINETS'],
+  ['#pMtamb h1', 'TAMBOUR METAL CABINET'], ['#pMdoor h1', '4-SHELF METAL CABINET'], ['#pTech h1', 'TECHNICAL WORK CABINET'], ['#pLock h1', '6-DOOR LOCKER'], ['#pFurn h1', 'FURNITURE & PROPS'], ['.tab[data-f="furn"]', 'FURNITURE'], ['.tab[data-f="metal"]', 'METAL CABINETS'],
   ['#mdColor button[data-v="blue"]', 'Blue'],
 ];
 let LANG = 'he';

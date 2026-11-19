@@ -8,7 +8,7 @@ import { isAdmin } from './_auth.js';
 export const config = { maxDuration: 60 };
 const TEXT_MODEL = process.env.OPENAI_DESIGN_MODEL || process.env.OPENAI_TEXT_MODEL || 'gpt-4.1-mini';
 
-const PTYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn'];
+const PTYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn', 'lock'];
 
 const KNOWLEDGE = `
 You are an interior / industrial layout designer for Huliot / Medikup storage products. You plan a space as ZONES; the app places the products.
@@ -25,6 +25,7 @@ PRODUCTS (type – Hebrew name – footprint W x D cm, height – what it is goo
 - mtamb – "ארון תריס" – 90 x 45 x 195, tambour, shelves (pick bins can stand on them: bin_layout).
 - mdoor – "ארון 4 מדפים" – 90 x 40 x 195, 2 doors, grey or blue (pick bins: bin_layout).
 - tech – "ארון עבודה טכני" – 100 x 56 x 195 blue workshop cabinet; tech_variant 1 = 4 shelves, 2 = 32 pick bins, 3 = 1 drawer, 4 = 3 drawers (tools / bins on the doors) – workshops, maintenance, electronics.
+- lock – "לוקר 6 דלתות" – staff locker 90 x 45 x 195, 6 lockable doors – changing rooms, staff areas of plants / clinics / warehouses (wall_storage along a wall, usually 2–6 side by side).
 - arc – "ארקליות" – single open pick bins (not a floor product – leave them for cabinets).
 - unit – a single tilt-bin unit (not a floor product).
 - furn – generic furniture / props: furn_kind station (computer workstation: desk + pedestal + monitor + office chair, desk 160 or 120 wide, 128 deep with the chair), desk, chair, bench (industrial workbench with a pegboard, 150 / 200 wide, 75 deep), plant.
