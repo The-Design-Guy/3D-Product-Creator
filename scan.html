@@ -73,7 +73,7 @@
 <section class="screen light" id="sStart">
   <img class="logo" src="brand/logo.svg" alt="HISTORGIC">
   <h1>צילום החדר</h1>
-  <p>8 תמונות בסיבוב אחד – והסצנה במחשב נבנית לפי החדר האמיתי.</p>
+  <p>8 תמונות בסיבוב אחד – והסצנה נבנית לפי החדר האמיתי.</p>
   <ol class="steps">
     <li><b>1</b><span>עמדו בערך באמצע החדר, מול הקיר שיהיה <strong>הקיר האחורי</strong> של הסצנה.</span></li>
     <li><b>2</b><span>החזיקו את הטלפון זקוף, בגובה החזה, והסתובבו לאט <strong>ימינה</strong> במקום.</span></li>
@@ -131,7 +131,7 @@
 
 <!-- 5. done -->
 <section class="screen light" id="sDone" hidden>
-  <div class="done"><div class="ok">✓</div><h1>נשלח למחשב</h1><p>הסצנה נבנית עכשיו לפי החדר. אפשר לסגור את הדף.</p></div>
+  <div class="done"><div class="ok">✓</div><h1>נשלח</h1><p>החדר נשלח לבניית הסצנה. תודה! אפשר לסגור את הדף.</p></div>
 </section>
 
 <script>
@@ -180,7 +180,15 @@ async function startCamera(fromTap) {
 }
 $('startBtn').onclick = () => startCamera(true);
 // straight into the camera when the page opens from the QR code (the start page shows only if the browser needs a tap first)
-if (/^[a-z0-9]{20}$/.test(SID)) { show('sWait'); $('waitTxt').textContent = 'פותח את המצלמה…'; startCamera(false); }
+// is the link still good? A shared link (sent to someone) starts on the explanation screen and shows how long it is valid
+if (/^[a-z0-9]{20}$/.test(SID)) {
+  show('sWait'); $('waitTxt').textContent = 'פותח את המצלמה…';
+  fetch(`/api/scan?a=check&id=${SID}`).then(r => r.json().then(j => ({ r, j }))).then(({ r, j }) => {
+    if (!r.ok || !j.ok) { show('sStart'); $('startBtn').disabled = true; $('startErr').textContent = !r.ok ? (j.error || 'הקישור לא נמצא') : j.status === 'done' ? 'הצילום כבר נשלח – תודה!' : 'הקישור פג תוקף או בוטל – בקשו קישור חדש.'; return; }
+    if (j.share) { show('sStart'); const m = Math.max(1, Math.round((j.exp - Date.now()) / 60000)); $('startErr').style.color = '#6b747c'; $('startErr').textContent = `הקישור תקף עוד ${m} דקות.`; return; }
+    startCamera(false);
+  }).catch(() => startCamera(false));
+}
 
 // ---------- the guide ring: where to turn, and auto capture when lined up ----------
 const diff = (a, b) => ((a - b + 540) % 360) - 180;
@@ -194,6 +202,7 @@ function loop(t) {
   $('ring').hidden = !ready;
   for (let k = 0; k < N; k++) { const el = $('tk' + k); if (el) el.setAttribute('fill', shots[k] ? '#1aa66b' : k === next ? '#0088FF' : '#ffffff55'); }
   if (next >= N) { $('autoTxt').textContent = ''; requestAnimationFrame(loop); return; }
+  if (ready && h0 === null && shots[0]) h0 = heading;        // the compass arrived after the first photo (iPhone asks on that tap)
   if (ready && h0 !== null) {
     const want = (h0 + next * STEP) % 360, d = diff(heading, want);
     $('needle').style.transform = `rotate(${(heading - h0 + 360) % 360}deg)`;
@@ -212,7 +221,10 @@ let busy = false;
 async function capture() {
   if (busy || next >= N) return; busy = true;
   const v = $('vid'), k = next;
-  if (!v.videoWidth) { busy = false; return; }
+  if (!v.videoWidth) {                                   // the camera has not delivered a frame yet: wait for it (max 2 s)
+    await new Promise(r => { const t = setTimeout(r, 2000); v.addEventListener('loadeddata', () => { clearTimeout(t); r(); }, { once:true }); v.play().catch(() => {}); });
+    if (!v.videoWidth) { busy = false; $('camMsg').textContent = 'המצלמה עוד לא מוכנה – נסו שוב'; return; }
+  }
   const s = Math.min(1, 1600 / Math.max(v.videoWidth, v.videoHeight));
   const c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * s); c.height = Math.round(v.videoHeight * s);
   c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
@@ -243,7 +255,7 @@ function renderThumbs() {
   $('nextBtn').textContent = all ? 'לניתוח ›' : 'לניתוח בלי כולן ›';
   $('camMsg').textContent = next < N ? AIM[next] : 'כל התמונות צולמו';
 }
-$('shutter').onclick = async () => { holdT = 0; if (needsAsk() && !asked) await askCompass(); capture(); };
+$('shutter').onclick = async () => { holdT = 0; await capture(); if (needsAsk() && !asked) askCompass(); };
 $('cancelBtn').onclick = async () => { if (!confirm('לבטל את הצילום?')) return; stream && stream.getTracks().forEach(t => t.stop()); try { await api('cancel'); } catch {} show('sStart'); };
 
 // ---------- analysis ----------

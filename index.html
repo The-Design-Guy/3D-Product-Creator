@@ -268,7 +268,7 @@
   .tb.on { background:#e6ebef; color:var(--acc); }
   .preset { display:inline-flex; align-items:center; gap:4px; height:34px; padding:0 6px 0 4px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--muted); }
   .preset select { font:inherit; font-size:13px; border:0; background-color:transparent; color:var(--ink); max-width:170px; cursor:pointer; }
-  .dlg { position:fixed; inset:0; background:rgba(20,26,32,.28); display:flex; align-items:center; justify-content:center; z-index:20; }
+  .dlg { position:fixed; inset:0; background:rgba(20,26,32,.28); display:flex; align-items:center; justify-content:center; z-index:52; }
   body.scn-full:not(.scn-drawer) .side { display:none !important; }
   body.scn-full.scn-drawer .side { box-shadow:0 18px 50px rgba(0,0,0,.18); border-radius:14px; background:rgba(246,248,249,.97); padding:8px; z-index:30; }
   .scnfab { position:fixed; top:calc(var(--hh) + 16px); right:16px; z-index:31; display:flex; gap:8px; }
@@ -633,7 +633,7 @@
   .r-chk.warn { background:#fff4dc; color:#7a5300; margin-top:8px; }
   .r-chk.bad { background:#fdecea; color:#a3261d; font-weight:600; }
   .r-chk small { font-weight:400; }
-  .toast { position:fixed; top:calc(var(--hh) + 64px); left:16px; background:var(--acc); color:#fff; font-size:13px; padding:8px 12px; border-radius:8px; z-index:30; }
+  .toast { position:fixed; top:calc(var(--hh) + 64px); left:16px; background:var(--acc); color:#fff; font-size:13px; padding:8px 12px; border-radius:8px; z-index:62; }
   .lightpop { position:fixed; top:calc(var(--hh) + 70px); left:16px; width:340px; background:rgba(255,255,255,.95); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
     border:1px solid var(--line); border-radius:12px; padding:12px; box-shadow:0 12px 36px rgba(30,40,50,.14); z-index:15; direction:rtl; }
   .lp-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; font-size:15px; }
@@ -892,6 +892,11 @@
   @keyframes scpulse { 50% { opacity:.3; } }
   .scanth { display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; margin:0 auto 10px; max-width:300px; }
   .scanth span { aspect-ratio:3/4; border-radius:4px; background:#eef0f1 center/cover no-repeat; border:1px solid var(--line); }
+  .scanhere { display:block; text-align:center; text-decoration:none; padding:12px; font-size:15px; margin:10px 0 4px; }
+  .scanqr summary { cursor:pointer; font-size:13px; color:var(--muted); margin:6px 0; }
+  .scanshare { border-top:1px solid var(--line); margin-top:12px; padding-top:12px; } .scanshare > .btn { width:100%; }
+  .shlist { display:flex; flex-direction:column; gap:6px; margin-top:8px; } .shrow { display:flex; align-items:center; gap:6px; border:1px solid var(--line); border-radius:10px; padding:6px 8px; font-size:13px; }
+  .shrow span { flex:1; display:flex; flex-direction:column; } .shrow small { color:var(--muted); font-size:11px; } .shrow .btn { padding:5px 10px; font-size:12px; }
   .qrbox { display:flex; justify-content:center; margin:14px 0 8px; }
   .qrbox img { width:220px; height:220px; border:1px solid var(--line); border-radius:12px; background:#fff; }
   .srow .sb svg { display:block; }
@@ -6361,13 +6366,17 @@ async function openRoomScan() {
   let id;
   try { id = (await api('/api/scan?a=new', {})).id; } catch (e) { toast(e.message); return; }
   const url = location.origin + '/scan.html?s=' + id;
+  const touch = matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0;   // phone / tablet: film right here, no QR
   openDialog(`<h3>צילום החדר</h3>
+    ${touch ? `<a class="btn primary scanhere" href="${url}" target="_blank" rel="noopener">📷 צילום עכשיו במכשיר הזה</a><p class="dlg-sub">נפתח בלשונית חדשה. בסוף הצילום חזרו ללשונית הזו – החדר ייבנה כאן.</p><details class="scanqr"><summary>או לצלם מטלפון אחר (ברקוד)</summary>` : ''}
     <p class="dlg-sub">סרקו את הברקוד במצלמה של הטלפון. עומדים באמצע החדר מול הקיר שיהיה הקיר האחורי, ומסתובבים לאט ימינה – 8 תמונות. כשתאשרו בטלפון, החדר ייבנה כאן.</p>
     <div class="qrbox"><img alt="ברקוד" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(url)}"></div>
     <div class="scanst" id="scanSt"><i></i><span>ממתין לטלפון…</span></div>
     <div class="scanth" id="scanTh">${Array.from({ length:8 }, () => '<span></span>').join('')}</div>
-    <div class="use" style="text-align:center">הקישור תקף 30 דקות · <a href="${url}" target="_blank" rel="noopener">פתיחה במכשיר הזה</a></div>
+    <div class="use" style="text-align:center">הקישור תקף 30 דקות${touch ? '' : ` · <a href="${url}" target="_blank" rel="noopener">פתיחה במכשיר הזה</a>`}</div>${touch ? '</details>' : ''}
+    <div class="scanshare"><button class="btn" id="shareNew">🔗 קישור לשליחה למישהו אחר (תקף שעה)</button><div id="shareBox"></div></div>
     <div class="dlg-actions"><button class="btn" data-close>סגירה</button></div>`, (card, close) => {
+    scanShares(card, () => { done = stop = true; close(); });
     let stop = false, done = false;
     $('dlg')._onClose = () => { stop = true; if (!done) api('/api/scan?a=cancel&id=' + id, {}).catch(() => {}); };
     const ST = { waiting:'ממתין לטלפון…', capturing:'מצלמים…', analyzing:'ה־AI מנתח את החדר…', review:'ממתין לאישור בטלפון…', done:'בונה את החדר…', cancelled:'הצילום בוטל' };
@@ -6388,6 +6397,43 @@ async function openRoomScan() {
     };
     tick();
   });
+}
+// ---- room-scan links sent to someone else: valid for an hour, the result waits here (a week) until it is built ----
+function scanShares(card, onBuild) {
+  const box = card.querySelector('#shareBox'), list = () => LS.get('rbt-scan-shares', []).filter(x => Date.now() - x.created < 7 * 864e5);
+  const ST = { waiting:'עוד לא התחילו', capturing:'מצלמים…', analyzing:'ה־AI מנתח…', review:'ממתין לאישור שלהם', done:'✓ התקבל – אפשר לבנות', cancelled:'בוטל' };
+  let live = true, t = 0;
+  const draw = async () => {
+    if (!live || !card.isConnected) return;
+    const L = list(); LS.set('rbt-scan-shares', L);
+    const rows = await Promise.all(L.map(async x => { try { const r = await fetch('/api/scan?a=status&id=' + x.id, { headers:{ 'x-admin-key':adminKey() } }); const st = await r.json(); return { x, st:r.ok ? st : null }; } catch { return { x, st:null }; } }));
+    if (!live || !card.isConnected) return;
+    box.innerHTML = rows.length ? `<div class="shlist">${rows.map(({ x, st }) => { const url = location.origin + '/scan.html?s=' + x.id, left = Math.round((x.exp - Date.now()) / 60000);
+      const s0 = !st ? 'לא נמצא' : st.status === 'done' ? ST.done : left <= 0 ? 'פג תוקף' : `${ST[st.status] || st.status} · עוד ${left} דק'`;
+      return `<div class="shrow" data-id="${x.id}"><span>${x.label || 'קישור'} · ${new Date(x.created).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' })}<small>${s0}</small></span>
+        ${st && st.status === 'done' ? '<button class="btn primary" data-a="build">בנה את החדר</button>' : left > 0 && st ? `<button class="btn" data-a="copy" data-u="${url}">העתקה</button>${navigator.share ? `<button class="btn" data-a="share" data-u="${url}">שליחה</button>` : ''}` : ''}
+        <button class="opdel" data-a="del" aria-label="הסרה">✕</button></div>`; }).join('')}</div>` : '';
+    box.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
+      const id = b.closest('.shrow').dataset.id, a = b.dataset.a;
+      if (a === 'copy') { try { await navigator.clipboard.writeText(b.dataset.u); toast('הקישור הועתק'); } catch { prompt('העתיקו את הקישור:', b.dataset.u); } }
+      if (a === 'share') navigator.share({ title:'צילום החדר', text:'צלמו את החדר ב-8 תמונות – הקישור תקף לשעה:', url:b.dataset.u }).catch(() => {});
+      if (a === 'del') { LS.set('rbt-scan-shares', list().filter(x => x.id !== id)); draw(); }
+      if (a === 'build') { try { const r = await fetch('/api/scan?a=status&id=' + id, { headers:{ 'x-admin-key':adminKey() } }); const st = await r.json(); if (!st.result) throw 0;
+        LS.set('rbt-scan-shares', list().filter(x => x.id !== id)); live = false; onBuild(); applyScan(st.result, st.photos || []); } catch { toast('לא הצלחתי לקבל את הצילום'); } }
+    });
+    clearTimeout(t); t = setTimeout(draw, 4000);
+  };
+  card.querySelector('#shareNew').onclick = async (e) => {
+    const b = e.currentTarget; b.disabled = true;
+    try {
+      const r = await api('/api/scan?a=new&share=1', {}), url = location.origin + '/scan.html?s=' + r.id;
+      const L = list(); L.unshift({ id:r.id, created:Date.now(), exp:r.exp, label:'קישור ' + (L.length + 1) }); LS.set('rbt-scan-shares', L.slice(0, 20));
+      if (navigator.share && matchMedia('(pointer: coarse)').matches) navigator.share({ title:'צילום החדר', text:'צלמו את החדר ב-8 תמונות – הקישור תקף לשעה:', url }).catch(() => {});
+      else { try { await navigator.clipboard.writeText(url); toast('נוצר קישור לשעה והועתק – שלחו אותו'); } catch { prompt('העתיקו את הקישור ושלחו:', url); } }
+    } catch (er) { toast(er.message); }
+    b.disabled = false; draw();
+  };
+  draw();
 }
 async function applyScan(r, photos) {
   pushRoomUndo();
