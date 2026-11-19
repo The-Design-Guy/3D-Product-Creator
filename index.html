@@ -3177,8 +3177,12 @@ canvas.addEventListener('pointerdown', (e) => {
   let g = hits[0].object; while (g && !g.userData.itemId) g = g.parent;
   if (!g) return;
   const it = SCN.items.find(i => i.id === g.userData.itemId);
-  if (SCN.sel !== it.id) { selectItem(it.id); SCN.justSel = true; return; }   // first click selects
-  if (!SCN.move) { partGesture(e); return; }               // not in move mode: dragging works the bins / doors / tambour
+  const grab = e.ctrlKey || e.metaKey;                     // Ctrl + drag: move the product across the scene, whatever the mode
+  if (grab) { e.stopImmediatePropagation(); if (SCN.sel !== it.id) selectItem(it.id); SCN.justSel = true; }   // the click that follows does nothing
+  else {
+    if (SCN.sel !== it.id) { selectItem(it.id); SCN.justSel = true; return; }   // first click selects
+    if (!SCN.move) { partGesture(e); return; }               // not in move mode: dragging works the bins / doors / tambour
+  }
   if (!dragRay.ray.intersectPlane(floorPlane, fHit)) return;
   sdrag = { it, dx: it.x - fHit.x, dz: it.z - fHit.z, sx: e.clientX, sy: e.clientY, moved:false };
   clearTimeout(deselT);
@@ -3192,6 +3196,10 @@ addEventListener('pointermove', (e) => {
   dragRay.setFromCamera(pointerNDC(e), camera);
   if (dragRay.ray.intersectPlane(floorPlane, fHit)) moveSel(it => { it.x = fHit.x + sdrag.dx; it.z = fHit.z + sdrag.dz; });
 });
+// holding Ctrl over the scene shows a grab cursor
+addEventListener('keydown', (e) => { if ((e.key === 'Control' || e.key === 'Meta') && mode === 'scene' && !sdrag) canvas.style.cursor = 'grab'; });
+addEventListener('keyup', (e) => { if ((e.key === 'Control' || e.key === 'Meta') && !sdrag) canvas.style.cursor = ''; });
+addEventListener('blur', () => { if (!sdrag) canvas.style.cursor = ''; });
 let deselT = 0;
 addEventListener('pointerup', () => {
   if (!sdrag) return;
