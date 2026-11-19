@@ -170,6 +170,15 @@
   .ararc .arseg button { border:0; background:#fff; font:inherit; font-size:12px; padding:6px 9px; cursor:pointer; border-inline-start:1px solid var(--line); }
   .ararc .arseg button:first-child { border-inline-start:0; }
   .ararc .arseg button.on { background:var(--ink); color:#fff; }
+  .arzones { display:flex; gap:6px; flex:0 1 auto; min-width:0; overflow-x:auto; scrollbar-width:thin; }
+  .arzones .hd b { color:var(--ink); font-weight:700; }
+  .arzones .hd.arsel { border-color:var(--acc); }
+  .arpop .arseg { display:inline-flex; flex-wrap:wrap; border:1px solid var(--line); border-radius:9px; overflow:hidden; align-self:flex-start; }
+  .arpop .arseg button { font-size:13px; padding:7px 11px; border-radius:0; border-inline-start:1px solid var(--line); }
+  .arpop .arseg button:first-child { border-inline-start:0; }
+  .arpop .arseg button:disabled { opacity:.35; cursor:default; }
+  .arpop .arseg button.on:disabled { opacity:1; }
+  .arpop .arnote { font-size:11px; color:var(--muted); }
   .arshelf.on { color:#fff; background:var(--acc); border:1px solid var(--acc); }
   body.has-strip .vbar { bottom:calc(var(--fh) + 64px); }
   .body > .inner { overflow:hidden; min-height:0; }
@@ -1244,6 +1253,8 @@
       <div class="lbl">מדפים מודולריים (גובה בס"מ מהרצפה)</div>
       <div class="shl" id="tcShelves"></div>
       <button class="btn" id="tcAdd">+ מדף</button>
+      <div id="tcAccSec"><div class="lbl">בדלתות</div>
+      <div class="seg2" id="tcAcc"><button data-v="tools">כלי עבודה</button><button data-v="bins">ארקליות</button><button data-v="both" class="on">גם וגם</button><button data-v="none">כלום</button></div></div>
       <div id="tcHangSec"><div class="lbl">ארקליות 4 תלויות על הדלתות</div>
       <div class="pair"><span class="tchang">ימין <button class="btn" data-d="1" data-s="-1">−</button><b id="tcHangR">1</b><button class="btn" data-d="1" data-s="1">+</button></span>
       <span class="tchang">שמאל <button class="btn" data-d="0" data-s="-1">−</button><b id="tcHangL">2</b><button class="btn" data-d="0" data-s="1">+</button></span></div></div>
@@ -3322,8 +3333,9 @@ function arcShelfRoom(S, i) {                        // free height above shelf 
 // a deeper bin on a shelf may only reach up to just under them
 const TC_FREE = 340;
 function arcHangRoom(S, i, M, room) {
-  if (!S.hang || !(S.hang[0] + S.hang[1]) || M.D <= TC_FREE) return room;
-  const ys = [0, 1].filter(d => S.hang[d] > 0).map(d => TCX.HANG[d]), lo = Math.min(...ys), hi = Math.max(...ys) + ARC_MODELS[4].H + 10;
+  const hg = S.variant ? tcHang(S) : [0, 0];
+  if (!(hg[0] + hg[1]) || M.D <= TC_FREE) return room;
+  const ys = [0, 1].filter(d => hg[d] > 0).map(d => TCX.HANG[d]), lo = Math.min(...ys), hi = Math.max(...ys) + ARC_MODELS[4].H + 10;
   const y0 = i === 'floor' ? tbFloor() : S.list[i] + TBX.SHELF;
   return y0 >= hi ? room : y0 < lo ? Math.min(room, lo - y0) : 0;
 }
@@ -3391,9 +3403,10 @@ const MD = { list:evenShelves(4), color:'7035', doors:[0, 0] };
 //   1 – 4 shelves · 2 – 8 levels of 4 × ארקלית 2 · 3 – one drawer + 2 shelves · 4 – 3 drawers + 2 shelves
 //   (3, 4: pegboard back, doors with holes / louvres, ארקלית 4 hung on the louvres)
 const TCX = { W:1000, D:560, SIDE:22, HANG:[1060, 1200], HANG_MAX:3 };
-const TC = { variant:1, list:[], arc:[], arcFloor:null, doors:[0, 0], drawers:[], hang:[0, 0], peg:false, color:'blue' };
+const TC = { variant:1, list:[], arc:[], arcFloor:null, doors:[0, 0], drawers:[], hang:[0, 0], peg:false, color:'blue', doorAcc:['both', 'both'] };
+const TC_ACC = { tools:'כלי עבודה', bins:'ארקליות', both:'גם וגם', none:'כלום' };
 function techVariant(S, v) {
-  S.variant = v; S.arc = []; S.arcFloor = null; S.drawers = []; S.hang = [0, 0]; S.peg = false; S.color = 'blue'; S.doors = S.doors || [0, 0];
+  S.variant = v; S.arc = []; S.arcFloor = null; S.drawers = []; S.hang = [0, 0]; S.peg = false; S.color = 'blue'; S.doors = S.doors || [0, 0]; S.doorAcc = ['both', 'both'];
   if (v === 1) S.list = [445, 795, 1170, 1520];
   if (v === 2) { S.list = [295, 520, 745, 970, 1195, 1420, 1645]; S.arc = S.list.map(() => ({ m:2, rows:1, cols:4 })); S.arcFloor = { m:2, rows:1, cols:4 }; }
   if (v === 3) { S.list = [995, 1520]; S.drawers = [{ y:445, n:1, h:120 }]; S.hang = [2, 1]; S.peg = true; }
@@ -3402,6 +3415,12 @@ function techVariant(S, v) {
 }
 techVariant(TC, 1);
 const techZones = (S) => S.variant >= 3;                         // doors with holes + louvres
+// what hangs inside each door: doorAcc = [left, right] (an older single value counts for both doors)
+const tcAccD = (S, d) => !techZones(S) ? 'none' : Array.isArray(S.doorAcc) ? (S.doorAcc[d] || 'both') : (S.doorAcc || 'both');
+function setTcAccD(S, d, v) { const a = [tcAccD(S, 0), tcAccD(S, 1)]; a[d] = v; S.doorAcc = a; }
+const tcAcc = (S) => tcAccD(S, 0) === tcAccD(S, 1) ? tcAccD(S, 0) : 'mix';           // both doors the same, or 'mix'
+const tcHang = (S) => [0, 1].map(d => ['bins', 'both'].includes(tcAccD(S, d)) ? ((S.hang || [0, 0])[d] || 0) : 0);   // ארקלית 4 actually on the doors
+const tcTools = (S, d) => ['tools', 'both'].includes(tcAccD(S, d));
 const blockH = (b) => 50 + b.n * b.h;                             // a drawer block: a plate under it, the drawers, a plate over it
 const cabBlocks = (S) => (S && S.drawers || []).map(b => [b.y, b.y + blockH(b)]);
 const cabW = (k) => k === 'tamb' ? TB_W : k === 'tech' ? TCX.W : TBX.W;
@@ -3595,7 +3614,7 @@ function buildMetal(k) {
       dl.push({ pivot, sd, idx, meshes:[] });
       door.traverse(o => { if (o.isMesh) dl[dl.length - 1].meshes.push(o); });
     });
-    doors = { list:dl, meshes:dl.flatMap(d => d.meshes) };
+    doors = { list:dl, meshes:dl.flatMap(d => d.meshes), drawers:list.filter(d => d.userData.slide) };   // drawers that slide out past the doors
   }
   return { group:g, drawers:list, rods:rodList, slats, doors, shelves:{ meshes:shelfMeshes }, D };
 }
@@ -3638,6 +3657,29 @@ function techInside(root, S, o) {
     }
   }
 }
+// work tools on the upper hole zone, under the top of the cabinet and above the top shelf:
+// left door – a holder with 4 screwdrivers + a hook; right door – a rail with 5 spanners + 2 hooks
+function techTools(door, idx, cx) {
+  const A = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; door.add(o); return o; };
+  const hook = (x, y) => { const h = A(new THREE.TorusGeometry(11, 2.2, 6, 14, Math.PI), zincMat, x, y, -24); h.rotation.set(Math.PI/2, 0, Math.PI);
+    A(new THREE.CylinderGeometry(2.2, 2.2, 22, 8), zincMat, x - 11, y + 10, -18).rotation.x = Math.PI/2; };
+  if (idx === 0) {
+    A(new THREE.BoxGeometry(170, 14, 34), lockBlack, cx - 60, 1790, -28);                              // screwdriver holder
+    [[-120, toolRed], [-80, toolYellow], [-40, toolRed], [0, toolYellow]].forEach(([dx, m], j) => {
+      A(new THREE.CylinderGeometry(11, 13, 95, 14), m, cx + dx, 1797 + 48, -34);                             // handle on top of the holder
+      A(new THREE.CylinderGeometry(3, 3, 130 - j * 15, 8), zincMat, cx + dx, 1783 - (130 - j * 15)/2, -34);   // the shaft below it
+    });
+    hook(cx + 110, 1800);
+  } else {
+    A(new THREE.BoxGeometry(220, 12, 18), zincMat, cx, 1855, -20);                                     // spanner rail
+    [0, 1, 2, 3, 4].forEach(j => {
+      const L = 130 + j * 22, x = cx - 88 + j * 44;
+      A(new THREE.BoxGeometry(14 + j, L, 5), zincMat, x, 1848 - L/2, -32);
+      const ring = A(new THREE.TorusGeometry(10 + j, 3.5, 6, 16), zincMat, x, 1848 - L - 6, -32);
+    });
+    hook(cx - 70, 1650); hook(cx + 70, 1650);
+  }
+}
 function techDoor(door, S, idx, cx, dw, dh, y0) {
   const ya = y0 + 40, zh = (dh - 80) / 4, w = dw - 70;
   for (let q = 0; q < 4; q++) {                                    // from the bottom: louvres, holes, louvres, holes
@@ -3645,7 +3687,8 @@ function techDoor(door, S, idx, cx, dw, dh, y0) {
     const m = tcSheet(kind, w, zh - 16, kind === 'louv' ? [64, 32] : [32, 32]);   // on the inside only – the outside of the door is plain
     m.position.set(cx, yc, -10.6); m.rotation.y = Math.PI; door.add(m);
   }
-  const n = (S.hang || [])[idx] || 0, M = ARC_MODELS[4];
+  if (tcTools(S, idx)) techTools(door, idx, cx);
+  const n = tcHang(S)[idx] || 0, M = ARC_MODELS[4];
   for (let j = 0; j < n; j++) {
     const b = makeArcBin(4, arcBlue, false);
     b.position.set(cx + (j - (n - 1) / 2) * (M.W + 24), TCX.HANG[idx], -12 - M.D/2); b.rotation.y = Math.PI; door.add(b);
@@ -3710,7 +3753,8 @@ function renderMetal(k) {
   if (k === 'mtamb') { $('mtOpen').value = Math.round(S.target / TBX.MAXO * 100); }
   else if (k === 'tech') {
     setSeg('tcVar', String(S.variant)); syncDoorBtns('tc', S);
-    $('tcHangSec').hidden = !techZones(S); $('tcHangL').textContent = S.hang[0]; $('tcHangR').textContent = S.hang[1];
+    $('tcAccSec').hidden = !techZones(S); setSeg('tcAcc', tcAcc(S));
+    $('tcHangSec').hidden = !(tcHang(S)[0] + tcHang(S)[1]) && !['bins', 'both'].includes(tcAccD(S, 0)) && !['bins', 'both'].includes(tcAccD(S, 1)); $('tcHangL').textContent = S.hang[0]; $('tcHangR').textContent = S.hang[1];
     $('tcHangSec').querySelectorAll('button').forEach(b => { const v = S.hang[+b.dataset.d] + +b.dataset.s; b.disabled = v < 0 || v > TCX.HANG_MAX; });
   }
   else { setSeg('mdColor', S.color); syncDoorBtns('md', S); }
@@ -3730,8 +3774,13 @@ function addShelf(S) {
 }
 
 // ---------- animation ----------
+// a drawer that is out keeps the doors open: they can't close on it
+const drawerOut = (Dr = DOORS) => !!(Dr && Dr.drawers && Dr.drawers.some(d => d.userData.target > 0.1));
+let DRW_TOAST = 0;
+function doorBlocked() { if (Date.now() - DRW_TOAST > 2500) { DRW_TOAST = Date.now(); toast('יש מגירה פתוחה – סגרו אותה כדי לסגור את הדלת'); } }
 function stepMetal(k) {
   const S = metalState(); if (!S) return;
+  if (DOORS && S.doors && drawerOut() && S.doors.some(v => v < 0.5)) { S.doors = S.doors.map(() => 1); if (S === TC) syncDoorBtns('tc', TC); }
   if (TAMB && S.target !== undefined && Math.abs(S.target - S.open) > 0.5) { S.open += (S.target - S.open) * k; placeSlats(TAMB.list, S.open, TAMB.zf, TAMB.hw); }
   if (DOORS) for (const d of DOORS.list) {
     const tgt = (d.sd < 0 ? -1 : 1) * S.doors[d.idx] * DOOR_OPEN;
@@ -3749,7 +3798,7 @@ canvas.addEventListener('pointerdown', (e) => {
   const shelfM = SHELVES ? SHELVES.meshes : [];
   const hit = dragRay.intersectObjects([...blockers, ...shelfM], true)[0]; if (!hit) return;
   if (inScene && !shelfM.includes(hit.object)) return;    // the shutter / doors there go through the part gestures
-  if (inScene) { e.stopImmediatePropagation(); ARR.shelf = hit.object.userData.shelf; syncArrange(); }
+  if (inScene) { e.stopImmediatePropagation(); ARR.shelf = hit.object.userData.shelf; arOpenZone(ARR.shelf); }
   if (TAMB && TAMB.meshes.includes(hit.object)) {
     const s = TAMB.list.find(x => x.m === hit.object || x.m === hit.object.parent);
     dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 0, 1), hit.point);
@@ -3799,6 +3848,7 @@ function doorClick(ray) {
   const S = metalState(); if (!S) return false;
   const hit = ray.intersectObjects(DOORS.meshes, true)[0]; if (!hit) return false;
   const d = DOORS.list.find(x => x.meshes.includes(hit.object)); if (!d) return false;
+  if (S.doors[d.idx] > 0.5 && drawerOut()) { doorBlocked(); return true; }
   S.doors[d.idx] = S.doors[d.idx] > 0.5 ? 0 : 1;
   syncDoorBtns(editKey() === 'tamb' ? 'tb' : editKey() === 'tech' ? 'tc' : 'md', S);
   return true;
@@ -4072,9 +4122,10 @@ document.getElementById('mtOpen').oninput = (e) => { MT.target = +e.target.value
 document.getElementById('mtAdd').onclick = () => addShelf(MT);
 document.getElementById('mdAdd').onclick = () => addShelf(MD);
 const TECH_VAR = { 1:'4 מדפים', 2:'8 מדפים', 3:'מגירה אחת', 4:'3 מגירות' };
-[['tcDoorR', 1], ['tcDoorL', 0]].forEach(([id, i]) => document.getElementById(id).onclick = () => { TC.doors[i] = TC.doors[i] > 0.5 ? 0 : 1; syncDoorBtns('tc', TC); });
+[['tcDoorR', 1], ['tcDoorL', 0]].forEach(([id, i]) => document.getElementById(id).onclick = () => { if (TC.doors[i] > 0.5 && drawerOut()) { doorBlocked(); return; } TC.doors[i] = TC.doors[i] > 0.5 ? 0 : 1; syncDoorBtns('tc', TC); });
 document.getElementById('tcAdd').onclick = () => addShelf(TC);
 segGroup('tcVar', (v) => { techVariant(TC, +v); rebuild(true); });
+segGroup('tcAcc', (v) => { TC.doorAcc = [v, v]; techBinsFit(TC); rebuild(true); });
 document.getElementById('tcHangSec').querySelectorAll('button').forEach(b => b.onclick = () => {
   const d = +b.dataset.d; TC.hang[d] = Math.max(0, Math.min(TCX.HANG_MAX, TC.hang[d] + +b.dataset.s));
   techBinsFit(TC); rebuild(true); if (mode === 'scene') { const it = SCN.items.find(x => x.id === SCN.sel); if (it) it.cfg = capCfg(it.type); syncArrange(); }
@@ -4835,7 +4886,7 @@ function describe() {
       .map(o => `${o.floor ? 'on the floor of the cabinet' : `on the shelf at ${Math.round(o.y/10)} cm`}: ${o.f.cols} column${o.f.cols > 1 ? 's' : ''} x ${o.f.rows} high of open-front bright blue plastic pick bins ("ארקלית ${o.a.m}", ${o.f.M.W} mm wide, ${o.f.M.D} mm deep, ${o.f.M.H} mm high, stacked on each other, fronts flush with the shelf edge, from the left side)`);
     const tech = mode !== 'tech' ? '' : (S.peg ? ' The back wall inside is a blue perforated pegboard with square holes (nothing hung on it).' : '')
       + (S.drawers || []).map(b => ` A block of ${b.n} full-width blue steel drawer${b.n > 1 ? 's' : ''}, each ${b.h} mm high, with a long horizontal aluminium bar handle, sits between two steel plates from ${Math.round(b.y/10)} to ${Math.round((b.y + blockH(b))/10)} cm above the floor${b.n > 0 && S.drawers.length ? '; the space under it is open' : ''}.`).join('')
-      + (techZones(S) ? ` The outside of the doors is plain smooth steel; the INSIDE of each door is a perforated blue steel panel in four horizontal zones, from the top: square holes, louvre slots, square holes, louvre slots.${S.hang[0] + S.hang[1] ? ` Small blue open-front plastic pick bins (ארקלית 4, 96 mm wide) hang on the inner louvres: ${S.hang[0]} on the left door, ${S.hang[1]} on the right door, at about ${Math.round(TCX.HANG[0]/10)} and ${Math.round(TCX.HANG[1]/10)} cm.` : ''}` : ' The doors are plain smooth steel.');
+      + (techZones(S) ? ` The outside of the doors is plain smooth steel; the INSIDE of each door is a perforated blue steel panel in four horizontal zones, from the top: square holes, louvre slots, square holes, louvre slots.${tcHang(S)[0] + tcHang(S)[1] ? ` Small blue open-front plastic pick bins (ארקלית 4, 96 mm wide) hang on the inner louvres: ${tcHang(S)[0]} on the left door, ${tcHang(S)[1]} on the right door, at about ${Math.round(TCX.HANG[0]/10)} and ${Math.round(TCX.HANG[1]/10)} cm.` : ''}${tcTools(S, 0) ? ' Hand tools hang on the upper hole zone of the LEFT door: a black holder with 4 red and yellow screwdrivers and a small hook.' : ''}${tcTools(S, 1) ? ' Hand tools hang on the upper hole zone of the RIGHT door: a rail with a set of 5 chrome spanners and two small hooks.' : ''}${tcAcc(S) === 'none' ? ' Nothing hangs on the doors.' : ''}` : ' The doors are plain smooth steel.');
     return `${shell} Inside: ${ys.length} adjustable full-width steel shelves at ${ys.join(', ')} cm from the floor, on perforated uprights.${tech}${bins.length ? ' Bins standing on the shelves, from the top: ' + bins.join('; ') + '; the other shelves are empty.' : ''}${flags.filter(f => !/rod|label/.test(f)).length ? ' ' + flags.filter(f => !/rod|label/.test(f)).join('; ') + '.' : ''}`;
   }
   if (mode === 'quad') {
@@ -6341,7 +6392,7 @@ const HEADS = {
     // the tambour opens to 90% while the shelves are set (still showing), and goes back afterwards
     open:() => { const S = METAL.mtamb, was = S.target; S.target = TBX.MAXO * 0.9; return () => { S.target = was; }; } }],
   mdoor:[{ seg:'mdColor', l:'צבע' }],
-  tech:[{ seg:'tcVar', l:'גרסה' }],
+  tech:[{ seg:'tcVar', l:'גרסה' }, { seg:'tcAcc', l:'בדלתות', if:() => techZones(TC) }],
   arc:[{ seg:'arcModel', l:'דגם' }, { seg:'arcColor', l:'צבע' }, { seg:'arcDiv', l:'מחיצת אורך', if:() => ARC.model <= 2 }],
 };
 const segBtns = (id) => { const s = $(id); return s ? [...s.children].filter(b => b.tagName === 'BUTTON') : []; };
@@ -6369,7 +6420,7 @@ function buildHeads(it, body) {
 }
 function syncHeads() {
   const body = $('ssBody'); if (!body || !body._hs) return;
-  body.querySelectorAll('.hd').forEach(b => {
+  body.querySelectorAll('.hd[data-i]').forEach(b => {
     const out = b.querySelector('b');
     if (b.dataset.i === 'contents') { const v = $('scnContents').value.trim(); out.textContent = v ? (v.length > 18 ? v.slice(0, 18) + '…' : v) : '—'; return; }
     const h = body._hs[+b.dataset.i];
@@ -6482,55 +6533,91 @@ function camBack(s) { if (!FREE.on) flyTo(s.p, s.t, s.fov); }
 // ---- arrange mode: in close on the product; drag opens doors / the shutter, moves shelves; a click opens a bin ----
 const ARR = { cam:null, shelf:null };
 function buildArrange(it, body) {
-  const bins = (ITEM_DRAWERS.get(it.id) || []).length > 0, S = metalState(), shelves = S && S.list;
-  body.innerHTML = (bins ? `<label class="sstog"><input type="checkbox" id="arOpen"><span>${S === TC ? 'כל המגירות פתוחות' : 'כל התאים פתוחים'}</span></label>` : '')
-    + (shelves ? `<span class="arshelf" id="arShelf"></span>${S !== TB ? '<button class="arshelf arfloor" id="arFloor">רצפת הארון</button>' : ''}<span class="ararc" id="arArc"></span>` : '')
-    + (S === TC && techZones(TC) ? `<span class="ararc" id="arHang"></span>` : '')
-    + `<span class="sshint">${bins ? (S === TC ? 'לחיצה על מגירה פותחת / סוגרת' : 'לחיצה על תא פותחת / סוגרת') : ''}${bins && (TAMB || DOORS) ? ' · ' : ''}${TAMB ? 'גרירה על התריס' : DOORS ? 'לחיצה / גרירה על דלת' : ''}${shelves ? ' · גרירת מדף, או R / F' : ''}</span>`;
-  const fl = $('arFloor'); if (fl) fl.onclick = () => { ARR.shelf = ARR.shelf === 'floor' ? null : 'floor'; syncArrange(); };
-  arHang();
+  body._hs = null;                                  // the headings of edit mode are gone
+  const bins = (ITEM_DRAWERS.get(it.id) || []).length > 0, S = metalState(), zones = S && S.list && S !== TB;
+  const openTog = bins ? `<label class="sstog"><input type="checkbox" id="arOpen"><span>${S === TC ? 'כל המגירות פתוחות' : 'כל התאים פתוחים'}</span></label>` : '';
+  if (!zones) {                                     // no shelves: the old strip
+    body.innerHTML = openTog + `<span class="sshint">${bins ? 'לחיצה על תא פותחת / סוגרת' : ''}${bins && (TAMB || DOORS) ? ' · ' : ''}${TAMB ? 'גרירה על התריס' : DOORS ? 'לחיצה / גרירה על דלת' : ''}</span>`;
+  } else {
+    // one row: every place that can hold something is a chip; a chip opens its choices upward
+    body.innerHTML = openTog + `<span class="arzones" id="arZones"></span><span class="sshint">${DOORS ? 'לחיצה על דלת פותחת / סוגרת' : TAMB ? 'גרירה על התריס' : ''} · גרירת מדף, או R / F</span>`;
+    arZones();
+  }
   const o = $('arOpen'); if (o) { o.checked = $('openAll').checked; o.onchange = () => { $('openAll').checked = o.checked; $('openAll').dispatchEvent(new Event('change', { bubbles:true })); }; }
-  syncArrange();
 }
-function syncArrange() {
-  const el = $('arShelf'); if (!el) return;
-  const S = metalState(), fl = $('arFloor');
-  if (fl) fl.classList.toggle('on', ARR.shelf === 'floor');
-  if (ARR.shelf === 'floor' && S) { el.textContent = 'בחרו מדף'; el.classList.remove('on'); arcArrange(S); return; }
-  if (ARR.shelf == null || !S || !S.list || S.list[ARR.shelf] === undefined) { el.textContent = 'בחרו מדף'; el.classList.remove('on'); arcArrange(S); return; }
-  const order = S.list.map((y, i) => ({ y, i })).sort((a, b) => b.y - a.y).findIndex(x => x.i === ARR.shelf) + 1;   // shelf 1 = the top one
-  el.textContent = `מדף ${order} · ${(S.list[ARR.shelf] / 10).toFixed(1)} ס"מ`; el.classList.add('on');
-  arcArrange(S);
+// the places of the selected cabinet: shelves from the top, the floor, the doors (technical cabinet with louvres)
+function arZoneList(S) {
+  const z = S.list.map((y, i) => ({ y, i })).sort((a, b) => b.y - a.y).map((o, k) => ({ key:o.i, name:`מדף ${k + 1}` }));
+  z.push({ key:'floor', name:'רצפת הארון' });
+  if (S === TC && techZones(TC)) z.push({ key:'dR', name:'דלת ימין' }, { key:'dL', name:'דלת שמאל' });
+  return z;
 }
-// the bins on the selected shelf: model, columns, rows (0 = as many as fit)
-// arrange mode, technical cabinet: ארקלית 4 hung on each door, one more / one less
-function arHang() {
-  const box = $('arHang'); if (!box) return;
-  const ctl = (d, he) => `<span class="arlbl">${he}</span><span class="arseg"><button data-d="${d}" data-s="-1" ${TC.hang[d] <= 0 ? 'disabled' : ''}>−</button><button class="on" disabled>${TC.hang[d]}</button><button data-d="${d}" data-s="1" ${TC.hang[d] >= TCX.HANG_MAX ? 'disabled' : ''}>+</button></span>`;
-  box.innerHTML = `<span class="arlbl">ארקליות בדלתות:</span>${ctl(1, 'ימין')}${ctl(0, 'שמאל')}`;
-  box.querySelectorAll('button[data-d]').forEach(b => b.onclick = () => {
-    const d = +b.dataset.d; TC.hang[d] = Math.max(0, Math.min(TCX.HANG_MAX, TC.hang[d] + +b.dataset.s)); techBinsFit(TC);
-    const it = SCN.items.find(x => x.id === SCN.sel); if (it) it.cfg = capCfg(it.type);
-    rebuild(true); arHang(); syncArrange();
+const arDoorIdx = (key) => key === 'dL' ? 0 : 1;
+function arSummary(S, key) {
+  if (key === 'dL' || key === 'dR') {
+    const d = arDoorIdx(key), acc = tcAccD(S, d), n = S.hang[d] || 0;
+    return { tools:'כלי עבודה', bins:`${n} ארקליות`, both:`כלים + ${n}`, none:'ריקה' }[acc];
+  }
+  const a = key === 'floor' ? S.arcFloor : S.arc && S.arc[key], f = a && arcFit(S, key, cabInW(S === TC ? 'tech' : 'mdoor'));
+  return f && f.cols && f.rows ? `${f.cols}×${f.rows} #${a.m}` : 'ריק';
+}
+function arZones() {
+  const box = $('arZones'), S = metalState(); if (!box || !S || !S.list) return;
+  const sel = OPTS && OPTS.zone !== undefined ? OPTS.zone : null;
+  box.innerHTML = arZoneList(S).map(z => `<button class="hd${String(sel) === String(z.key) ? ' open' : ''}${String(ARR.shelf) === String(z.key) ? ' arsel' : ''}" data-z="${z.key}"><span>${z.name}</span><b>${arSummary(S, z.key)}</b>${CHEV}</button>`).join('');
+  if (sel !== null) { const h = box.querySelector(`[data-z="${sel}"]`); if (h) OPTS.head = h; }   // the popup follows its (new) chip
+  box.querySelectorAll('.hd').forEach(b => b.onclick = () => {
+    const key = isNaN(+b.dataset.z) ? b.dataset.z : +b.dataset.z;
+    if (OPTS && OPTS.zone !== undefined && String(OPTS.zone) === String(key)) { closeOpts(true); return; }
+    arOpenZone(key);
   });
 }
-function arcArrange(S) {
-  const box = $('arArc'); if (!box) return;
-  if (!S || S === TB || ARR.shelf == null) { box.innerHTML = ''; return; }
-  const inW = cabInW(S === TC ? 'tech' : 'mdoor'), i = ARR.shelf, a = (i === 'floor' ? S.arcFloor : S.arc && S.arc[i]) || null, f = arcFit(S, i, inW);
-  const fits = (m) => { const g = arcFit({ ...S, arc:i === 'floor' ? S.arc : Object.assign([], S.arc, { [i]:{ m } }), arcFloor:i === 'floor' ? { m } : S.arcFloor }, i, inW); return g && g.maxR > 0 && g.maxC > 0; };
-  const seg = (k, opts, cur) => `<span class="arseg" data-k="${k}">${opts.map(([v, t]) => `<button data-v="${v}" class="${String(cur) === String(v) ? 'on' : ''}">${t}</button>`).join('')}</span>`;
-  const nums = (n) => [['0', 'מלא'], ...Array.from({ length:n }, (_, j) => [String(j + 1), String(j + 1)])];
-  box.innerHTML = `<span class="arlbl">ארקליות</span>${seg('m', [['0', 'בלי'], ...ARC_IN_CAB.filter(m => fits(m) || (a && a.m === m)).map(m => [String(m), '#' + m])], a ? a.m : 0)}`
-    + (a && f ? `<span class="arlbl">עמודות</span>${seg('cols', nums(f.maxC), a.cols || 0)}<span class="arlbl">שכבות</span>${seg('rows', nums(Math.max(1, f.maxR)), a.rows || 0)}` : '');
-  box.querySelectorAll('.arseg button').forEach(b => b.onclick = () => {
-    const k = b.parentNode.dataset.k, v = +b.dataset.v;
-    S.arc = S.arc || []; for (let j = 0; j < S.list.length; j++) if (S.arc[j] === undefined) S.arc[j] = null;
-    const val = k === 'm' ? (v ? { m:v, cols:a ? a.cols : 0, rows:a ? a.rows : 0 } : null) : { ...a, [k]:v };
-    if (i === 'floor') S.arcFloor = val; else S.arc[i] = val;
-    const it = SCN.items.find(x => x.id === SCN.sel); if (it) it.cfg = capCfg(it.type);
-    rebuild(true); syncArrange();
-  });
+function syncArrange() { arZones(); if (OPTS && OPTS.zone !== undefined) arPopFill(); }
+function arOpenZone(key) {
+  const S = metalState(); if (!S || !S.list) return;
+  ARR.shelf = key === 'dL' || key === 'dR' ? null : key;
+  arZones();
+  const head = $('arZones').querySelector(`[data-z="${key}"]`); if (!head) return;
+  closeOpts(true);
+  const pop = document.createElement('div'); pop.className = 'hopts wide arpop';
+  document.body.appendChild(pop);
+  OPTS = { head, pop, zone:key }; head.classList.add('open');
+  arPopFill();
+}
+// the choices of one place, drawn into the open popup (again after every change)
+function arPopFill() {
+  const o = OPTS; if (!o || o.zone === undefined) return;
+  const S = metalState(), key = o.zone, pop = o.pop; if (!S) return;
+  const seg = (k, opts, cur) => `<span class="arseg" data-k="${k}">${opts.map(([v, t, dis]) => `<button data-v="${v}" class="${String(cur) === String(v) ? 'on' : ''}" ${dis ? 'disabled' : ''}>${t}</button>`).join('')}</span>`;
+  const save = () => { const it = SCN.items.find(x => x.id === SCN.sel); if (it) it.cfg = capCfg(it.type); rebuild(true); syncArrange(); };
+  let html = '';
+  if (key === 'dL' || key === 'dR') {
+    const d = arDoorIdx(key), acc = tcAccD(S, d), bins = ['bins', 'both'].includes(acc);
+    html = `<label>${key === 'dL' ? 'דלת שמאל' : 'דלת ימין'} – מה תלוי בה</label>${seg('acc', Object.entries(TC_ACC), acc)}`
+      + (bins ? `<label>ארקליות 4 על הדלת</label><span class="arseg" data-k="n"><button data-s="-1" ${S.hang[d] <= 0 ? 'disabled' : ''}>−</button><button class="on" disabled>${S.hang[d]}</button><button data-s="1" ${S.hang[d] >= TCX.HANG_MAX ? 'disabled' : ''}>+</button></span>` : '');
+    pop.innerHTML = html;
+    pop.querySelectorAll('[data-k="acc"] button').forEach(b => b.onclick = () => { setTcAccD(S, d, b.dataset.v); techBinsFit(S); save(); });
+    pop.querySelectorAll('[data-k="n"] button[data-s]').forEach(b => b.onclick = () => { S.hang[d] = Math.max(0, Math.min(TCX.HANG_MAX, S.hang[d] + +b.dataset.s)); techBinsFit(S); save(); });
+  } else {
+    const inW = cabInW(S === TC ? 'tech' : 'mdoor'), i = key, a = (i === 'floor' ? S.arcFloor : S.arc && S.arc[i]) || null, f = arcFit(S, i, inW);
+    const fits = (m) => { const g = arcFit({ ...S, arc:i === 'floor' ? S.arc : Object.assign([], S.arc, { [i]:{ m } }), arcFloor:i === 'floor' ? { m } : S.arcFloor }, i, inW); return g && g.maxR > 0 && g.maxC > 0; };
+    const nums = (n) => [['0', 'מלא'], ...Array.from({ length:n }, (_, j) => [String(j + 1), String(j + 1)])];
+    const name = arZoneList(S).find(z => String(z.key) === String(key)).name;
+    html = (i === 'floor' ? `<label>${name}</label>` : `<label>${name} · גובה <b>${(S.list[i] / 10).toFixed(1)}</b> ס"מ</label><span class="arseg" data-k="h"><button data-s="-1">− 2.5</button><button data-s="1">+ 2.5</button></span>`)
+      + `<label>ארקליות</label>${seg('m', [['0', 'בלי'], ...ARC_IN_CAB.map(m => [String(m), '#' + m, !fits(m) && !(a && a.m === m)])], a ? a.m : 0)}`
+      + (a && f ? `<label>עמודות</label>${seg('cols', nums(f.maxC), a.cols || 0)}<label>שכבות</label>${seg('rows', nums(Math.max(1, f.maxR)), a.rows || 0)}` : '')
+      + (S === TC && ARC_IN_CAB.some(m => !fits(m)) ? `<span class="arnote">ארקליות עמוקות לא נכנסות בגובה הארקליות שעל הדלתות</span>` : '');
+    pop.innerHTML = html;
+    pop.querySelectorAll('[data-k="h"] button').forEach(b => b.onclick = () => { S.list[i] = clampShelf(S.list, i, S.list[i] + +b.dataset.s * 25, S); save(); });
+    pop.querySelectorAll('[data-k="m"] button, [data-k="cols"] button, [data-k="rows"] button').forEach(b => b.onclick = () => {
+      const k = b.parentNode.dataset.k, v = +b.dataset.v;
+      S.arc = S.arc || []; for (let j = 0; j < S.list.length; j++) if (S.arc[j] === undefined) S.arc[j] = null;
+      const val = k === 'm' ? (v ? { m:v, cols:a ? a.cols : 0, rows:a ? a.rows : 0 } : null) : { ...a, [k]:v };
+      if (i === 'floor') S.arcFloor = val; else S.arc[i] = val;
+      save();
+    });
+  }
+  placeOpts(pop, o.head.getBoundingClientRect());
 }
 function arrangeKey(code, shift) {
   const S = metalState(); if (!S || !S.list || ARR.shelf == null || ARR.shelf === 'floor' || S.list[ARR.shelf] === undefined) return false;
@@ -7034,7 +7121,7 @@ function executeOps0(ops, walled, WROT) {
         if (SCN.sel !== it.id) selectItem(it.id);
         const open = o.open !== false;
         if (o.op === 'tambour' && (it.type === 'tamb' || it.type === 'mtamb')) { METAL[it.type].target = open ? TBX.MAXO : 0; done++; }
-        else if (it.type === 'tech') { const w = o.which || 'all'; TC.doors = [w === 'right' ? TC.doors[0] : +open, w === 'left' ? TC.doors[1] : +open]; syncDoorBtns('tc', TC); done++; }
+        else if (it.type === 'tech') { const w = o.which || 'all'; if (!open) (ITEM_DRAWERS.get(it.id) || []).forEach(d => { if (d.userData.slide) d.userData.target = 0; }); TC.doors = [w === 'right' ? TC.doors[0] : +open, w === 'left' ? TC.doors[1] : +open]; syncDoorBtns('tc', TC); done++; }
         else if (it.type === 'mdoor') { const w = o.which || 'all'; MD.doors = [w === 'right' ? MD.doors[0] : +open, w === 'left' ? MD.doors[1] : +open]; syncDoorBtns('md', MD); done++; }
         else if (it.type === 'tena' && tena.slide && tena.slide.on) { tena.slide.open = open ? [1, 0, 1, 0] : [0, 0, 0, 0]; if (SLD) SLD.st = tena.slide; syncSlideBtns(); done++; }
         else if (it.type === 'tamb' || it.type === 'mtamb') { METAL[it.type].target = open ? TBX.MAXO : 0; done++; }
@@ -7267,6 +7354,7 @@ function cfgFromPlan(p) {
     case 'tamb': { const c = comp(TB_MODELS); if (c) cfg.tb.items = [{ t:'bins', y:TBX.BASE, comp:c, side:'center', noSep:[...ORDER] }]; set(cfg.tb, 'align', st.align); break; }
     case 'mdoor': set(cfg.md, 'color', st.md_color); break;
     case 'tech': if (st.tech_variant) techVariant(cfg.tc, Math.max(1, Math.min(4, st.tech_variant)));
+      if (st.door_acc && TC_ACC[st.door_acc]) cfg.tc.doorAcc = [st.door_acc, st.door_acc];
       if (st.door_bins && techZones(cfg.tc)) cfg.tc.hang = [st.door_bins.left ?? cfg.tc.hang[0], st.door_bins.right ?? cfg.tc.hang[1]].map(n => Math.max(0, Math.min(TCX.HANG_MAX, n | 0)));
       break;
     case 'arc': { const a = st.arc || {}; cfg.arc = { ...ARC0, ...(cfg.arc || {}) };
