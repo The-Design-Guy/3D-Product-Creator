@@ -3849,16 +3849,18 @@ function buildWb() {
   const top = new THREE.Mesh(new THREE.PlaneGeometry(W - 16, D - 16), WB.top === 'white' ? wbWhite : wbGreen); top.rotation.x = -Math.PI/2; top.position.set(0, TOPY + 0.6, 0); top.receiveShadow = true; root.add(top);
   // two welded end frames (legs 80 wide, a stretcher low down, a rail under the top) joined by a front and a back apron
   const LX = W/2 - 90, LZ = D/2 - 60, LH = TOPY - T;
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      box(80, LH - 30, 60, sx * LX, (LH - 30)/2 + 30, sz * LZ);
-      const f = new THREE.Mesh(new THREE.CylinderGeometry(24, 28, 30, 16), zincMat); f.position.set(sx * LX, 15, sz * LZ); root.add(f);
-    }
+  const LEGS = v === 3 ? [-1] : [-1, 1];                 // v3: the floor drawer cabinet replaces the right pair of legs
+  const foot = (x, z) => {                               // a slim silver levelling foot (≈15 mm stem on a small pad)
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 7.5, 26, 12), zincMat); st.position.set(x, 17, z); root.add(st);
+    const pd = new THREE.Mesh(new THREE.CylinderGeometry(15, 16, 5, 14), zincMat); pd.position.set(x, 2.5, z); root.add(pd);
+  };
+  for (const sx of LEGS) {
+    for (const sz of [-1, 1]) { box(80, LH - 30, 60, sx * LX, (LH - 30)/2 + 30, sz * LZ); foot(sx * LX, sz * LZ); }
     box(60, 50, 2 * LZ - 60, sx * LX, 190, 0); box(70, 60, 2 * LZ, sx * LX, LH - 30, 0);
   }
-  box(2 * LX, 50, 25, 0, LH - 25, LZ - 10); box(2 * LX, 50, 25, 0, LH - 25, -LZ - 20);          // the front apron sits behind the drawer case
-  box(2 * LX, 50, 50, 0, 190, 0);                                   // the long stretcher low down between the end frames (as on the real bench)
-  for (const sx of [-1, 1]) for (const dx of [-14, 14]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 4, 10), zincMat); b.rotation.x = Math.PI/2; b.position.set(sx * LX + dx, LH - 22, LZ + 34); root.add(b); }
+  const AR = v === 3 ? W/2 - 40 - 560 : LX, AL = -LX, AW = AR - AL, AX = (AR + AL)/2;   // aprons run leg to leg (or leg to cabinet)
+  box(AW, 50, 25, AX, LH - 25, LZ - 10); box(AW, 50, 25, AX, LH - 25, -LZ - 20);          // the front apron sits behind the drawer case
+  for (const sx of LEGS) for (const dx of [-14, 14]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 4, 10), zincMat); b.rotation.x = Math.PI/2; b.position.set(sx * LX + dx, LH - 22, LZ + 34); root.add(b); }
   // drawers: blue fronts, a full-width silver handle, slide straight out
   const drawer = (x, yb, h, w, d, zf) => {
     const dg = new THREE.Group(); root.add(dg);
@@ -3868,8 +3870,8 @@ function buildWb() {
     for (const sx of [-1, 1]) box(3, h - 40, d - 40, x + sx * (w/2 - 18), yb + h/2, zf - 16 - (d - 40)/2, wbFrame, dg);
     dg.userData = { open:1, target:0, angle:0, slide:Math.round(d * 0.7), z0:0 }; list.push(dg);
   };
-  const cabinet = (CW, CD, CH, y0, drawersH) => {        // a light grey steel case with the drawers, flush with the front of the top
-    const x = LX - 50 - CW/2, zf = D/2 - 30, zc = zf - CD/2;
+  const cabinet = (CW, CD, CH, y0, drawersH, cx) => {        // a light grey steel case with the drawers, flush with the front of the top
+    const x = cx ?? (LX - 50 - CW/2), zf = D/2 - 30, zc = zf - CD/2;
     box(CW, CH, 14, x, y0 + CH/2, zf - CD + 7); for (const sx of [-1, 1]) box(16, CH, CD, x + sx * (CW/2 - 8), y0 + CH/2, zc);
     box(CW, 18, CD, x, y0 + 9, zc); box(CW, 18, CD, x, y0 + CH - 9, zc);
     box(CW, 34, 16, x, y0 + CH - 17, zf - 8);                                                    // the case's top front bar …
@@ -3880,12 +3882,11 @@ function buildWb() {
   if (v === 1) cabinet(450, 560, 320, LH - 320, [128, 128]);
   else if (v === 2) cabinet(540, 520, 360, LH - 360, [148, 148]);
   else {                                                 // floor cabinet 560 x 650 x 740 on feet, 4 drawers (2 shallow, 2 deep)
-    const x = cabinet(560, 650, 740, 50, [205, 205, 120, 120]);   // from the bottom: 2 deep, 2 shallow
-    for (const sx of [-1, 1]) for (const zz of [D/2 - 80, D/2 - 620]) { const f = new THREE.Mesh(new THREE.CylinderGeometry(20, 24, 50, 14), zincMat); f.position.set(x + sx * 240, 25, zz); root.add(f); }
+    const CH = LH - 18, x = cabinet(560, 650, CH, 18, [Math.round((CH - 80) * 0.31), Math.round((CH - 80) * 0.31), Math.round((CH - 80) * 0.19), Math.round((CH - 80) * 0.19)], W/2 - 40 - 280);   // carries the top in place of the right legs
+    for (const sx of [-1, 1]) for (const zz of [D/2 - 110, D/2 - 590]) { const f = new THREE.Mesh(new THREE.CylinderGeometry(10, 12, 18, 12), zincMat); f.position.set(x + sx * 220, 9, zz); root.add(f); }   // small feet, set in under the case
   }
-  if (v >= 2) {                                          // the blue back: posts, a perforated panel, gussets on the top, a middle shelf and a top shelf on brackets
+  if (v >= 2) {                                          // the blue back: a perforated panel, gussets on the top, a middle shelf and a top shelf on brackets
     const PZ = -D/2 + 15, TOPB = 1700, SD = v === 2 ? 250 : 230;
-    for (const sx of [-1, 1]) box(40, TOPB - TOPY, 30, sx * (W/2 - 30), TOPY + (TOPB - TOPY)/2, PZ);
     const ph = v === 2 ? 660 : 860, py0 = TOPB - 20 - ph;
     box(W - 100, ph, 10, 0, py0 + ph/2, PZ - 5, wbBlue);
     if (py0 > TOPY + 5) box(W - 100, py0 - TOPY, 10, 0, TOPY + (py0 - TOPY)/2, PZ - 5, wbBlue);   // plain strip down to the top
@@ -3913,9 +3914,9 @@ function buildWb() {
 }
 function describeWb() {
   const v = WB.variant;
-  return `A heavy-duty industrial workbench, 1500 mm wide and 750 mm deep, work surface at 840 mm: a 50 mm thick top with a ${WB.top === 'white' ? 'plain white laminate' : 'green anti-static (ESD) laminate'} surface and a black rubber edge band with rounded corners, on a light grey steel frame of flat rectangular legs with side rails low down and levelling feet. `
-    + (v === 3 ? 'Under the right side a free-standing light grey drawer cabinet 560 x 650 x 740 mm on small feet with 4 drawers and a key lock on the top front bar of the cabinet (2 shallow on top, 2 deep below), royal-blue drawer fronts with a full-width silver pull handle along the bottom edge of each front. ' : `Hanging under the right side of the top, a light grey drawer cabinet ${v === 1 ? '450 wide, 320 high' : '540 wide, 360 high'} with 2 drawers and a key lock on the cabinet's top front bar, royal-blue fronts with a full-width silver pull handle along the bottom edge of each front; the space below it is open. `)
-    + (v >= 2 ? `At the back of the top, a royal-blue steel back up to 1700 mm overall height: two side posts, a perforated panel with square holes in a uniform grid, triangular gussets on the worktop, a middle shelf with a front lip on small triangular brackets ${WB.br === 'down' ? 'under it' : 'standing on top of it against the posts'}, and a top shelf on small brackets under it.${WB.tools === 'tools' ? ' A set of chrome spanners, a red screwdriver and a few hooks hang on the perforated board.' : ' Nothing hangs on the board.'}` : 'No back panel.');
+  return `A heavy-duty industrial workbench, 1500 mm wide and 750 mm deep, work surface at 840 mm: a 50 mm thick top with a ${WB.top === 'white' ? 'plain white laminate' : 'green anti-static (ESD) laminate'} surface and a black rubber edge band with rounded corners, on a light grey steel frame of flat rectangular legs with a side rail low down on each end frame (no stretcher between them) and slim silver levelling feet. `
+    + (v === 3 ? 'Under the right side a light grey drawer cabinet 560 x 650 mm reaching from the floor to the top, which replaces the right pair of legs (no legs beside it), on tiny hidden feet, with 4 drawers and a key lock on the top front bar of the cabinet (2 shallow on top, 2 deep below), royal-blue drawer fronts with a full-width silver pull handle along the bottom edge of each front. ' : `Hanging under the right side of the top, a light grey drawer cabinet ${v === 1 ? '450 wide, 320 high' : '540 wide, 360 high'} with 2 drawers and a key lock on the cabinet's top front bar, royal-blue fronts with a full-width silver pull handle along the bottom edge of each front; the space below it is open. `)
+    + (v >= 2 ? `At the back of the top, a royal-blue steel back up to 1700 mm overall height, with no posts at the sides: a perforated panel with square holes in a uniform grid, triangular gussets on the worktop, a middle shelf with a front lip on small triangular brackets ${WB.br === 'down' ? 'under it' : 'standing on top of it at its ends'}, and a top shelf on small brackets under it.${WB.tools === 'tools' ? ' A set of chrome spanners, a red screwdriver and a few hooks hang on the perforated board.' : ' Nothing hangs on the board.'}` : 'No back panel.');
 }
 function describeFurn() {
   const k = FU.kind, W = Math.round((FU.w || 1600) / 10);
