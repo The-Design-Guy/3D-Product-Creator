@@ -8,7 +8,7 @@ export const config = { maxDuration: 60 };
 const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL || 'gpt-4.1-mini';
 
 const TYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn', 'lock', 'wb'];
-const OPS = ['add', 'move', 'move_to', 'rotate', 'rotate_to', 'delete', 'duplicate', 'set', 'bins', 'doors', 'tambour', 'contents', 'select', 'room', 'light', 'opening', 'clear', 'commit', 'design'];
+const OPS = ['add', 'move', 'move_to', 'rotate', 'rotate_to', 'delete', 'duplicate', 'set', 'bins', 'doors', 'tambour', 'contents', 'select', 'room', 'light', 'opening', 'obstacle', 'photo', 'clear', 'commit', 'design'];
 
 const CATALOGUE = `
 Product types (type key – Hebrew name – footprint width x depth in cm with rot 0 – what can be set):
@@ -106,7 +106,7 @@ export default async function handler(req, res) {
     random:{ type:'integer', description:'>0: open / close only this many bins chosen at random among the selected ones' },
     all:{ type:'boolean', description:'true = every bin of the product on every side' } } });
   const op = { type:'object', additionalProperties:false,
-    required:['op', 'target', 'type', 'saved_model', 'count', 'name', 'settings', 'x_cm', 'z_cm', 'rot', 'row', 'wall', 'fill', 'y_cm', 'dx_cm', 'dz_cm', 'dy_cm', 'deg', 'open', 'bins', 'which', 'door', 'text', 'room', 'light', 'opening'],
+    required:['op', 'target', 'type', 'saved_model', 'count', 'name', 'settings', 'x_cm', 'z_cm', 'rot', 'row', 'wall', 'fill', 'y_cm', 'dx_cm', 'dz_cm', 'dy_cm', 'deg', 'open', 'bins', 'which', 'door', 'text', 'room', 'light', 'opening', 'obstacle', 'photo'],
     properties:{
       op:{ type:'string', enum:OPS },
       target:nul({ type:'integer', description:'id of the product the action is about; null = the selected product (or, right after an add, the product just added)' }),
@@ -138,6 +138,16 @@ export default async function handler(req, res) {
         width_cm:nul({ type:'number' }), height_cm:nul({ type:'number' }),
         offset_cm:nul({ type:'number', description:'distance from the corner: on the back / front wall from the LEFT wall, on the side walls from the BACK wall; null = in the middle of the wall' }),
         sill_cm:nul({ type:'number', description:'window: height of its bottom above the floor' }) } }),
+      obstacle:nul({ type:'object', additionalProperties:false, required:['action', 'index', 'kind', 'x_cm', 'z_cm', 'width_cm', 'depth_cm', 'height_cm'], properties:{
+        action:{ type:'string', enum:['add', 'set', 'remove', 'clear'], description:'clear = remove every obstacle of that kind (kind null = all)' },
+        index:nul({ type:'integer', description:'set / remove: its index from room.obstacles (1-based; null = the last one of that kind)' }),
+        kind:nul({ type:'string', enum:['step', 'column', 'pipe', 'gypsum', 'tap'], description:'step = a floor-coloured display step / plinth (הגבהה, מדרגה, במה, פודסט) that products stand on; column = עמוד; pipe = vertical צינור; gypsum = new gypsum wall (קיר גבס); tap = ברז' }),
+        x_cm:nul({ type:'number', description:'its CENTRE from the left wall' }), z_cm:nul({ type:'number', description:'its CENTRE from the back wall' }),
+        width_cm:nul({ type:'number', description:'size along x (gypsum: its length, running across the room)' }), depth_cm:nul({ type:'number', description:'size along z' }),
+        height_cm:nul({ type:'number' }) } }),
+      photo:nul({ type:'object', additionalProperties:false, required:['ratio', 'view'], properties:{
+        ratio:nul({ type:'string', enum:['1:1', '3:4', '4:3', '5:4', '4:5', '2:3', '3:2', '9:16', '16:9'], description:'the picture ratio for the realistic render' }),
+        view:nul({ type:'string', enum:['front', 'three_quarter', 'top'], description:'front = straight on, slightly from above (catalogue); three_quarter = from the front-right corner' }) } }),
       light:nul({ type:'object', additionalProperties:false, required:['type', 'clock', 'elevation_deg', 'power_pct', 'power_change_pct', 'soft', 'soft_level'], properties:{
         type:nul({ type:'string', enum:['studio', 'sun', 'cloudy', 'fluor', 'bulb'], description:'סטודיו / שמש / מעונן-חלון / פלורסנט / נורה חמה' }),
         clock:nul({ type:'number', description:'where the light comes from, as a clock seen from above: 12 = from the back wall, 3 = from the right, 6 = from the front (the viewer), 9 = from the left' }),
@@ -165,6 +175,8 @@ export default async function handler(req, res) {
     '- room: change the room size / walls. "החדר שלי 4 על 6" = width 4, depth 6 (the first number is the width, across the front, unless the user says otherwise); keep the walls that are on and switch on any wall that products are put against.',
     '- add with wall: "על הקיר הימני", "צמוד לקיר האחורי", "על שלושה קירות" (= back, left, right – one add per wall). Several identical products on one wall = ONE add with count; "מלא את הקיר" / "על כל הקיר" / "על שלושה קירות" without a number → fill true. "מימין" for one more product = against the right wall. Height above the floor → y_cm.',
     '- opening: doors and windows in the walls (room.openings lists the ones there are). "תוסיף דלת כפולה ברוחב 1.6 בקיר השמאלי" → add, kind door, type double, wall left, width_cm 160. Sizes the user did not say stay null (the app uses the type\'s standard size). The app never places products in front of doors or windows.',
+    '- obstacle: columns, pipes, gypsum walls, taps and display STEPS (room.obstacles lists them, 1-based). A step ("הגבהה", "מדרגה", "במה", "פודסט", "על הגבהה של הרצפה") is a box in the floor\'s own colour that products stand ON – for catalogue photos. To put a product on a step give its add / move_to x_cm, z_cm INSIDE the step (the app lifts it onto the top). "חלקן על הגבהה" → 2–3 steps of different heights (e.g. 10, 20, 35 cm), each a little wider / deeper than the products on it, some products on them and the rest on the floor next to / in front of them, all close together as one composition.',
+    '- photo: a catalogue / product picture ("תמונה לקטלוג", "בתמונה 4:5", "צילום מוצר") → photo with the ratio (default 4:5) and view (default front); it frames the camera on the products and presets the render ratio. Put it LAST, after the products. For a catalogue shot also clear the scene first if the user asks for only these products, keep the room with no side walls, and use light type studio.',
     '- light: the lighting of the scene (only the fields the user mentioned; the rest null). "תאורת סטודיו משעה 5" → type studio, clock 5. "פחות חזקה ב-20%" → power_change_pct -20. "צל רך יותר" / "צל רק יותר" (a common mis-hearing of רך) → soft softer.',
     '- design: planning a WHOLE space or AREAS / ZONES – "תיצור לי מרחב / אולם / חנות / מחסן…", "תעשה לי אזור של עמדות עם מחיצות", "תכנן לי את החדר", "תסדר את החדר", or changing such zones ("תזיז את אזור העמדות לקיר השמאלי", "עוד שתי עמדות", "בלי העגלות" when the products are in a zone). Then return ONE op design with text = the user\'s full request, and no other op. Single products ("תוסיף מחיצה", "תזיז את זה") are NOT design.',
     '- contents also fits the kind of shop: "זו חנות ממתקים" → contents "ממתקים" on every product added (or the add\'s text field).',

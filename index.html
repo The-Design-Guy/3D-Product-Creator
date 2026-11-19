@@ -2793,6 +2793,18 @@ function snapItem(it) {
     if (oz > 0.02 && ox > -SN) { if (ox > 0 && oz > 0 && oz < ox) it.z = o.z + Math.sign(dz || 1)*(ez + q.ez); else it.x = o.x + Math.sign(dx || 1)*(ex + q.ex); }
     else if (ox > 0.02 && oz > -SN) it.z = o.z + Math.sign(dz || 1)*(ez + q.ez);
   }
+  // obstacles: a product whose centre is over a step stands on it; anything else in the way pushes it out
+  for (const o of R.obstacles || []) {
+    const b = obstBox(o), cx = (it.x + W2) * 1000, cz = (it.z + D2) * 1000;
+    if (o.kind === 'step' && cx > b.x0 && cx < b.x1 && cz > b.z0 && cz < b.z1) { if (it.onStep !== o.id || yOf(it) < b.y1 / 1000) it.y = b.y1 / 1000; it.onStep = o.id; continue; }
+    const y0 = yOf(it) * 1000, y1 = y0 + (it.h || 0) * 1000;
+    if (o.kind === 'step' ? y0 >= b.y1 - 1 : !(y1 > b.y0 + 0.5 && y0 < b.y1 - 0.5)) continue;
+    const ox = Math.min(cx + ex*1000, b.x1) - Math.max(cx - ex*1000, b.x0), oz = Math.min(cz + ez*1000, b.z1) - Math.max(cz - ez*1000, b.z0);
+    if (ox <= 0.5 || oz <= 0.5) continue;
+    if (ox < oz) it.x = (cx < (b.x0 + b.x1)/2 ? b.x0 - ex*1000 : b.x1 + ex*1000) / 1000 - W2;
+    else it.z = (cz < (b.z0 + b.z1)/2 ? b.z0 - ez*1000 : b.z1 + ez*1000) / 1000 - D2;
+  }
+  if (it.onStep && !(R.obstacles || []).some(o => { if (o.kind !== 'step') return false; const b = obstBox(o), cx = (it.x + W2) * 1000, cz = (it.z + D2) * 1000; return cx > b.x0 && cx < b.x1 && cz > b.z0 && cz < b.z1; })) { it.y = 0; delete it.onStep; }
   // walls: stick when close; always stay on the floor
   if (R.back && it.z - ez < -D2 + SN) it.z = -D2 + ez;
   if (R.left && it.x - ex < -W2 + SN) it.x = -W2 + ex;
@@ -2850,15 +2862,16 @@ function openBlocks(it, x, z, y) {
 }
 // ---------- obstacles in the room: a column, a pipe, a gypsum wall (existing / removable / new, to build for the storage) ----------
 // mm; x = centre from the left wall, z = centre from the back wall
-const OBST_HE = { column:'עמוד', pipe:'צינור', gypsum:'קיר גבס', tap:'ברז / נקודת מים' };
+const OBST_HE = { column:'עמוד', pipe:'צינור', gypsum:'קיר גבס', tap:'ברז / נקודת מים', step:'מדרגה / במה' };
 const GYP_HE = { fixed:'קיים', removable:'קיים – אפשר להסיר', new:'חדש – לבנייה לאחסון' };
 const PIPE_HE = { y:'אנכי', x:'אופקי – לרוחב החדר', z:'אופקי – לעומק החדר' };
 const roomObst = () => (SCN.room.obstacles = SCN.room.obstacles || []);
 function obstBox(o) {                       // its box in room mm: x0..x1 (from the left), z0..z1 (from the back), y0..y1
   let w, d, y0 = 0, y1 = WALL_H;
   if (o.kind === 'column') { w = o.w; d = o.round ? o.w : o.d; }
+  else if (o.kind === 'step') { w = o.w; d = o.d; y1 = o.h; }
   else if (o.kind === 'tap') { w = d = 80; y0 = o.y - 40; y1 = o.y + 60; }
-  else if (o.kind === 'gypsum') { w = o.axis === 'z' ? o.t : o.len; d = o.axis === 'z' ? o.len : o.t; }
+  else if (o.kind === 'gypsum') { w = o.axis === 'z' ? o.t : o.len; d = o.axis === 'z' ? o.len : o.t; y1 = o.h || WALL_H; }
   else if (o.axis === 'y') { w = d = o.dia; }
   else { w = o.axis === 'x' ? o.len : o.dia; d = o.axis === 'x' ? o.dia : o.len; y0 = o.y - o.dia/2; y1 = o.y + o.dia/2; }
   return { x0:o.x - w/2, x1:o.x + w/2, z0:o.z - d/2, z1:o.z + d/2, y0, y1 };
@@ -2868,12 +2881,13 @@ function obstFix(o) {
   if (o.kind === 'column') { o.w = cl(o.w, 100, 2000); o.d = cl(o.d ?? o.w, 100, 2000); }
   if (o.kind === 'pipe') { o.dia = cl(o.dia, 20, 600); if (o.axis !== 'y') { o.len = cl(o.len, 200, Math.max(R.W, R.D)); o.y = cl(o.y, o.dia/2, WALL_H - o.dia/2); } }
   if (o.kind === 'tap') o.y = cl(o.y ?? 1000, 300, 2000);
-  if (o.kind === 'gypsum') { o.t = cl(o.t || 100, 50, 300); o.len = cl(o.len, 300, o.axis === 'z' ? R.D : R.W); o.status = GYP_HE[o.status] ? o.status : 'fixed'; }
+  if (o.kind === 'step') { o.w = cl(o.w, 100, R.W); o.d = cl(o.d, 100, R.D); o.h = cl(o.h, 20, 2000); }
+  if (o.kind === 'gypsum') { o.t = cl(o.t || 100, 50, 300); o.len = cl(o.len, 300, o.axis === 'z' ? R.D : R.W); o.status = GYP_HE[o.status] ? o.status : 'fixed'; o.h = cl(o.h || WALL_H, 300, WALL_H); }
   const b = obstBox(o), hw = (b.x1 - b.x0)/2, hd = (b.z1 - b.z0)/2;
   o.x = cl(o.x, hw, R.W - hw); o.z = cl(o.z, hd, R.D - hd);
 }
 function addObst(kind, extra = {}) {
-  const R = SCN.room, base = { column:{ w:400, d:400, round:false }, pipe:{ axis:'y', dia:110, len:3000, y:2500 }, gypsum:{ axis:'x', len:3000, t:100, status:'new' }, tap:{ y:1000 } }[kind];
+  const R = SCN.room, base = { column:{ w:400, d:400, round:false }, pipe:{ axis:'y', dia:110, len:3000, y:2500 }, gypsum:{ axis:'x', len:3000, t:100, status:'new' }, tap:{ y:1000 }, step:{ w:1000, d:600, h:300 } }[kind];
   const o = { id:Date.now() + Math.random(), kind, x:R.W/2, z:R.D/2, ...base };
   if (kind === 'pipe') { o.x = 150; o.z = 150; }
   if (kind === 'tap') { o.z = 40; }                               // on the back wall                  // a pipe usually runs in a corner / along a wall
@@ -2884,32 +2898,34 @@ function addObst(kind, extra = {}) {
 function obstHit(it, x, z, y) {
   const R = SCN.room; if (!R.obstacles || !R.obstacles.length) return false;
   const { ex, ez } = extents(it), cx = (x + R.W/2000) * 1000, cz = (z + R.D/2000) * 1000, y0 = y * 1000, y1 = (y + (it.h || 0)) * 1000;
-  return R.obstacles.some(o => { const b = obstBox(o); return cx + ex*1000 > b.x0 + 0.5 && cx - ex*1000 < b.x1 - 0.5 && cz + ez*1000 > b.z0 + 0.5 && cz - ez*1000 < b.z1 - 0.5 && y1 > b.y0 + 0.5 && y0 < b.y1 - 0.5; });
+  return R.obstacles.some(o => { const b = obstBox(o); if (o.kind === 'step' && y0 >= b.y1 - 1) return false; return cx + ex*1000 > b.x0 + 0.5 && cx - ex*1000 < b.x1 - 0.5 && cz + ez*1000 > b.z0 + 0.5 && cz - ez*1000 < b.z1 - 0.5 && y1 > b.y0 + 0.5 && y0 < b.y1 - 0.5; });
 }
 const obConcMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#c9c6c0'), roughness:0.92 });
 const obPipeMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#9ea4a9'), roughness:0.35, metalness:0.65 });
 const obGypMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#f1efeb'), roughness:0.9 });
 const obGypNewMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#f6f6f4'), roughness:0.85, transparent:true, opacity:0.82 });
+const OBST_PARTS = [];                    // every mesh of an obstacle, for Ctrl + drag
 function buildObstacles(world) {
-  const R = SCN.room;
+  const R = SCN.room; OBST_PARTS.length = 0;
   for (const o of R.obstacles || []) {
     obstFix(o);
     const b = obstBox(o), w = (b.x1 - b.x0)/1000, d = (b.z1 - b.z0)/1000, h = (b.y1 - b.y0)/1000;
     const cx = (b.x0 + b.x1)/2000 - R.W/2000, cz = (b.z0 + b.z1)/2000 - R.D/2000, cy = (b.y0 + b.y1)/2000;
     let m;
     if (o.kind === 'tap') {                                     // a chrome tap on a short pipe out of the wall
-      const g = new THREE.Group(); g.position.set(cx, o.y/1000, cz); world.add(g);
+      const g = new THREE.Group(); g.position.set(cx, o.y/1000, cz); world.add(g); g.userData.obst = o; OBST_PARTS.push(g);
       const p1 = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.07, 12), obPipeMat); p1.rotation.x = Math.PI/2; g.add(p1);
       const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.06, 12), obPipeMat); sp.position.set(0, -0.025, 0.035); g.add(sp);
       const hd = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 14), obPipeMat); hd.position.set(0, 0.02, 0.01); g.add(hd);
       continue;
     }
-    if (o.kind === 'column') m = new THREE.Mesh(o.round ? new THREE.CylinderGeometry(w/2, w/2, h, 32) : new THREE.BoxGeometry(w, h, d), obConcMat);
+    if (o.kind === 'step') m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), floorMat);   // the floor's own material: it reads as part of the floor
+    else if (o.kind === 'column') m = new THREE.Mesh(o.round ? new THREE.CylinderGeometry(w/2, w/2, h, 32) : new THREE.BoxGeometry(w, h, d), obConcMat);
     else if (o.kind === 'gypsum') m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), o.status === 'new' ? obGypNewMat : obGypMat);
     else { m = new THREE.Mesh(new THREE.CylinderGeometry(o.dia/2000, o.dia/2000, o.axis === 'y' ? h : o.len/1000, 20), obPipeMat); if (o.axis === 'x') m.rotation.z = Math.PI/2; if (o.axis === 'z') m.rotation.x = Math.PI/2; }
-    m.position.set(cx, cy, cz); m.castShadow = m.receiveShadow = true; world.add(m);
+    m.position.set(cx, cy, cz); m.castShadow = m.receiveShadow = true; world.add(m); m.userData.obst = o; OBST_PARTS.push(m);
     if (o.kind === 'gypsum' && o.status === 'new') {               // a new wall: an outline on the floor marks where it will be built
-      const ln = new THREE.Mesh(new THREE.BoxGeometry(w + 0.04, 0.004, d + 0.04), new THREE.MeshBasicMaterial({ color:0x6d8fd8 })); ln.position.set(cx, 0.002, cz); world.add(ln);
+      const ln = new THREE.Mesh(new THREE.BoxGeometry(w + 0.04, 0.004, d + 0.04), new THREE.MeshBasicMaterial({ color:0x6d8fd8 })); ln.position.set(cx, 0.002, cz); world.add(ln); ln.userData.obst = o; OBST_PARTS.push(ln);
     }
   }
 }
@@ -3313,6 +3329,16 @@ canvas.addEventListener('pointerdown', (e) => {
   if (mode !== 'scene' || e.button !== 0) return;
   dragRay.setFromCamera(pointerNDC(e), camera);
   const hits = dragRay.intersectObjects([...ITEM_GROUPS.values()].filter(g => g.visible), true);
+  if ((e.ctrlKey || e.metaKey) && OBST_PARTS.length) {           // Ctrl + drag on a column / pipe / gypsum wall / tap: move it
+    const oh = dragRay.intersectObjects(OBST_PARTS, true)[0];
+    if (oh && (!hits.length || oh.distance < hits[0].distance) && dragRay.ray.intersectPlane(floorPlane, fHit)) {
+      let m = oh.object; while (m && !m.userData.obst) m = m.parent;
+      const o = m.userData.obst, R = SCN.room;
+      e.stopImmediatePropagation(); clearTimeout(deselT); controls.enabled = false;
+      odrag = { o, dx:o.x - (fHit.x + R.W/2000) * 1000, dz:o.z - (fHit.z + R.D/2000) * 1000, sx:e.clientX, sy:e.clientY, moved:false };
+      return;
+    }
+  }
   if (!hits.length) return;
   let g = hits[0].object; while (g && !g.userData.itemId) g = g.parent;
   if (!g) return;
@@ -3328,6 +3354,25 @@ canvas.addEventListener('pointerdown', (e) => {
   clearTimeout(deselT);
   controls.enabled = false;
 }, { capture:true });
+let odrag = null;
+addEventListener('pointermove', (e) => {
+  if (!odrag) return;
+  if (!odrag.moved && Math.hypot(e.clientX - odrag.sx, e.clientY - odrag.sy) < 5) return;
+  if (!odrag.moved) { pushRoomUndo(); odrag.moved = true; }
+  canvas.style.cursor = 'grabbing';
+  dragRay.setFromCamera(pointerNDC(e), camera);
+  if (!dragRay.ray.intersectPlane(floorPlane, fHit)) return;
+  const o = odrag.o, R = SCN.room;
+  o.x = (fHit.x + R.W/2000) * 1000 + odrag.dx; o.z = (fHit.z + R.D/2000) * 1000 + odrag.dz; obstFix(o);
+  const b = obstBox(o), cx = (b.x0 + b.x1)/2000 - R.W/2000, cz = (b.z0 + b.z1)/2000 - R.D/2000;
+  for (const m of OBST_PARTS) if (m.userData.obst === o) { m.position.x = cx; m.position.z = cz; }
+  renderScene();
+});
+addEventListener('pointerup', () => {
+  if (!odrag) return;
+  const was = odrag; odrag = null; controls.enabled = true; canvas.style.cursor = '';
+  if (was.moved) { renderObstacles(); rebuild(true); }
+});
 addEventListener('pointermove', (e) => {
   if (!sdrag) return;
   if (!sdrag.moved && Math.hypot(e.clientX - sdrag.sx, e.clientY - sdrag.sy) < 5) return;
@@ -3337,8 +3382,8 @@ addEventListener('pointermove', (e) => {
   if (dragRay.ray.intersectPlane(floorPlane, fHit)) moveSel(it => { it.x = fHit.x + sdrag.dx; it.z = fHit.z + sdrag.dz; });
 });
 // holding Ctrl over the scene shows a grab cursor
-addEventListener('keydown', (e) => { if ((e.key === 'Control' || e.key === 'Meta') && mode === 'scene' && !sdrag) canvas.style.cursor = 'grab'; });
-addEventListener('keyup', (e) => { if ((e.key === 'Control' || e.key === 'Meta') && !sdrag) canvas.style.cursor = ''; });
+addEventListener('keydown', (e) => { if ((e.key === 'Control' || e.key === 'Meta') && mode === 'scene' && !sdrag && !odrag) canvas.style.cursor = 'grab'; });
+addEventListener('keyup', (e) => { if ((e.key === 'Control' || e.key === 'Meta') && !sdrag && !odrag) canvas.style.cursor = ''; });
 addEventListener('blur', () => { if (!sdrag) canvas.style.cursor = ''; });
 let deselT = 0;
 addEventListener('pointerup', () => {
@@ -3361,10 +3406,11 @@ function describeScene() {
   const R = SCN.room, walls = ['back', 'left', 'right'].filter(k => R[k]);
   const opTxt = (R.openings || []).map(o => `a ${OPEN_EN[o.kind][o.type]} ${Math.round(o.w/10)} cm wide and ${Math.round(o.h/10)} cm high in the ${o.wall} wall, ${Math.round(o.off/10)} cm from the ${o.wall === 'left' || o.wall === 'right' ? 'back' : 'left'} corner${o.kind === 'window' ? `, ${Math.round(o.sill/10)} cm above the floor` : ''}`);
   const obTxt = (R.obstacles || []).map(o => { const at = `centred ${Math.round(o.x/10)} cm from the left wall and ${Math.round(o.z/10)} cm from the back wall`;
-    return o.kind === 'tap' ? `a small chrome water tap on the wall ${Math.round(o.y/10)} cm above the floor, ${at}`
+    return o.kind === 'step' ? `a display step / plinth ${Math.round(o.w/10)} x ${Math.round(o.d/10)} cm and ${Math.round(o.h/10)} cm high, made of exactly the same material and colour as the floor so it blends into it (catalogue-photo style), ${at}`
+      : o.kind === 'tap' ? `a small chrome water tap on the wall ${Math.round(o.y/10)} cm above the floor, ${at}`
       : o.kind === 'column' ? `a ${o.round ? 'round' : 'square'} grey concrete structural column ${Math.round(o.w/10)} cm${o.round ? ' in diameter' : ' x ' + Math.round(o.d/10) + ' cm'}, floor to ceiling, ${at}`
       : o.kind === 'pipe' ? (o.axis === 'y' ? `a vertical grey metal pipe ${Math.round(o.dia/10)} cm thick, floor to ceiling, ${at}` : `a horizontal grey metal pipe ${Math.round(o.dia/10)} cm thick and ${Math.round(o.len/10)} cm long, ${Math.round(o.y/10)} cm above the floor, running ${o.axis === 'x' ? 'across' : 'along the depth of'} the room, ${at}`)
-      : `a plain white gypsum partition wall ${Math.round(o.len/10)} cm long and ${Math.round(o.t/10)} cm thick, floor to ceiling, running ${o.axis === 'x' ? 'across' : 'along the depth of'} the room, ${at}`; });
+      : `a plain white gypsum partition wall ${Math.round(o.len/10)} cm long and ${Math.round(o.t/10)} cm thick, ${(o.h || WALL_H) >= WALL_H ? 'floor to ceiling' : Math.round(o.h/10) + ' cm high (not up to the ceiling)'}, running ${o.axis === 'x' ? 'across' : 'along the depth of'} the room, ${at}`; });
   const scanTxt = R.scan && R.scan.en ? `The room looks like the real one in the room reference photos: ${R.scan.en}\n` : '';
   const lines = [`${scanTxt}${obTxt.length ? 'Fixed elements that must appear exactly where they are in the base image: ' + obTxt.join('; ') + '.\n' : ''}${opTxt.length ? 'Openings that must appear exactly where they are in the base image: ' + opTxt.join('; ') + '.\n' : ''}A realistic interior scene: a room about ${R.W/1000} x ${R.D/1000} m with a smooth floor${walls.length ? ' and plain light walls (' + walls.join(', ') + ')' : ''}. It contains ${SCN.items.filter(i => !i.hidden).length} products, arranged exactly as in the image:`];
   const saved = capAll(), m = mode;
@@ -5341,7 +5387,7 @@ $('renderBtn').onclick = () => {
     <div class="lbl">רקע</div>
     <div class="seg2" id="rBg"><button data-v="transparent"${mode === 'scene' ? '' : ' class="on"'}>שקוף</button><button data-v="studio"${mode === 'scene' ? ' class="on"' : ''}>סטודיו</button></div>
     <div class="lbl">יחס תמונה</div>
-    <div class="ratios" id="rRatio">${ratios.map(r => `<button data-v="${r}" class="${r === '4:5' ? 'on' : ''}">${r === 'custom' ? 'CUSTOM' : r}</button>`).join('')}</div>
+    <div class="ratios" id="rRatio">${ratios.map(r => `<button data-v="${r}" class="${r === (PHOTO_PREF.ratio || '4:5') ? 'on' : ''}">${r === 'custom' ? 'CUSTOM' : r}</button>`).join('')}</div>
     <div class="pair" id="rCustom" hidden>
       <label class="fld">רוחב (px)<input type="number" id="rW" min="256" max="3840" step="16" value="2048"></label>
       <label class="fld">גובה (px)<input type="number" id="rH" min="256" max="3840" step="16" value="1536"></label>
@@ -5390,7 +5436,7 @@ $('renderBtn').onclick = () => {
       <button class="btn" data-close>ביטול</button>
     </div>`, (card, close) => {
     RWRAP._onClose = mountNotes(card);
-    const st = { bg: mode === 'scene' ? 'studio' : 'transparent', ratio:'4:5', res: mode === 'scene' ? 'high' : 'std', dpi:300 };   // product photo: transparent 4:5; a scene: studio 4:5, high quality
+    const st = { bg: mode === 'scene' ? 'studio' : 'transparent', ratio:PHOTO_PREF.ratio || '4:5', res: mode === 'scene' ? 'high' : 'std', dpi:300 };   // product photo: transparent 4:5; a scene: studio 4:5, high quality
     const q = (sel) => card.querySelector(sel);
     const seg = (id, key, after) => card.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => {
       st[key] = key === 'dpi' ? +b.dataset.v : b.dataset.v;
@@ -6203,17 +6249,18 @@ function renderObstacles() {
   const num = (f, v, l) => `<label>${l}<input type="number" data-f="${f}" value="${Math.round(v / 10)}" min="0" step="1"></label>`;
   const head = (o) => o.kind === 'column' ? `<select data-f="round">${opt(!!o.round, false, 'מרובע')}${opt(!!o.round, true, 'עגול')}</select>`
     : o.kind === 'pipe' ? `<select data-f="axis">${Object.entries(PIPE_HE).map(([k, t]) => opt(o.axis, k, t)).join('')}</select>`
-    : o.kind === 'tap' ? '<span style="flex:1"></span>'
+    : o.kind === 'tap' || o.kind === 'step' ? '<span style="flex:1"></span>'
     : `<select data-f="status">${Object.entries(GYP_HE).map(([k, t]) => opt(o.status, k, t)).join('')}</select>`;
   const fields = (o) => num('x', o.x, 'מרכז – מהקיר השמאלי (ס"מ)') + num('z', o.z, 'מרכז – מהקיר האחורי (ס"מ)') + (
     o.kind === 'column' ? num('w', o.w, o.round ? 'קוטר (ס"מ)' : 'רוחב (ס"מ)') + (o.round ? '' : num('d', o.d, 'עומק (ס"מ)'))
     : o.kind === 'tap' ? num('y', o.y, 'גובה מהרצפה (ס"מ)')
+    : o.kind === 'step' ? num('w', o.w, 'רוחב (ס"מ)') + num('d', o.d, 'עומק (ס"מ)') + num('h', o.h, 'גובה (ס"מ)')
     : o.kind === 'pipe' ? num('dia', o.dia, 'קוטר (ס"מ)') + (o.axis === 'y' ? '' : num('len', o.len, 'אורך (ס"מ)') + num('y', o.y, 'גובה מהרצפה (ס"מ)'))
-    : `<label>כיוון<select data-f="axis">${opt(o.axis, 'x', 'לרוחב החדר')}${opt(o.axis, 'z', 'לעומק החדר')}</select></label>` + num('len', o.len, 'אורך (ס"מ)') + num('t', o.t, 'עובי (ס"מ)'));
-  box.innerHTML = (list.length ? '' : '<div class="opempty">אין מכשולים בחדר (עמוד, צינור, קיר גבס, ברז).</div>') + list.map(o => `<div class="oprow" data-id="${o.id}">
+    : `<label>כיוון<select data-f="axis">${opt(o.axis, 'x', 'לרוחב החדר')}${opt(o.axis, 'z', 'לעומק החדר')}</select></label>` + num('len', o.len, 'אורך (ס"מ)') + num('t', o.t, 'עובי (ס"מ)') + num('h', o.h || WALL_H, 'גובה (ס"מ)'));
+  box.innerHTML = (list.length ? '' : '<div class="opempty">אין מכשולים בחדר (עמוד, צינור, קיר גבס, ברז, מדרגה).</div>') + list.map(o => `<div class="oprow" data-id="${o.id}">
       <div class="oph"><b>${OBST_HE[o.kind]}</b>${head(o)}<button class="opdel" title="הסרה" aria-label="הסרה">✕</button></div>
       <div class="opf">${fields(o)}</div></div>`).join('')
-    + `<div class="opadd"><button class="btn" data-add="column">+ עמוד</button><button class="btn" data-add="pipe">+ צינור</button><button class="btn" data-add="gypsum">+ קיר גבס</button><button class="btn" data-add="tap">+ ברז</button></div>`;
+    + `<div class="opadd"><button class="btn" data-add="column">+ עמוד</button><button class="btn" data-add="pipe">+ צינור</button><button class="btn" data-add="gypsum">+ קיר גבס</button><button class="btn" data-add="tap">+ ברז</button><button class="btn" data-add="step">+ מדרגה</button></div>`;
   const changed = () => { pushRoomUndo(); rebuild(true); renderObstacles(); };
   box.querySelectorAll('.oprow').forEach(row => {
     const o = list.find(x => String(x.id) === row.dataset.id); if (!o) return;
@@ -7555,8 +7602,9 @@ function executeOps(ops) {
 }
 function executeOps0(ops, walled, WROT) {
   const sel0 = SCN.items.find(i => i.id === SCN.sel); if (sel0) sel0.cfg = capCfg(sel0.type);
-  const W2 = SCN.room.W/2000, D2 = SCN.room.D/2000, added = [], rows = [], post = [];
-  let lastAdded = null, done = 0;
+  let W2 = SCN.room.W/2000, D2 = SCN.room.D/2000;                 // updated when a room op resizes the room
+  const added = [], rows = [], post = [];
+  let lastAdded = null, done = 0, photoReq = null;
   const target = (o) => SCN.items.find(i => i.id === (o.target ?? (lastAdded ? lastAdded.id : SCN.sel)));
   for (const o of ops) {
     const it = target(o);
@@ -7564,9 +7612,11 @@ function executeOps0(ops, walled, WROT) {
       case 'clear': selectItem(null, true); SCN.items = []; done++; break;
       case 'room': if (o.room) { const R = SCN.room, r = o.room;
         R.W = Math.max(2000, Math.min(100000, Math.round(r.width_m * 1000) || R.W)); R.D = Math.max(2000, Math.min(100000, Math.round(r.depth_m * 1000) || R.D));
-        R.back = !!r.back; R.left = !!r.left; R.right = !!r.right; if (r.front !== undefined && r.front !== null) R.front = !!r.front; done++; } break;
+        R.back = !!r.back; R.left = !!r.left; R.right = !!r.right; if (r.front !== undefined && r.front !== null) R.front = !!r.front; W2 = R.W/2000; D2 = R.D/2000; done++; } break;
       case 'light': if (o.light) { aiLight(o.light); done++; } break;
       case 'opening': if (o.opening) { if (aiOpening(o.opening)) done++; } break;
+      case 'obstacle': if (o.obstacle) { if (aiObstacle(o.obstacle)) { done++; rebuild(true); } } break;
+      case 'photo': photoReq = o.photo || {}; done++; break;
       case 'add': {
         if (!o.type || !TYPE_NAME[o.type]) break;
         const cfg = cfgFromPlan({ type:o.type, saved_model:o.saved_model || '', settings:o.settings || {} }), n = o.count || 1, grp = [];
@@ -7632,6 +7682,7 @@ function executeOps0(ops, walled, WROT) {
     }
   }
   renderScene();
+  if (photoReq) setTimeout(() => framePhoto(photoReq), 60);
   if (!done) VOICE.undo.pop();
   return done;
 }
@@ -7911,6 +7962,9 @@ function opLines(ops) {
         return `<li>${q.action === 'remove' ? 'הסרת' : q.action === 'set' ? 'שינוי' : 'הוספת'} ${what}${q.wall ? ' בקיר ה' + WALL_HE[q.wall] : ''}${q.width_cm ? ` · רוחב ${q.width_cm} ס"מ` : ''}${q.height_cm ? ` · גובה ${q.height_cm} ס"מ` : ''}</li>`; }
       case 'light': return `<li>תאורה${o.light && o.light.type ? ': ' + (LIGHT_TYPES[o.light.type] || {}).he : ''}${o.light && o.light.clock ? ` מכיוון שעה ${o.light.clock}` : ''}${o.light && o.light.power_change_pct ? ` · עוצמה ${o.light.power_change_pct > 0 ? '+' : ''}${o.light.power_change_pct}%` : ''}${o.light && o.light.soft ? ` · צל ${o.light.soft === 'softer' ? 'רך' : 'חד'} יותר` : ''}</li>`;
       case 'clear': return `<li><b>ריקון הסצנה</b></li>`;
+      case 'obstacle': { const q = o.obstacle || {}; const what = OBST_HE[q.kind] || 'מכשול';
+        return `<li>${q.action === 'clear' ? 'הסרת כל ה' + (q.kind ? what : 'מכשולים') : (q.action === 'remove' ? 'הסרת ' : q.action === 'set' ? 'שינוי ' : 'הוספת ') + what}${q.width_cm ? ` · ${q.width_cm}${q.depth_cm ? '×' + q.depth_cm : ''} ס"מ` : ''}${q.height_cm ? ` · גובה ${q.height_cm} ס"מ` : ''}</li>`; }
+      case 'photo': return `<li>מסגור לצילום קטלוג${o.photo && o.photo.ratio ? ' · יחס ' + o.photo.ratio : ''}</li>`;
     }
     return '';
   }).join('');
@@ -8149,9 +8203,44 @@ function designSummary(plan, lay, room) {
 }
 // the obstacles as the AI sees them (cm; x / z = the centre from the left / back wall)
 function obstAI(R) {
-  return (R.obstacles || []).map(o => { const b = obstBox(o), cm = (v) => Math.round(v/10);
-    return { kind:o.kind, ...(o.kind === 'gypsum' ? { status:o.status, removable:o.status === 'removable', to_build:o.status === 'new' } : {}), ...(o.kind === 'pipe' ? { axis:o.axis } : {}), ...(o.kind === 'tap' ? { water_point:true } : {}),
+  return (R.obstacles || []).map((o, k) => { const b = obstBox(o), cm = (v) => Math.round(v/10);
+    return { index:k + 1, kind:o.kind, centre_x_cm:cm(o.x), centre_z_cm:cm(o.z), ...(o.kind === 'gypsum' ? { status:o.status, removable:o.status === 'removable', to_build:o.status === 'new' } : {}), ...(o.kind === 'pipe' ? { axis:o.axis } : {}), ...(o.kind === 'tap' ? { water_point:true } : {}), ...(o.kind === 'step' ? { display_step:true, products_may_stand_on_top:true } : {}),
       x0_cm:cm(b.x0), x1_cm:cm(b.x1), z0_cm:cm(b.z0), z1_cm:cm(b.z1), from_floor_cm:cm(b.y0), to_cm:cm(b.y1) }; });
+}
+// the AI adds / changes / removes an obstacle (cm in, mm stored)
+function aiObstacle(q) {
+  const list = roomObst(), cm = (v) => v === null || v === undefined ? undefined : v * 10;
+  if (q.action === 'clear') { SCN.room.obstacles = list.filter(o => q.kind && o.kind !== q.kind); return true; }
+  const pick = () => q.index ? list[q.index - 1] : [...list].reverse().find(o => !q.kind || o.kind === q.kind);
+  if (q.action === 'remove') { const o = pick(); if (!o) return false; SCN.room.obstacles = list.filter(x => x !== o); return true; }
+  const map = (o) => {
+    const set = (k, v) => { if (v !== undefined) o[k] = v; };
+    set('x', cm(q.x_cm)); set('z', cm(q.z_cm));
+    if (o.kind === 'step' || o.kind === 'column') { set('w', cm(q.width_cm)); set('d', cm(q.depth_cm)); }
+    if (o.kind === 'step' || o.kind === 'gypsum') set('h', cm(q.height_cm));
+    if (o.kind === 'gypsum') { if (q.depth_cm && (!q.width_cm || q.depth_cm > q.width_cm)) { o.axis = 'z'; o.len = cm(q.depth_cm); } else set('len', cm(q.width_cm)); }
+    if (o.kind === 'pipe') set('dia', cm(q.width_cm));
+    if (o.kind === 'tap') set('y', cm(q.height_cm));
+  };
+  if (q.action === 'set') { const o = pick(); if (!o) return false; map(o); obstFix(o); return true; }
+  if (!q.kind || !OBST_HE[q.kind]) return false;
+  const o = addObst(q.kind); map(o); obstFix(o); return true;
+}
+// catalogue photo: frame the camera on the products (and their steps) for the chosen ratio, preset the render ratio
+const PHOTO_PREF = { ratio:null };
+function framePhoto(q) {
+  if (q.ratio) PHOTO_PREF.ratio = q.ratio;
+  const box = new THREE.Box3();
+  for (const it of SCN.items) { const g = ITEM_GROUPS.get(it.id); if (g && g.visible && !it.hidden) box.expandByObject(g); }
+  for (const m of OBST_PARTS) if (m.userData.obst && m.userData.obst.kind === 'step') box.expandByObject(m);
+  if (box.isEmpty() || FREE.on) return;
+  const c = box.getCenter(new THREE.Vector3()), sph = box.getBoundingSphere(new THREE.Sphere());
+  const [a, b] = (PHOTO_PREF.ratio || '4:5').split(':').map(Number), asp = Math.min(camera.aspect, a / b);
+  const dir = (q.view === 'top' ? new THREE.Vector3(0, 1.2, 0.6) : q.view === 'three_quarter' ? new THREE.Vector3(0.65, 0.38, 1) : new THREE.Vector3(0, 0.3, 1)).normalize();
+  const vf = THREE.MathUtils.degToRad(camera.fov) / 2, hf = Math.atan(Math.tan(vf) * asp);
+  const dist = sph.radius / Math.sin(Math.min(vf, hf)) * 1.06;
+  flyTo(c.clone().addScaledVector(dir, dist), c, camera.fov);
+  toast(`מוכן לצילום קטלוג – לחץ Render (יחס ${PHOTO_PREF.ratio || '4:5'})`);
 }
 // ask the designer, show the plan, build it on approval
 async function designFlow(text) {
@@ -8241,7 +8330,7 @@ function renderSceneTypes() {
 function sceneSnap() {
   const s = SCN.items.find(i => i.id === SCN.sel); if (s) s.cfg = capCfg(s.type);
   return { room:deep(SCN.room), next:SCN.next, shots:deep(SCN.shots || []), zones:deep(SCN.zones || []),
-    items:SCN.items.map(({ id, type, cfg, x, z, y, rot, hidden, name, contents, zone }) => deep({ id, type, cfg, x, z, y:y || 0, rot, hidden:!!hidden, name, contents:contents || '', ...(zone ? { zone } : {}) })) };
+    items:SCN.items.map(({ id, type, cfg, x, z, y, rot, hidden, name, contents, zone, onStep }) => deep({ id, type, cfg, x, z, y:y || 0, rot, hidden:!!hidden, name, contents:contents || '', ...(zone ? { zone } : {}), ...(onStep ? { onStep } : {}) })) };
 }
 async function uploadImage(src, kind) {
   if (!src) return null;
