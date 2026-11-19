@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>צילום מלאי – HISTORGIC</title>
+<link rel="icon" href="brand/favicon.svg" type="image/svg+xml">
+<style>
+  :root { --ink:#111417; --muted:#6b7378; --line:#e3e6e8; --blue:#0088FF; --ok:#1aa66b; --bad:#d64545; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:#fff; color:var(--ink); font-family:system-ui, -apple-system, "Segoe UI", Heebo, Arial, sans-serif; -webkit-tap-highlight-color:transparent; }
+  button, input, select, textarea { font:inherit; }
+  .screen { min-height:100vh; padding:max(18px, env(safe-area-inset-top)) 18px max(110px, calc(env(safe-area-inset-bottom) + 100px)); }
+  .screen[hidden] { display:none; }
+  h1 { font-size:22px; margin:16px 0 8px; } h2 { font-size:18px; margin:6px 0 10px; }
+  p { color:var(--muted); line-height:1.55; margin:0 0 12px; font-size:15px; }
+  .logo { height:26px; }
+  .steps { list-style:none; padding:0; margin:16px 0 20px; display:grid; gap:12px; }
+  .steps li { display:flex; gap:12px; align-items:flex-start; font-size:15px; line-height:1.45; }
+  .steps b { flex:none; width:26px; height:26px; border-radius:50%; background:var(--ink); color:#fff; display:grid; place-items:center; font-size:13px; }
+  .btn { display:block; width:100%; border:0; border-radius:14px; padding:15px; font-size:17px; font-weight:700; background:var(--ink); color:#fff; cursor:pointer; text-align:center; }
+  .btn.sec { background:#f1f3f4; color:var(--ink); } .btn.blue { background:var(--blue); }
+  .btn:disabled { opacity:.45; }
+  .bar { position:fixed; inset-inline:0; bottom:0; padding:12px 18px max(14px, env(safe-area-inset-bottom)); background:linear-gradient(#fff0, #fff 30%); display:grid; gap:8px; }
+  .err { color:var(--bad); font-size:14px; margin:8px 0; min-height:1em; }
+  .tip { background:#f4f8ff; border:1px solid #d6e6fb; border-radius:12px; padding:10px 12px; font-size:13px; line-height:1.5; color:#24476b; margin:10px 0 14px; }
+  .list { display:grid; gap:10px; }
+  .item { display:flex; gap:10px; align-items:center; border:1px solid var(--line); border-radius:14px; padding:8px; }
+  .item i { flex:none; width:64px; height:64px; border-radius:10px; background:#eef0f1 center/cover no-repeat; position:relative; }
+  .item i.busy::after { content:''; position:absolute; inset:auto 4px 4px auto; width:10px; height:10px; border-radius:50%; background:#f5b400; }
+  .item i.up::after { content:''; position:absolute; inset:auto 4px 4px auto; width:10px; height:10px; border-radius:50%; background:var(--ok); }
+  .item i.err::after { content:'!'; position:absolute; inset:auto 2px 2px auto; width:16px; height:16px; border-radius:50%; background:var(--bad); color:#fff; font-size:11px; display:grid; place-items:center; font-style:normal; }
+  .item div { flex:1; min-width:0; font-size:14px; line-height:1.4; }
+  .item small { display:block; color:var(--muted); font-size:12px; }
+  .item button { border:0; background:none; color:var(--muted); font-size:15px; padding:6px; }
+  .empty { text-align:center; color:var(--muted); padding:30px 10px; border:1px dashed var(--line); border-radius:14px; }
+  .pic { width:100%; max-height:42vh; object-fit:contain; border-radius:14px; background:#f3f4f5; display:block; margin-bottom:12px; }
+  label.f { display:flex; flex-direction:column; gap:5px; font-size:13px; color:var(--muted); margin-bottom:12px; }
+  label.f select, label.f textarea, label.f input { font-size:16px; color:var(--ink); border:1px solid var(--line); border-radius:12px; padding:11px; background:#fff; width:100%; }
+  .notebox { position:relative; } .notebox textarea { padding-inline-end:54px; min-height:84px; resize:vertical; }
+  .mic { position:absolute; inset-inline-end:8px; bottom:8px; width:40px; height:40px; border-radius:50%; border:0; background:#f1f3f4; font-size:18px; }
+  .mic.on { background:var(--bad); color:#fff; animation:pl 1s infinite; } @keyframes pl { 50% { opacity:.6; } }
+  details { margin-bottom:12px; } summary { font-size:14px; color:var(--muted); cursor:pointer; padding:4px 0; }
+  .dims { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-top:8px; }
+  .dims input { font-size:16px; border:1px solid var(--line); border-radius:10px; padding:10px; width:100%; }
+  table { width:100%; border-collapse:collapse; font-size:14px; } td, th { padding:6px 4px; border-bottom:1px solid var(--line); text-align:start; vertical-align:middle; }
+  th { color:var(--muted); font-weight:500; font-size:12px; } td input { width:100%; font-size:15px; border:1px solid var(--line); border-radius:8px; padding:7px; }
+  td.q input { width:70px; } td small { color:var(--muted); font-size:11px; display:block; }
+  .qs { background:#fff8e6; border:1px solid #f0dfb0; border-radius:12px; padding:10px 12px; font-size:14px; margin:10px 0; }
+  .spinner { width:42px; height:42px; border-radius:50%; border:4px solid #e3e6e8; border-top-color:var(--ink); animation:sp .9s linear infinite; margin:60px auto 16px; } @keyframes sp { to { transform:rotate(360deg); } }
+  .done { text-align:center; padding-top:60px; } .done .ok { width:70px; height:70px; border-radius:50%; background:var(--ok); color:#fff; display:grid; place-items:center; font-size:38px; margin:0 auto 18px; }
+</style>
+</head>
+<body>
+
+<section class="screen" id="sStart">
+  <img class="logo" src="brand/logo.svg" alt="HISTORGIC">
+  <h1>צילום מלאי</h1>
+  <p>מצלמים כל סוג פריט שצריך לאחסן, ואומרים כמה יש ממנו – והמערכת מתאימה פתרון אחסון.</p>
+  <ol class="steps">
+    <li><b>1</b><span>הניחו ליד הפריט חפץ שהמידות שלו ידועות – <strong>כרטיס אשראי</strong>, מטבע, שטר, סרגל או דף A4 – צמוד אליו ובאותו מישור.</span></li>
+    <li><b>2</b><span>צלמו ישר מלמעלה או מהצד, שהפריט וחפץ הייחוס ייראו במלואם.</span></li>
+    <li><b>3</b><span>כתבו או אמרו כמה יש ממנו ומה חשוב לדעת (נשלף כל יום, יקר, נעול…).</span></li>
+  </ol>
+  <button class="btn" id="startBtn">התחלה</button>
+  <div class="err" id="startErr"></div>
+</section>
+
+<section class="screen" id="sList" hidden>
+  <h2>הפריטים שצולמו</h2>
+  <div class="list" id="list"></div>
+  <div class="err" id="listErr"></div>
+  <div class="bar">
+    <label class="btn blue" for="file">📷 צילום פריט</label>
+    <button class="btn" id="analyzeBtn" disabled>סיימתי – לניתוח</button>
+  </div>
+</section>
+
+<section class="screen" id="sItem" hidden>
+  <img class="pic" id="pic" alt="">
+  <label class="f">מה הנחתם ליד הפריט?<select id="ref"></select></label>
+  <div class="tip" id="refTip"></div>
+  <label class="f">כמה יש ממנו, ומה עוד חשוב
+    <div class="notebox"><textarea id="note" placeholder="למשל: בערך 200 קופסאות, שולפים כל יום"></textarea><button class="mic" id="mic" type="button" aria-label="הקלטה" hidden>🎙</button></div></label>
+  <details><summary>יש לכם מידות מדויקות? (לא חובה)</summary>
+    <div class="dims"><input id="dl" type="number" inputmode="decimal" placeholder="אורך ס״מ"><input id="dw" type="number" inputmode="decimal" placeholder="רוחב ס״מ"><input id="dh" type="number" inputmode="decimal" placeholder="גובה ס״מ"></div></details>
+  <div class="bar">
+    <button class="btn" id="saveBtn">שמירה</button>
+    <label class="btn sec" for="file">צילום מחדש</label>
+    <button class="btn sec" id="backBtn">ביטול</button>
+  </div>
+</section>
+
+<section class="screen" id="sWait" hidden><div class="spinner"></div><p style="text-align:center" id="waitTxt">ה־AI מזהה את הפריטים ומעריך מידות…</p></section>
+
+<section class="screen" id="sReview" hidden>
+  <h2>זה מה שהבנו</h2>
+  <p>בדקו ותקנו את השמות והכמויות. מידות שהוערכו מתמונה הן בקירוב.</p>
+  <div id="qs"></div>
+  <table><thead><tr><th>פריט</th><th>מידות (ס״מ)</th><th>כמות</th></tr></thead><tbody id="rows"></tbody></table>
+  <div class="err" id="revErr"></div>
+  <div class="bar"><button class="btn" id="sendBtn">אישור ושליחה</button><button class="btn sec" id="moreBtn">לצלם עוד פריטים</button></div>
+</section>
+
+<section class="screen" id="sDone" hidden>
+  <div class="done"><div class="ok">✓</div><h1>נשלח</h1><p>רשימת המלאי נשלחה לתכנון. תודה! אפשר לסגור את הדף.</p></div>
+</section>
+
+<input type="file" id="file" accept="image/*" capture="environment" hidden>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const SID = new URLSearchParams(location.search).get('s') || '';
+const REFS = { card:'כרטיס אשראי', ruler:'סרגל', a4:'דף A4', can:'פחית 330 מ"ל', bic:'עט BIC',
+  ils1:'מטבע 1 ש"ח', ils_half:'מטבע חצי שקל', ils5:'מטבע 5 ש"ח', ils10:'מטבע 10 ש"ח', quarter:'Quarter (מטבע 25 סנט)',
+  usd:'שטר דולר', ils20:'שטר 20 ש"ח', ils50:'שטר 50 ש"ח', ils100:'שטר 100 ש"ח', ils200:'שטר 200 ש"ח', eur5:'שטר 5 יורו', eur10:'שטר 10 יורו', eur20:'שטר 20 יורו', eur50:'שטר 50 יורו', none:'בלי חפץ ייחוס' };
+const GROUPS = [['הכי מדויק', ['card', 'ruler', 'a4']], ['מטבעות – לפריטים קטנים', ['ils1', 'ils_half', 'ils5', 'ils10', 'quarter']], ['שטרות – לפריטים בינוניים', ['usd', 'ils20', 'ils50', 'ils100', 'ils200', 'eur5', 'eur10', 'eur20', 'eur50']], ['חפץ יומיומי', ['can', 'bic']], ['', ['none']]];
+const TIPS = { none:'בלי חפץ ייחוס המידות יהיו הערכה גסה בלבד. אם אפשר – הניחו כרטיס אשראי או מטבע ליד הפריט.', ruler:'הניחו את הסרגל לאורך הפריט, שהשנתות ייראו בתמונה.', a4:'מתאים לפריטים גדולים – ארגזים, כלים. הניחו את הדף צמוד לפריט.' };
+const tipFor = (r) => TIPS[r] || 'הניחו אותו צמוד לפריט ובאותו מישור, וצלמו ישר – לא קרוב יותר למצלמה מהפריט.';
+let items = [], cur = null, editIdx = -1;
+const show = (id) => { for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id; scrollTo(0, 0); };
+async function api(a, body, type) {
+  const r = await fetch(`/api/invscan?a=${a}&id=${encodeURIComponent(SID)}${a === 'photo' ? '&n=' + body.n : ''}`, {
+    method:'POST', headers:{ 'content-type':type || 'application/json' }, body:type ? body.blob : JSON.stringify(body || {}) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || `שגיאה ${r.status}`);
+  return j;
+}
+$('ref').innerHTML = GROUPS.map(([g, ks]) => (g ? `<optgroup label="${g}">` : '') + ks.map(k => `<option value="${k}">${REFS[k]}</option>`).join('') + (g ? '</optgroup>' : '')).join('');
+const lastRef = () => { try { return localStorage.getItem('inv-ref') || 'card'; } catch { return 'card'; } };
+$('ref').onchange = () => { $('refTip').textContent = tipFor($('ref').value); try { localStorage.setItem('inv-ref', $('ref').value); } catch {} };
+
+// ---------- start: is the link good? (a link from someone else shows how long it is valid) ----------
+if (!/^[a-z0-9]{20}$/.test(SID)) { $('startBtn').disabled = true; $('startErr').textContent = 'הקישור לא שלם – בקשו קישור חדש.'; }
+else fetch(`/api/invscan?a=check&id=${SID}`).then(r => r.json().then(j => ({ r, j }))).then(({ r, j }) => {
+  if (!r.ok || !j.ok) { $('startBtn').disabled = true; $('startErr').textContent = !r.ok ? (j.error || 'הקישור לא נמצא') : j.status === 'done' ? 'הרשימה כבר נשלחה – תודה!' : 'הקישור פג תוקף או בוטל – בקשו קישור חדש.'; return; }
+  items = (j.items || []).map(x => x && x.url ? { ...x, up:'ok' } : null);
+  if (j.share) { const m = Math.max(1, Math.round((j.exp - Date.now()) / 60000)); $('startErr').style.color = '#6b7378'; $('startErr').textContent = `הקישור תקף עוד ${m} דקות.`; }
+  if (items.some(Boolean)) { drawList(); show('sList'); }
+}).catch(() => {});
+$('startBtn').onclick = () => { drawList(); show('sList'); $('file').click(); };
+
+// ---------- the list ----------
+function drawList() {
+  const L = items.map((x, k) => x ? { x, k } : null).filter(Boolean);
+  $('list').innerHTML = L.length ? L.map(({ x, k }) => `<div class="item"><i class="${x.up || ''}" style="background-image:url('${x.local || x.url}')"></i>
+      <div>${x.note ? x.note.replace(/</g, '&lt;') : '<span style="color:#d64545">חסר: כמה יש?</span>'}<small>${REFS[x.ref] || ''}${x.up === 'err' ? ' · לא עלה – לחצו לנסות שוב' : ''}</small></div>
+      <button data-e="${k}" aria-label="עריכה">✎</button><button data-d="${k}" aria-label="מחיקה">✕</button></div>`).join('')
+    : '<div class="empty">עוד לא צולם אף פריט.<br>לחצו "צילום פריט" למטה.</div>';
+  $('list').querySelectorAll('[data-d]').forEach(b => b.onclick = async () => { const k = +b.dataset.d; if (!confirm('למחוק את הפריט?')) return; items[k] = null; drawList(); try { await api('remove', { n:k }); } catch {} });
+  $('list').querySelectorAll('[data-e]').forEach(b => b.onclick = () => openItem(+b.dataset.e));
+  $('list').querySelectorAll('i.err').forEach(i => i.onclick = () => { const k = [...$('list').querySelectorAll('.item')].indexOf(i.parentNode); const e = L[k]; if (e) upload(e.k); });
+  $('analyzeBtn').disabled = !L.some(e => e.x.up === 'ok') || L.some(e => e.x.up === 'busy');
+  $('analyzeBtn').textContent = L.some(e => e.x.up === 'busy') ? 'מעלה תמונות…' : 'סיימתי – לניתוח';
+}
+
+// ---------- one item: photo → reference + how many ----------
+function shrink(file) {
+  return new Promise((ok, bad) => { const u = URL.createObjectURL(file), im = new Image(); im.onerror = bad; im.onload = () => {
+    const k = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); c.toBlob(b => ok({ blob:b, url:URL.createObjectURL(b) }), 'image/jpeg', 0.85); URL.revokeObjectURL(u); }; im.src = u; });
+}
+$('file').onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const s = await shrink(f).catch(() => null); if (!s) { alert('לא הצלחתי לקרוא את התמונה'); return; }
+  if (!$('sItem').hidden && cur) { cur.blob = s.blob; cur.local = s.url; cur.newPic = true; $('pic').src = s.url; return; }   // a retake keeps what was typed
+  editIdx = -1; cur = { blob:s.blob, local:s.url, ref:lastRef(), note:'', dims:{}, newPic:true }; fillItem(); show('sItem');
+};
+function openItem(k) { editIdx = k; cur = { ...items[k], dims:{ ...(items[k].dims || {}) }, newPic:false }; fillItem(); show('sItem'); }
+function fillItem() {
+  $('pic').src = cur.local || cur.url; $('ref').value = cur.ref || lastRef(); $('refTip').textContent = tipFor($('ref').value);
+  $('note').value = cur.note || ''; $('dl').value = cur.dims.l || ''; $('dw').value = cur.dims.w || ''; $('dh').value = cur.dims.h || '';
+}
+$('backBtn').onclick = () => { stopMic(); show('sList'); };
+$('saveBtn').onclick = () => {
+  stopMic();
+  const k = editIdx >= 0 ? editIdx : (items.findIndex(x => !x) >= 0 ? items.findIndex(x => !x) : items.length);
+  if (k >= 30) { alert('עד 30 פריטים בכל רשימה'); return; }
+  const it = { ...(items[k] || {}), ...cur, ref:$('ref').value, note:$('note').value.trim(), dims:{ l:+$('dl').value || null, w:+$('dw').value || null, h:+$('dh').value || null } };
+  items[k] = it; editIdx = -1; show('sList');
+  if (it.newPic) upload(k); else saveMeta(k);
+  drawList();
+};
+async function upload(k) {
+  const it = items[k]; if (!it) return; it.up = 'busy'; drawList();
+  try { const r = await api('photo', { n:k, blob:it.blob }, 'image/jpeg'); it.url = r.url; it.newPic = false; await saveMeta(k); if (items[k] === it) it.up = 'ok'; }
+  catch (e) { if (items[k] === it) it.up = 'err'; $('listErr').textContent = e.message; }
+  drawList();
+}
+async function saveMeta(k) { const it = items[k]; if (!it) return; try { await api('meta', { n:k, ref:it.ref, note:it.note, dims:it.dims }); } catch (e) { $('listErr').textContent = e.message; } }
+
+// ---------- dictation (the phone's own speech recognition, Hebrew) ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition; let rec = null;
+if (SR) $('mic').hidden = false;
+function stopMic() { if (rec) { try { rec.stop(); } catch {} rec = null; $('mic').classList.remove('on'); } }
+$('mic').onclick = () => {
+  if (rec) { stopMic(); return; }
+  rec = new SR(); rec.lang = 'he-IL'; rec.interimResults = true; rec.continuous = true;
+  const base = $('note').value.trim();
+  rec.onresult = (e) => { let t = ''; for (const r of e.results) t += r[0].transcript; $('note').value = (base ? base + ' ' : '') + t.trim(); };
+  rec.onend = () => { rec = null; $('mic').classList.remove('on'); };
+  rec.onerror = () => stopMic();
+  try { rec.start(); $('mic').classList.add('on'); } catch { rec = null; }
+};
+
+// ---------- analyse → review → send ----------
+let rows = [];
+$('analyzeBtn').onclick = async () => {
+  show('sWait');
+  try { const r = await api('analyze'); rows = r.rows || []; drawRows(r.questions || []); show('sReview'); }
+  catch (e) { show('sList'); $('listErr').textContent = e.message; }
+};
+function drawRows(qs) {
+  $('qs').innerHTML = qs.length ? `<div class="qs">${qs.map(q => '❓ ' + q.replace(/</g, '&lt;')).join('<br>')}</div>` : '';
+  $('rows').innerHTML = rows.map((r, k) => `<tr data-k="${k}"><td><input data-f="name" value="${(r.name || '').replace(/"/g, '&quot;')}"><small>${r.size_basis || ''}</small></td>
+    <td>${[r.length_cm, r.width_cm, r.height_cm].map(v => v ? Math.round(v * 10) / 10 : '?').join('×')}</td>
+    <td class="q"><input data-f="qty" type="number" inputmode="numeric" value="${r.qty ?? ''}"></td></tr>`).join('');
+  $('rows').querySelectorAll('input').forEach(el => el.onchange = () => { const r = rows[+el.closest('tr').dataset.k]; r[el.dataset.f] = el.dataset.f === 'qty' ? (el.value === '' ? null : +el.value) : el.value; });
+}
+$('moreBtn').onclick = () => { show('sList'); };
+$('sendBtn').onclick = async () => {
+  if (rows.some(r => !r.qty) && !confirm('בחלק מהפריטים חסרה כמות. לשלוח בכל זאת?')) return;
+  $('sendBtn').disabled = true;
+  try { await api('confirm', { rows }); show('sDone'); } catch (e) { $('revErr').textContent = e.message; $('sendBtn').disabled = false; }
+};
+</script>
+</body>
+</html>

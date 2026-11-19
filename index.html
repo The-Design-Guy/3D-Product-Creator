@@ -529,6 +529,7 @@
   .wztable .opdel { border:0; background:none; cursor:pointer; color:var(--muted); }
   .wzh4 { margin:14px 0 6px; font-size:14px; } .wzgap { font-size:11px; color:#b5651d; } .wzwhy { font-size:11px; color:var(--muted); } .wztable td input[data-need] { width:64px; }
   .wzlogotog { margin-top:8px; font-size:13px; color:var(--ink); }
+  .wzref { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); } .wzref select { font:inherit; font-size:13px; border:1px solid var(--line); border-radius:8px; padding:6px; }
   .wzsum { display:flex; flex-direction:column; gap:6px; font-size:14px; }
   .dlg-sub { font-size:13px; color:var(--muted); margin:0 0 12px; line-height:1.5; }
   .fld { display:block; font-size:13px; color:var(--muted); margin:8px 0; }
@@ -6376,7 +6377,7 @@ async function openRoomScan() {
     <div class="use" style="text-align:center">הקישור תקף 30 דקות${touch ? '' : ` · <a href="${url}" target="_blank" rel="noopener">פתיחה במכשיר הזה</a>`}</div>${touch ? '</details>' : ''}
     <div class="scanshare"><button class="btn" id="shareNew">🔗 קישור לשליחה למישהו אחר (תקף שעה)</button><div id="shareBox"></div></div>
     <div class="dlg-actions"><button class="btn" data-close>סגירה</button></div>`, (card, close) => {
-    scanShares(card, () => { done = stop = true; close(); });
+    scanShares(card, (st) => { done = stop = true; close(); applyScan(st.result, st.photos || []); });
     let stop = false, done = false;
     $('dlg')._onClose = () => { stop = true; if (!done) api('/api/scan?a=cancel&id=' + id, {}).catch(() => {}); };
     const ST = { waiting:'ממתין לטלפון…', capturing:'מצלמים…', analyzing:'ה־AI מנתח את החדר…', review:'ממתין לאישור בטלפון…', done:'בונה את החדר…', cancelled:'הצילום בוטל' };
@@ -6399,41 +6400,82 @@ async function openRoomScan() {
   });
 }
 // ---- room-scan links sent to someone else: valid for an hour, the result waits here (a week) until it is built ----
-function scanShares(card, onBuild) {
-  const box = card.querySelector('#shareBox'), list = () => LS.get('rbt-scan-shares', []).filter(x => Date.now() - x.created < 7 * 864e5);
+const SHARE_CFG = {
+  room:{ api:'/api/scan', page:'/scan.html', ls:'rbt-scan-shares', what:'צילום החדר', msg:'צלמו את החדר ב-8 תמונות – הקישור תקף לשעה:', build:'בנה את החדר' },
+  items:{ api:'/api/invscan', page:'/items.html', ls:'rbt-inv-shares', what:'צילום מלאי', msg:'צלמו את הפריטים שצריך לאחסן ורשמו כמה יש מכל אחד – הקישור תקף לשעה:', build:'הוסף לאשף' },
+};
+function scanShares(card, onBuild, C = SHARE_CFG.room) {
+  const box = card.querySelector('#shareBox'), list = () => LS.get(C.ls, []).filter(x => Date.now() - x.created < 7 * 864e5);
   const ST = { waiting:'עוד לא התחילו', capturing:'מצלמים…', analyzing:'ה־AI מנתח…', review:'ממתין לאישור שלהם', done:'✓ התקבל – אפשר לבנות', cancelled:'בוטל' };
   let live = true, t = 0;
   const draw = async () => {
     if (!live || !card.isConnected) return;
-    const L = list(); LS.set('rbt-scan-shares', L);
-    const rows = await Promise.all(L.map(async x => { try { const r = await fetch('/api/scan?a=status&id=' + x.id, { headers:{ 'x-admin-key':adminKey() } }); const st = await r.json(); return { x, st:r.ok ? st : null }; } catch { return { x, st:null }; } }));
+    const L = list(); LS.set(C.ls, L);
+    const rows = await Promise.all(L.map(async x => { try { const r = await fetch(C.api + '?a=status&id=' + x.id, { headers:{ 'x-admin-key':adminKey() } }); const st = await r.json(); return { x, st:r.ok ? st : null }; } catch { return { x, st:null }; } }));
     if (!live || !card.isConnected) return;
-    box.innerHTML = rows.length ? `<div class="shlist">${rows.map(({ x, st }) => { const url = location.origin + '/scan.html?s=' + x.id, left = Math.round((x.exp - Date.now()) / 60000);
+    box.innerHTML = rows.length ? `<div class="shlist">${rows.map(({ x, st }) => { const url = location.origin + C.page + '?s=' + x.id, left = Math.round((x.exp - Date.now()) / 60000);
       const s0 = !st ? 'לא נמצא' : st.status === 'done' ? ST.done : left <= 0 ? 'פג תוקף' : `${ST[st.status] || st.status} · עוד ${left} דק'`;
       return `<div class="shrow" data-id="${x.id}"><span>${x.label || 'קישור'} · ${new Date(x.created).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' })}<small>${s0}</small></span>
-        ${st && st.status === 'done' ? '<button class="btn primary" data-a="build">בנה את החדר</button>' : left > 0 && st ? `<button class="btn" data-a="copy" data-u="${url}">העתקה</button>${navigator.share ? `<button class="btn" data-a="share" data-u="${url}">שליחה</button>` : ''}` : ''}
+        ${st && st.status === 'done' ? `<button class="btn primary" data-a="build">${C.build}</button>` : left > 0 && st ? `<button class="btn" data-a="copy" data-u="${url}">העתקה</button>${navigator.share ? `<button class="btn" data-a="share" data-u="${url}">שליחה</button>` : ''}` : ''}
         <button class="opdel" data-a="del" aria-label="הסרה">✕</button></div>`; }).join('')}</div>` : '';
     box.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
       const id = b.closest('.shrow').dataset.id, a = b.dataset.a;
       if (a === 'copy') { try { await navigator.clipboard.writeText(b.dataset.u); toast('הקישור הועתק'); } catch { prompt('העתיקו את הקישור:', b.dataset.u); } }
-      if (a === 'share') navigator.share({ title:'צילום החדר', text:'צלמו את החדר ב-8 תמונות – הקישור תקף לשעה:', url:b.dataset.u }).catch(() => {});
-      if (a === 'del') { LS.set('rbt-scan-shares', list().filter(x => x.id !== id)); draw(); }
-      if (a === 'build') { try { const r = await fetch('/api/scan?a=status&id=' + id, { headers:{ 'x-admin-key':adminKey() } }); const st = await r.json(); if (!st.result) throw 0;
-        LS.set('rbt-scan-shares', list().filter(x => x.id !== id)); live = false; onBuild(); applyScan(st.result, st.photos || []); } catch { toast('לא הצלחתי לקבל את הצילום'); } }
+      if (a === 'share') navigator.share({ title:C.what, text:C.msg, url:b.dataset.u }).catch(() => {});
+      if (a === 'del') { LS.set(C.ls, list().filter(x => x.id !== id)); draw(); }
+      if (a === 'build') { try { const r = await fetch(C.api + '?a=status&id=' + id, { headers:{ 'x-admin-key':adminKey() } }); const st = await r.json(); if (!(st.result || st.rows)) throw 0;
+        LS.set(C.ls, list().filter(x => x.id !== id)); live = false; onBuild(st); } catch { toast('לא הצלחתי לקבל את הצילום'); } }
     });
     clearTimeout(t); t = setTimeout(draw, 4000);
   };
   card.querySelector('#shareNew').onclick = async (e) => {
     const b = e.currentTarget; b.disabled = true;
     try {
-      const r = await api('/api/scan?a=new&share=1', {}), url = location.origin + '/scan.html?s=' + r.id;
-      const L = list(); L.unshift({ id:r.id, created:Date.now(), exp:r.exp, label:'קישור ' + (L.length + 1) }); LS.set('rbt-scan-shares', L.slice(0, 20));
-      if (navigator.share && matchMedia('(pointer: coarse)').matches) navigator.share({ title:'צילום החדר', text:'צלמו את החדר ב-8 תמונות – הקישור תקף לשעה:', url }).catch(() => {});
+      const r = await api(C.api + '?a=new&share=1', {}), url = location.origin + C.page + '?s=' + r.id;
+      const L = list(); L.unshift({ id:r.id, created:Date.now(), exp:r.exp, label:'קישור ' + (L.length + 1) }); LS.set(C.ls, L.slice(0, 20));
+      if (navigator.share && matchMedia('(pointer: coarse)').matches) navigator.share({ title:C.what, text:C.msg, url }).catch(() => {});
       else { try { await navigator.clipboard.writeText(url); toast('נוצר קישור לשעה והועתק – שלחו אותו'); } catch { prompt('העתיקו את הקישור ושלחו:', url); } }
     } catch (er) { toast(er.message); }
     b.disabled = false; draw();
   };
   draw();
+}
+// ---- inventory by phone: photos item by item (with a reference object) → rows for the planning wizard ----
+async function openInvScan() {
+  if (!server) { toast('צילום המלאי עובד באתר עצמו (Vercel)'); return; }
+  if (!adminKey()) { toast('זמין במצב ניהול'); $('lockBtn').click(); return; }
+  let id;
+  try { id = (await api('/api/invscan?a=new', {})).id; } catch (e) { toast(e.message); openWizard(4); return; }
+  const url = location.origin + '/items.html?s=' + id, touch = matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0;
+  const takeRows = (rows) => { const B = wzBrief(); B.inv.rows = [...B.inv.rows, ...(rows || []).map(r => ({ unit:'pcs', weight_kg:null, freq:null, notes:'', ...r }))]; B.step = 4; openWizard(4); toast(`נוספו ${(rows || []).length} פריטים לטבלה`); };
+  openDialog(`<h3>צילום מלאי בטלפון</h3>
+    <p class="dlg-sub">מצלמים כל סוג פריט עם חפץ ייחוס לידו (כרטיס אשראי, מטבע, שטר, סרגל…) ואומרים כמה יש ממנו. בסוף מאשרים בטלפון – והטבלה נכנסת לאשף.</p>
+    ${touch ? `<a class="btn primary scanhere" href="${url}" target="_blank" rel="noopener">📷 צילום עכשיו במכשיר הזה</a><p class="dlg-sub">נפתח בלשונית חדשה. בסוף חזרו ללשונית הזו.</p><details class="scanqr"><summary>או לצלם מטלפון אחר (ברקוד)</summary>` : ''}
+    <div class="qrbox"><img alt="ברקוד" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(url)}"></div>${touch ? '</details>' : ''}
+    <div class="scanst" id="scanSt"><i></i><span>ממתין לטלפון…</span></div>
+    <div class="use" style="text-align:center">תקף 30 דקות${touch ? '' : ` · <a href="${url}" target="_blank" rel="noopener">פתיחה במכשיר הזה</a>`}</div>
+    <div class="scanshare"><button class="btn" id="shareNew">🔗 קישור לשליחה למישהו אחר (תקף שעה)</button><div id="shareBox"></div></div>
+    <div class="dlg-actions"><button class="btn" id="invBack">חזרה לאשף</button></div>`, (card, close) => {
+    let stop = false, done = false;
+    $('dlg')._onClose = () => { stop = true; if (!done) api('/api/invscan?a=cancel&id=' + id, {}).catch(() => {}); };
+    card.querySelector('#invBack').onclick = () => { close(); openWizard(4); };
+    scanShares(card, (st) => { done = stop = true; close(); takeRows(st.rows); }, SHARE_CFG.items);
+    const ST = { waiting:'ממתין לטלפון…', capturing:'מצלמים…', analyzing:'ה־AI מנתח את הפריטים…', review:'ממתין לאישור בטלפון…', done:'מוסיף לטבלה…', cancelled:'בוטל' };
+    const tick = async () => {
+      if (stop || !card.isConnected) return;
+      try {
+        const r = await fetch('/api/invscan?a=status&id=' + id, { headers:{ 'x-admin-key':adminKey() } }), st = await r.json();
+        if (!r.ok) throw new Error(st.error || 'HTTP ' + r.status);
+        const n = (st.items || []).filter(x => x && x.url).length;
+        card.querySelector('#scanSt span').textContent = (ST[st.status] || st.status) + (n ? ` · ${n} פריטים` : '') + (st.error ? ' · ' + st.error : '');
+        card.querySelector('#scanSt').dataset.s = st.status;
+        if (st.status === 'done' && st.rows) { done = stop = true; close(); takeRows(st.rows); return; }
+        if (st.status === 'cancelled') { stop = true; return; }
+      } catch (e) { card.querySelector('#scanSt span').textContent = e.message; }
+      setTimeout(tick, 2000);
+    };
+    tick();
+  });
 }
 async function applyScan(r, photos) {
   pushRoomUndo();
@@ -8423,6 +8465,7 @@ function openDesignDialog(d) {
 // ---------- planning wizard: business → space → size → doors & obstacles → inventory → plan ----------
 const WZ_SPACE = { warehouse:'מחסן', workshop:'סדנה / מוסך', lab:'מעבדה', tech:'חדר טכנאים', assembly:'קו הרכבה / ייצור', shop:'חנות / תצוגה', office:'משרד', other:'אחר' };
 const KIND_HE = { small_parts:'ברגים / חלקים קטנים', electronics:'רכיבי אלקטרוניקה', hand_tools:'כלי עבודה ידניים', power_tools:'כלי עבודה חשמליים', boxed_goods:'ארגזים / סחורה ארוזה', heavy:'פריטים כבדים', long_items:'פריטים ארוכים', personal:'ציוד אישי', consumables:'מתכלים', chemicals:'שמנים / כימיקלים', documents:'מסמכים / קלסרים', mobile:'ציוד נייד בין עמדות', other:'אחר' };
+const WZ_REFS = { none:'בלי חפץ ייחוס', card:'כרטיס אשראי', ruler:'סרגל', a4:'דף A4', can:'פחית 330 מ"ל', bic:'עט BIC', ils1:'מטבע 1 ש"ח', ils_half:'מטבע חצי שקל', ils5:'מטבע 5 ש"ח', ils10:'מטבע 10 ש"ח', quarter:'Quarter', usd:'שטר דולר', ils20:'שטר 20 ש"ח', ils50:'שטר 50 ש"ח', ils100:'שטר 100 ש"ח', ils200:'שטר 200 ש"ח', eur5:'שטר 5 יורו', eur10:'שטר 10 יורו', eur20:'שטר 20 יורו', eur50:'שטר 50 יורו' };
 const FREQ_HE = { daily:'יומי', weekly:'שבועי', rare:'לעיתים רחוקות' };
 const WZ_STEPS = ['העסק', 'החלל', 'מידות', 'פתחים ומכשולים', 'מה מאחסנים', 'סיכום'];
 const wzBrief = () => (SCN.brief = SCN.brief || { step:0, biz:{ name:'', field:'', logo:'' }, space:{ type:'', purpose:'' }, inv:{ text:'', rows:[], questions:[], photos:[] } });
@@ -8576,13 +8619,14 @@ function openWizard(at) {
         body.innerHTML = `<h3>מה מאחסנים</h3><p class="dlg-sub">כתבו או הקליטו מה יש, כמה ממנו ובאיזה גודל, ו/או צלמו את הפריטים. ה-AI יבנה טבלה, ואתם מאשרים או מתקנים. מידות מתמונה הן הערכה בלבד.</p>
           <div class="aibox"><textarea id="wzInvText" rows="3" placeholder="למשל: 300 קופסאות ברגים קטנות, 15 מקדחות, 40 ארגזי קרטון 60×40×40, שמנים בפחים של 5 ליטר">${wzEsc(I.text)}</textarea><button class="aimic" id="wzMic" title="הקלטה" aria-label="הקלטה">🎙</button></div>
           <div class="use" id="wzPartial"></div>
-          <div class="wzphotos">${I.photos.map((u, k) => `<span style="background-image:url('${u}')"><button data-k="${k}" aria-label="הסרה">✕</button></span>`).join('')}<label class="btn">📷 תמונות<input type="file" id="wzPh" accept="image/*" multiple hidden></label>
+          <div class="wzphotos">${I.photos.map((u, k) => `<span style="background-image:url('${u}')"><button data-k="${k}" aria-label="הסרה">✕</button></span>`).join('')}<button class="btn" id="wzPhone">📱 צילום מלאי בטלפון</button><label class="btn">📷 תמונות<input type="file" id="wzPh" accept="image/*" multiple hidden></label>
+            ${I.photos.length ? `<label class="wzref">ליד הפריטים בתמונות:<select id="wzRef">${Object.entries(WZ_REFS).map(([k, t]) => `<option value="${k}"${(I.ref || 'none') === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label>` : ''}
             <button class="btn primary" id="wzParse">נתח עם AI</button></div>
           ${I.questions.length ? `<div class="wzq">${I.questions.map(t => `<div>❓ ${wzEsc(t)}</div>`).join('')}</div>` : ''}
           <div class="wztable"><table><thead><tr><th>פריט</th><th>סוג</th><th>א×ר×ג (ס"מ)</th><th>כמות</th><th>שליפה</th><th></th></tr></thead><tbody>
           ${I.rows.map((r, k) => `<tr data-k="${k}"><td><input data-f="name" value="${wzEsc(r.name)}"></td>
             <td><select data-f="kind">${Object.entries(KIND_HE).map(([v, t]) => `<option value="${v}"${r.kind === v ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
-            <td class="wzdim"><input data-f="length_cm" type="number" value="${r.length_cm ?? ''}"><input data-f="width_cm" type="number" value="${r.width_cm ?? ''}"><input data-f="height_cm" type="number" value="${r.height_cm ?? ''}">${r.from_photo ? '<i title="הערכה מתמונה">≈</i>' : ''}</td>
+            <td class="wzdim"><input data-f="length_cm" type="number" value="${r.length_cm ?? ''}"><input data-f="width_cm" type="number" value="${r.width_cm ?? ''}"><input data-f="height_cm" type="number" value="${r.height_cm ?? ''}">${r.from_photo ? `<i title="${wzEsc(r.size_basis || 'הערכה מתמונה')}">≈</i>` : ''}</td>
             <td><input data-f="qty" type="number" value="${r.qty ?? ''}"></td>
             <td><select data-f="freq"><option value="">—</option>${Object.entries(FREQ_HE).map(([v, t]) => `<option value="${v}"${r.freq === v ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
             <td><button class="opdel" data-del="${k}" aria-label="הסרה">✕</button></td></tr>`).join('')}
@@ -8593,6 +8637,8 @@ function openWizard(at) {
           state:(on) => mic.classList.toggle('on', !!on), error:() => {} });
         micReady.then(kind => { mic.hidden = !kind; });
         mic.onclick = () => { if (Mic.listening) { Mic.stop(); return; } Mic.start().catch(() => mic.classList.remove('on')); };
+        if (q('#wzRef')) q('#wzRef').onchange = (e) => I.ref = e.target.value;
+        q('#wzPhone').onclick = () => { if (Mic.listening) Mic.stop(); close(); openInvScan(); };
         q('#wzPh').onchange = async (e) => { for (const f of [...e.target.files].slice(0, 6 - I.photos.length)) I.photos.push(await imgToData(f)); draw(); };
         body.querySelectorAll('.wzphotos [data-k]').forEach(b => b.onclick = () => { I.photos.splice(+b.dataset.k, 1); draw(); });
         q('#wzParse').onclick = async () => {
@@ -8600,7 +8646,7 @@ function openWizard(at) {
           if (!I.text.trim() && !I.photos.length) { err('כתבו, הקליטו או צלמו קודם מה מאחסנים.'); return; }
           if (!server) { err('ניתוח AI זמין רק בגרסה שעולה ל-Vercel. אפשר למלא את הטבלה ידנית.'); return; }
           const b = q('#wzParse'); b.disabled = true; b.textContent = 'מנתח…'; err('');
-          try { const r = await api('/api/inventory', { text:I.text, images:I.photos, rows:I.rows }); I.rows = r.rows || []; I.questions = r.questions || []; draw(); }
+          try { const r = await api('/api/inventory', { text:I.text, images:I.photos.map(u => ({ url:u, ref:I.ref || 'none' })), rows:I.rows }); I.rows = r.rows || []; I.questions = r.questions || []; draw(); }
           catch (e) { b.disabled = false; b.textContent = 'נתח עם AI'; err(e.message); }
         };
         body.querySelectorAll('tbody [data-f]').forEach(el => el.onchange = () => { const r = I.rows[+el.closest('tr').dataset.k], f = el.dataset.f;
