@@ -3558,7 +3558,7 @@ function buildMetal(k) {
       const pivot = new THREE.Group(); pivot.position.set(sd * W/2, 0, zP); root.add(pivot);
       const door = new THREE.Group(); pivot.add(door);
       const panel = box(dw, dh, 20, -sd * dw/2, y0 + dh/2, 0, mat, door);
-      if (zones) techDoor(door, S, idx, -sd * dw/2, dw, dh, y0);                     // holes / louvres on both faces + hanging bins
+      if (zones) techDoor(door, S, idx, -sd * dw/2, dw, dh, y0);                     // holes / louvres on the inside + hanging bins
       else box(dw - 60, dh - 60, 4, -sd * dw/2, y0 + dh/2, -12, mat, door);           // inner stiffener
       if (pegboard) {
         const t = pegTex.clone(); t.needsUpdate = true; t.repeat.set((dw - 90) / 32, (dh - 120) / 32);
@@ -3642,10 +3642,8 @@ function techDoor(door, S, idx, cx, dw, dh, y0) {
   const ya = y0 + 40, zh = (dh - 80) / 4, w = dw - 70;
   for (let q = 0; q < 4; q++) {                                    // from the bottom: louvres, holes, louvres, holes
     const kind = q % 2 ? 'holes' : 'louv', yc = ya + q * zh + zh/2;
-    for (const f of [1, -1]) {
-      const m = tcSheet(kind, w, zh - 16, kind === 'louv' ? [64, 32] : [32, 32]);
-      m.position.set(cx, yc, f * 10.6); if (f < 0) m.rotation.y = Math.PI; door.add(m);
-    }
+    const m = tcSheet(kind, w, zh - 16, kind === 'louv' ? [64, 32] : [32, 32]);   // on the inside only – the outside of the door is plain
+    m.position.set(cx, yc, -10.6); m.rotation.y = Math.PI; door.add(m);
   }
   const n = (S.hang || [])[idx] || 0, M = ARC_MODELS[4];
   for (let j = 0; j < n; j++) {
@@ -4837,7 +4835,7 @@ function describe() {
       .map(o => `${o.floor ? 'on the floor of the cabinet' : `on the shelf at ${Math.round(o.y/10)} cm`}: ${o.f.cols} column${o.f.cols > 1 ? 's' : ''} x ${o.f.rows} high of open-front bright blue plastic pick bins ("ארקלית ${o.a.m}", ${o.f.M.W} mm wide, ${o.f.M.D} mm deep, ${o.f.M.H} mm high, stacked on each other, fronts flush with the shelf edge, from the left side)`);
     const tech = mode !== 'tech' ? '' : (S.peg ? ' The back wall inside is a blue perforated pegboard with square holes (nothing hung on it).' : '')
       + (S.drawers || []).map(b => ` A block of ${b.n} full-width blue steel drawer${b.n > 1 ? 's' : ''}, each ${b.h} mm high, with a long horizontal aluminium bar handle, sits between two steel plates from ${Math.round(b.y/10)} to ${Math.round((b.y + blockH(b))/10)} cm above the floor${b.n > 0 && S.drawers.length ? '; the space under it is open' : ''}.`).join('')
-      + (techZones(S) ? ` The doors are perforated blue steel in four horizontal zones, from the top: square holes, louvre slots, square holes, louvre slots.${S.hang[0] + S.hang[1] ? ` Small blue open-front plastic pick bins (ארקלית 4, 96 mm wide) hang on the inner louvres: ${S.hang[0]} on the left door, ${S.hang[1]} on the right door, at about ${Math.round(TCX.HANG[0]/10)} and ${Math.round(TCX.HANG[1]/10)} cm.` : ''}` : ' The doors are plain smooth steel.');
+      + (techZones(S) ? ` The outside of the doors is plain smooth steel; the INSIDE of each door is a perforated blue steel panel in four horizontal zones, from the top: square holes, louvre slots, square holes, louvre slots.${S.hang[0] + S.hang[1] ? ` Small blue open-front plastic pick bins (ארקלית 4, 96 mm wide) hang on the inner louvres: ${S.hang[0]} on the left door, ${S.hang[1]} on the right door, at about ${Math.round(TCX.HANG[0]/10)} and ${Math.round(TCX.HANG[1]/10)} cm.` : ''}` : ' The doors are plain smooth steel.');
     return `${shell} Inside: ${ys.length} adjustable full-width steel shelves at ${ys.join(', ')} cm from the floor, on perforated uprights.${tech}${bins.length ? ' Bins standing on the shelves, from the top: ' + bins.join('; ') + '; the other shelves are empty.' : ''}${flags.filter(f => !/rod|label/.test(f)).length ? ' ' + flags.filter(f => !/rod|label/.test(f)).join('; ') + '.' : ''}`;
   }
   if (mode === 'quad') {
@@ -5487,8 +5485,8 @@ function closeSheet(now) {
 function groupVars(list) { const out = []; list.forEach(v => { const k = v.g || v.name, g = out.find(x => x.name === k); g ? g.vars.push(v) : out.push({ name:k, vars:[v] }); }); return out; }
 let ADD_OPEN = false, AD_TICK = 0;
 // product photos (from the Drive folder), per product; a card fades through them
-const PRODUCT_IMGS = {"tech": ["img/tech-0.webp", "img/tech-1.webp", "img/tech-2.webp", "img/tech-3.webp"], "mtarc": ["img/mtarc-1.webp", "img/mtarc-0.webp"], "mdarc": ["img/mdarc-0.webp", "img/mdarc-1.webp", "img/mdarc-2.webp"], "arc": ["img/arc-0.webp", "img/arc-1.webp"], "bin2": ["img/bin2-0.webp"], "bin3": ["img/bin3-0.webp"], "bin4": ["img/bin4-0.webp"], "bin5": ["img/bin5-v2.webp"], "bin6": ["img/bin6-0.webp"], "bin9": ["img/bin9-0.webp"], "stand1": ["img/stand1-0.webp", "img/stand1-1.webp", "img/stand1-2.webp", "img/stand1-3.webp", "img/stand1-4.webp", "img/stand1-5.webp", "img/stand1-6.webp", "img/stand1-7.webp", "img/stand1-8.webp", "img/stand1-9.webp", "img/stand1-10.webp", "img/stand1-11.webp"], "stand2": ["img/stand2-0.webp", "img/stand2-1.webp"], "excl": ["img/excl-0.webp", "img/excl-1.webp"], "quad": ["img/quad-0.webp", "img/quad-1.webp", "img/quad-2.webp", "img/quad-3.webp"], "part": ["img/part-0.webp", "img/part-1.webp", "img/part-2.webp", "img/part-3.webp", "img/part-4.webp", "img/part-5.webp", "img/part-6.webp"], "delux": ["img/delux-0.webp", "img/delux-1.webp", "img/delux-2.webp", "img/delux-3.webp", "img/delux-4.webp", "img/delux-5.webp", "img/delux-6.webp", "img/delux-7.webp", "img/delux-8.webp", "img/delux-9.webp", "img/delux-10.webp", "img/delux-11.webp", "img/delux-12.webp", "img/delux-13.webp", "img/delux-14.webp", "img/delux-15.webp", "img/delux-16.webp", "img/delux-17.webp"], "smart": ["img/smart-0.webp", "img/smart-1.webp", "img/smart-2.webp"], "wall": ["img/wall-0.webp", "img/wall-1.webp", "img/wall-2.webp", "img/wall-3.webp", "img/wall-4.webp", "img/wall-5.webp", "img/wall-6.webp"], "tamb": ["img/tamb-0.webp", "img/tamb-1.webp", "img/tamb-2.webp", "img/tamb-3.webp", "img/tamb-4.webp", "img/tamb-5.webp"]};
-const IMG_KEY = { 'ארון עבודה טכני':'tech', 'ארון תריס עם ארקליות':'mtarc', 'ארון 2 דלתות עם ארקליות':'mdarc', 'ארקליות':'arc', 'מתקן חד צדדי':'stand1', 'עגלה דו צדדית':'stand2', 'עגלת EXCLUSIVE':'excl', 'מעמד 4 דפנות':'quad', 'מחיצת EXCLUSIVE':'part', 'תא נע DELUXE':'delux', 'תא נע SMART':'smart', 'מתלי קיר':'wall', 'ארון מאובטח לרב תא':'tamb' };
+const PRODUCT_IMGS = {"mt": ["img/mtarc2-4.webp?v=2"], "tech": ["img/tech-0.webp", "img/tech-1.webp", "img/tech-2.webp", "img/tech-3.webp"], "mtarc": ["img/mtarc2-0.webp?v=2", "img/mtarc2-1.webp?v=2", "img/mtarc2-2.webp?v=2", "img/mtarc2-3.webp?v=2", "img/mtarc2-4.webp?v=2"], "mdarc": ["img/mdarc2-0.webp", "img/mdarc2-1.webp", "img/mdarc2-2.webp", "img/mdarc2-3.webp"], "arc": ["img/arcb-1.webp?v=2", "img/arcb-2.webp?v=2", "img/arcb-3.webp?v=2", "img/arcb-4.webp?v=2"], "bin2": ["img/tb2.webp"], "bin3": ["img/tb3.webp"], "bin4": ["img/tb4.webp"], "bin5": ["img/tb5.webp"], "bin6": ["img/tb6.webp"], "bin9": ["img/tb9.webp"], "stand1": ["img/stand1-0.webp", "img/stand1-1.webp", "img/stand1-2.webp", "img/stand1-3.webp", "img/stand1-4.webp", "img/stand1-5.webp", "img/stand1-6.webp", "img/stand1-7.webp", "img/stand1-8.webp", "img/stand1-9.webp", "img/stand1-10.webp", "img/stand1-11.webp"], "stand2": ["img/stand2-0.webp", "img/stand2-1.webp"], "excl": ["img/excl-0.webp", "img/excl-1.webp"], "quad": ["img/quad-0.webp", "img/quad-1.webp", "img/quad-2.webp", "img/quad-3.webp"], "part": ["img/part-0.webp", "img/part-1.webp", "img/part-2.webp", "img/part-3.webp", "img/part-4.webp", "img/part-5.webp", "img/part-6.webp"], "delux": ["img/delux-0.webp", "img/delux-1.webp", "img/delux-2.webp", "img/delux-3.webp", "img/delux-4.webp", "img/delux-5.webp", "img/delux-6.webp", "img/delux-7.webp", "img/delux-8.webp", "img/delux-9.webp", "img/delux-10.webp", "img/delux-11.webp", "img/delux-12.webp", "img/delux-13.webp", "img/delux-14.webp", "img/delux-15.webp", "img/delux-16.webp", "img/delux-17.webp"], "smart": ["img/smart-0.webp", "img/smart-1.webp", "img/smart-2.webp"], "wall": ["img/wall-0.webp", "img/wall-1.webp", "img/wall-2.webp", "img/wall-3.webp", "img/wall-4.webp", "img/wall-5.webp", "img/wall-6.webp"], "tamb": ["img/tamb2-0.webp?v=2", "img/tamb2-1.webp?v=2", "img/tamb2-2.webp?v=2", "img/tamb2-3.webp?v=2", "img/tamb2-4.webp?v=2", "img/tamb2-5.webp?v=2"]};
+const IMG_KEY = { 'ארון תריס':'mt', 'ארון עבודה טכני':'tech', 'ארון תריס עם ארקליות':'mtarc', 'ארון 2 דלתות עם ארקליות':'mdarc', 'ארקליות':'arc', 'מתקן חד צדדי':'stand1', 'עגלה דו צדדית':'stand2', 'עגלת EXCLUSIVE':'excl', 'מעמד 4 דפנות':'quad', 'מחיצת EXCLUSIVE':'part', 'תא נע DELUXE':'delux', 'תא נע SMART':'smart', 'מתלי קיר':'wall', 'ארון מאובטח לרב תא':'tamb' };
 function productImgs(f) {
   const v = f.vars[0];
   if (v.t === 'unit') return [2, 3, 4, 5, 6, 9].flatMap(n => PRODUCT_IMGS['bin' + n] || []);   // all the bin sizes, one after another
@@ -5520,6 +5518,7 @@ const PRODUCT_OPTS = {
   'ארון 4 מדפים':[{ l:'צבע', ch:[['RAL 7035', C2(c => c.md.color = '7035')], ['כחול', C2(c => c.md.color = 'blue')]], def:(c) => c.md.color === 'blue' ? 'כחול' : 'RAL 7035' }],
 };
 // the photo of a chosen setup, when there is one (otherwise the model's own picture)
+const MT_CLOSED = (c) => c.mt && !(c.mt.target > 0) && !(c.mt.open > 0);
 function photoFor(f, c) {
   const P = PRODUCT_IMGS, g = (k, i) => P[k] && P[k][i];
   switch (f.name) {
@@ -5532,10 +5531,14 @@ function photoFor(f, c) {
     case 'מתלי קיר': return g('wall', { 600:1, 1200:0, 2000:2 }[c.wall.height]);
     case 'תא נע DELUXE': return c.tn.slide && c.tn.slide.on ? g('delux', { 4:3, 10:6 }[c.tn.size]) : g('delux', { 4:1, 7:0, 10:2 }[c.tn.size]);
     case 'תא נע SMART': return g('smart', 0);
-    case 'ארון מאובטח לרב תא': return g('tamb', 0);
-    case 'ארקליות': return c.arc.color === 'grey' ? g('arc', 1) : g('arc', 0);
-    case 'ארון 2 דלתות עם ארקליות': return g('mdarc', 0);
-    case 'ארון תריס עם ארקליות': return g('mtarc', 0);
+    case 'ארון מאובטח לרב תא': {        // the photo that matches: only #5 at the front / at the back; #3 + #5 + #6 at the front
+      const cm = (c.tb && c.tb.items && c.tb.items[0] && c.tb.items[0].comp) || {}, ks = Object.keys(cm).filter(n => cm[n] > 0).map(Number).sort();
+      if (ks.join() === '5') return g('tamb', c.tb.align === 'front' ? 0 : 3);
+      return ks.join() === '3,5,6' ? g('tamb', 5) : null; }
+    case 'ארקליות': return c.arc.color === 'grey' ? null : g('arc', c.arc.model - 1);      // blue: the photo of that model; grey: the 3D model
+    case 'ארון 2 דלתות עם ארקליות': return c.md.color === 'blue' ? null : g('mdarc', c.md.layout === 'full' ? 2 : 0);      // the photo of the chosen layout (grey cabinet)
+    case 'ארון תריס': return MT_CLOSED(c) ? g('mt', 0) : null;          // the closed photo – only while nothing shows inside
+    case 'ארון תריס עם ארקליות': return g('mtarc', c.mt && c.mt.layout === 'full' ? 2 : 0);      // the photo of the chosen layout
     case 'ארון עבודה טכני': return g('tech', c.tc.variant - 1);
   }
   return null;
