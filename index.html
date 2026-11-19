@@ -209,6 +209,9 @@
   [hidden] { display:none !important; }
   .comp { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; direction:rtl; }
   .pair { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .dplan { max-height:60vh; overflow:auto; font-size:14px; line-height:1.5; }
+  .dplan .dzones { margin:6px 0; padding-inline-start:18px; display:flex; flex-direction:column; gap:6px; }
+  .dplan .dwarn { color:#b45309; font-size:13px; }
   .tchang { display:flex; align-items:center; gap:8px; justify-content:center; } .tchang .btn { width:36px; padding:0; } .tchang b { min-width:14px; text-align:center; }
   .toggles { display:grid; grid-template-columns:1fr 1fr; column-gap:18px; }
   .toggles .row:nth-child(2) { border-top:0; }
@@ -930,6 +933,7 @@
   <div class="tabs" role="tablist" aria-label="משפחות מוצרים">
     <button class="tab on" role="tab" aria-selected="true" data-f="tilt">משפחת רב תא</button>
     <button class="tab" role="tab" aria-selected="false" data-f="metal">ארונות מתכת</button>
+    <button class="tab" role="tab" aria-selected="false" data-f="furn">ריהוט ותפאורה</button>
   </div>
 
   <div class="panel" id="pScene" data-mode="scene" data-family="all">
@@ -1239,6 +1243,20 @@
       <div class="lbl">דלתות (לחיצה על דלת פותחת / סוגרת אותה)</div>
       <div class="pair"><button class="btn" id="mdDoorR">דלת ימין</button><button class="btn" id="mdDoorL">דלת שמאל</button></div>
       <div class="use">גוררים מדף על המודל (כשהדלת פתוחה) כדי לשנות את גובהו. מנעול מפתח בדלת הימנית.</div>
+      <div class="slot"></div>
+    </div></div>
+  </div>
+  <div class="panel" id="pFurn" data-mode="furn" data-family="furn" hidden>
+    <button class="head" aria-expanded="false">
+      <span class="ttl"><h1>ריהוט ותפאורה</h1><span class="sub" id="fuSub">שולחנות, כיסאות ועציצים – לבנייה של סצנה שלמה</span></span>
+      <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="body"><div class="inner">
+      <div class="lbl">פריט</div>
+      <div class="seg2" id="fuKind"><button data-v="station" class="on">עמדת מחשב</button><button data-v="desk">שולחן</button><button data-v="chair">כיסא</button><button data-v="bench">שולחן עבודה</button><button data-v="plant">עציץ</button></div>
+      <div id="fuDeskSec"><div class="lbl">רוחב (ס"מ)</div>
+      <div class="seg2" id="fuW"><button data-v="1200">120</button><button data-v="1500">150</button><button data-v="1600" class="on">160</button><button data-v="2000">200</button></div></div>
+      <div class="use">ריהוט כללי, לא מוצר מהקטלוג: עמדת מחשב = שולחן, שידת מגירות, מסך ומקלדת, וכיסא.</div>
       <div class="slot"></div>
     </div></div>
   </div>
@@ -2619,7 +2637,7 @@ const ARC_MODELS = {
 const ARC0 = { model:2, cols:1, rows:1, color:'blue', div:false };     // one single bin per product
 const ARC = { ...ARC0 };
 const TYPE_NAME = { unit:'רב תא', stand:'מעמד', excl:'עגלת רב-תא EXCLUSIVE', part:'מחיצת EXCLUSIVE מודולרית', quad:'מעמד 4 דפנות',
-  wall:'מתלה קיר', tena:'תא-נע DELUX', smart:'תא-נע SMART', tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים', tech:'ארון עבודה טכני', arc:'ארקליות' };
+  wall:'מתלה קיר', tena:'תא-נע DELUX', smart:'תא-נע SMART', tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים', tech:'ארון עבודה טכני', arc:'ארקליות', furn:'ריהוט' };
 const SCN = { room:{ W:6000, D:5000, back:true, left:false, right:false }, items:[], sel:null, editType:null, next:1 };
 let SCENE_BUILD = false;
 const deep = (o) => JSON.parse(JSON.stringify(o));
@@ -2634,6 +2652,7 @@ function capCfg(t) {
   if (t === 'mdoor') return { md:deep(MD) };
   if (t === 'tech') return { tc:deep(TC) };
   if (t === 'arc') return { arc:{ ...ARC } };
+  if (t === 'furn') return { fu:{ ...FU } };
   return { tn:deep(TN[t === 'smart' ? 'smart' : 'delux']) };
 }
 function applyCfg(t, c) {
@@ -2647,14 +2666,16 @@ function applyCfg(t, c) {
   else if (t === 'mdoor') { MD.arc = []; MD.arcFloor = null; Object.assign(MD, deep(c.md)); }
   else if (t === 'tech') { techVariant(TC, 1); Object.assign(TC, deep(c.tc)); }
   else if (t === 'arc') { Object.assign(ARC, ARC0, c.arc || {}); ARC.cols = ARC.rows = 1; }
+  else if (t === 'furn') Object.assign(FU, FU0, c.fu || {});
   else { const v = t === 'smart' ? 'smart' : 'delux'; for (const k in TN[v]) delete TN[v][k]; Object.assign(TN[v], deep(c.tn)); tena = TN[v]; }
 }
-const capAll = () => ({ arc:{ ...ARC }, current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD), tc:deep(TC), qd:deep(QD) });
+const capAll = () => ({ arc:{ ...ARC }, current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD), tc:deep(TC), fu:{ ...FU }, qd:deep(QD) });
 function restoreAll(a) {
   applyCfg('unit', a); applyCfg('stand', a); applyCfg('wall', a);
   applyCfg('excl', { exs:a.exs.excl }); applyCfg('part', { exs:a.exs.part });
   applyCfg('smart', { tn:a.tn.smart }); applyCfg('tena', { tn:a.tn.delux }); applyCfg('tamb', { tb:a.tb });
   if (a.arc) applyCfg('arc', { arc:a.arc });
+  if (a.fu) applyCfg('furn', { fu:a.fu });
   if (a.mt) applyCfg('mtamb', { mt:a.mt }); if (a.md) applyCfg('mdoor', { md:a.md }); if (a.tc) applyCfg('tech', { tc:a.tc }); if (a.qd) applyCfg('quad', { qd:a.qd });
 }
 // the selected item's settings live in the globals while it is being edited
@@ -2664,7 +2685,7 @@ function syncUI(t) {
   setSeg('stHandle', stand.handle); setSeg('stBrake', stand.brake); syncWheelOpts();
   setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0');
   setSeg('quBase', QD.base); setSeg('quTop', QD.top || 'black'); setSeg('exTop', EXS.excl.top || 'black'); setSeg('ptTop', EXS.part.top || 'black');
-  setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; setSeg('mdColor', MD.color); setSeg('tcVar', String(TC.variant));
+  setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; setSeg('mdColor', MD.color); setSeg('tcVar', String(TC.variant)); setSeg('fuKind', FU.kind); setSeg('fuW', String(FU.w)); $('fuDeskSec').hidden = !['station', 'desk', 'bench'].includes(FU.kind);
   setSeg('arcModel', ARC.model); setSeg('arcColor', ARC.color); setSeg('arcDiv', ARC.div ? '1' : '0');
   $('ptWide').checked = !!EXS.part.wide; setSeg('exSide', EXS.excl.side || 'left'); setSeg('ptSide', EXS.part.side || 'left'); setSeg('ptCols', EXS.part.cols || 2);
   for (const v of ['delux', 'smart']) { const px = v === 'smart' ? 'sm' : 'tn';
@@ -2865,6 +2886,7 @@ function buildScene() {
     else if (it.type === 'quad') b = buildQuad();
     else if (METAL[it.type]) b = buildMetal(it.type);
     else if (it.type === 'arc') b = buildArc();
+    else if (it.type === 'furn') b = buildFurn();
     else { WING_GROUPS.clear(); SLD = null; b = buildTena(); b.sld = SLD; }
     if (it.draft) ghost(b.group);
     ITEM_DRAWERS.set(it.id, it.hidden ? [] : b.drawers);
@@ -3627,6 +3649,85 @@ function buildMetal(k) {
   return { group:g, drawers:list, rods:rodList, slats, doors, shelves:{ meshes:shelfMeshes }, D };
 }
 function buildTamb() { return buildMetal('tamb'); }
+// ---------- generic furniture and props (not catalogue products): for building whole scenes ----------
+//   station – desk + drawer pedestal + monitor, keyboard, mouse + office chair (the user sits on the front side)
+//   desk – the desk alone · chair – an office chair · bench – industrial workbench with a pegboard · plant – a potted plant
+const FU0 = { kind:'station', w:1600 };
+const FU = { ...FU0 };
+const FURN_NAME = { station:'עמדת מחשב', desk:'שולחן עבודה', chair:'כיסא משרדי', bench:'שולחן עבודה תעשייתי', plant:'עציץ' };
+const fuWhite = new THREE.MeshStandardMaterial({ color:0xf3f4f2, roughness:0.45 });
+const fuGrey = new THREE.MeshStandardMaterial({ color:0xb9bec2, roughness:0.35, metalness:0.5 });
+const fuBlack = new THREE.MeshStandardMaterial({ color:0x1d1f22, roughness:0.6 });
+const fuMesh = new THREE.MeshStandardMaterial({ color:0x2a2c30, roughness:0.85 });
+const fuScreen = new THREE.MeshStandardMaterial({ color:0x2f4e6e, roughness:0.2, metalness:0.1, emissive:0x10202e });
+const fuWood = new THREE.MeshStandardMaterial({ color:0xc59a62, roughness:0.6 });
+const fuLeaf = new THREE.MeshStandardMaterial({ color:0x2f6b35, roughness:0.7 });
+const fuPot = new THREE.MeshStandardMaterial({ color:0xa9aaa6, roughness:0.8 });
+function buildFurn() {
+  const g = new THREE.Group(), root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
+  const box = (w, h, d, x, y, z, m, par = root) => { const o = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)); o.position.set(x, y, z); par.add(o); return o; };
+  const cyl = (r1, r2, h, x, y, z, m, par = root, seg = 16) => { const o = shadowOn(new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg), m)); o.position.set(x, y, z); par.add(o); return o; };
+  const k = FU.kind, W = FU.w || 1600, D = 800;
+  const desk = (zc) => {                                   // white top on a grey metal frame, user side = +z
+    box(W, 25, D, 0, 740, zc, fuWhite);
+    for (const sx of [-1, 1]) { box(50, 715, 50, sx * (W/2 - 60), 357, zc - D/2 + 70, fuGrey); box(50, 715, 50, sx * (W/2 - 60), 357, zc + D/2 - 70, fuGrey); box(50, 30, D - 140, sx * (W/2 - 60), 690, zc, fuGrey); }
+    box(W - 170, 300, 12, 0, 520, zc - D/2 + 70, fuGrey);                                  // modesty panel
+  };
+  const chair = (x, z, rot = 0) => {                       // black office chair, its back toward +z
+    const c = new THREE.Group(); c.position.set(x, 0, z); c.rotation.y = rot; root.add(c);
+    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2, leg = box(300, 22, 40, Math.cos(a) * 150, 70, Math.sin(a) * 150, fuBlack, c); leg.rotation.y = -a;
+      cyl(28, 28, 40, Math.cos(a) * 290, 25, Math.sin(a) * 290, fuBlack, c, 10); }
+    cyl(22, 22, 330, 0, 250, 0, fuGrey, c);
+    box(480, 70, 470, 0, 450, 0, fuBlack, c);                                              // seat
+    const back = box(460, 520, 40, 0, 780, 230, fuMesh, c); back.rotation.x = -0.12;          // mesh back
+    for (const sx of [-1, 1]) { box(30, 200, 40, sx * 255, 560, 40, fuBlack, c); box(60, 25, 260, sx * 255, 665, 20, fuBlack, c); }
+  };
+  const pedestal = (x, z) => {                              // 3-drawer pedestal on castors
+    box(400, 560, 520, x, 320, z, fuWhite);
+    for (let i = 0; i < 3; i++) { box(380, 2, 4, x, 220 + i * 170, z + 262, fuGrey); box(120, 14, 14, x, 280 + i * 170, z + 268, fuGrey); }
+    for (const [dx, dz] of [[-150, -200], [150, -200], [-150, 200], [150, 200]]) cyl(22, 22, 40, x + dx, 20, z + dz, fuBlack, root, 10);
+  };
+  const screen = (zc) => {                                  // monitor, keyboard, mouse, a pen cup
+    box(560, 340, 30, 0, 1000, zc - D/2 + 170, fuBlack); box(520, 300, 4, 0, 1000, zc - D/2 + 187, fuScreen);
+    box(60, 160, 40, 0, 830, zc - D/2 + 150, fuBlack); box(240, 12, 180, 0, 758, zc - D/2 + 150, fuBlack);
+    box(440, 18, 150, 0, 762, zc - D/2 + 360, fuBlack); box(60, 22, 100, 300, 763, zc - D/2 + 360, fuBlack);
+    cyl(40, 36, 110, -W/2 + 180, 808, zc - D/2 + 160, fuGrey);
+  };
+  let w = W, d = D, h = 1200;
+  if (k === 'station') { desk(0); pedestal(W/2 - 270, -20); screen(0); chair(-60, D/2 + 160); d = D + 480; }
+  else if (k === 'desk') desk(0);
+  else if (k === 'chair') { chair(0, 0, Math.PI); w = 620; d = 620; }
+  else if (k === 'bench') {                                 // industrial workbench: wood top, grey frame, a shelf, a pegboard with tools
+    const BW = W, BD = 750;
+    box(BW, 40, BD, 0, 880, 0, fuWood);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(50, 860, 50, sx * (BW/2 - 40), 430, sz * (BD/2 - 40), fuGrey);
+    box(BW - 60, 20, BD - 60, 0, 200, 0, fuGrey);
+    for (const sx of [-1, 1]) box(40, 900, 40, sx * (BW/2 - 40), 1350, -BD/2 + 30, fuGrey);
+    const t = pegTex.clone(); t.needsUpdate = true; t.repeat.set((BW - 120) / 32, 700 / 32);
+    const pb = new THREE.Mesh(new THREE.PlaneGeometry(BW - 120, 700), new THREE.MeshStandardMaterial({ map:t, roughness:0.55 })); pb.position.set(0, 1400, -BD/2 + 32); root.add(pb);
+    [[-300, toolRed], [-240, toolYellow], [-180, toolRed]].forEach(([x, m]) => { cyl(11, 13, 95, x, 1560, -BD/2 + 50, m); cyl(3, 3, 130, x, 1450, -BD/2 + 50, zincMat); });
+    box(36, 180, 14, 120, 1480, -BD/2 + 48, toolRed); box(36, 180, 14, 160, 1480, -BD/2 + 48, toolRed);
+    box(320, 110, 180, 380, 960, -60, new THREE.MeshStandardMaterial({ color:0x2f6fd6, roughness:0.5 }));   // a blue box on the top
+    w = BW; d = BD; h = 1800;
+  } else if (k === 'plant') {
+    cyl(200, 160, 420, 0, 210, 0, fuPot, root, 24);
+    for (let i = 0; i < 14; i++) {
+      const a = i * 2.4, r = 40 + (i % 4) * 30, leaf = shadowOn(new THREE.Mesh(new THREE.SphereGeometry(90, 10, 8), fuLeaf));
+      leaf.scale.set(0.55, 1.6, 0.25); leaf.position.set(Math.cos(a) * r * 1.6, 620 + i * 45, Math.sin(a) * r * 1.6); leaf.rotation.set(Math.sin(a) * 0.5, a, Math.cos(a) * 0.6); root.add(leaf);
+    }
+    cyl(10, 14, 700, 0, 700, 0, new THREE.MeshStandardMaterial({ color:0x4b3a28, roughness:0.9 }));
+    w = 450; d = 450; h = 1350;
+  }
+  return { group:g, drawers:[], rods:[], W:w, D:d, H:h };
+}
+function describeFurn() {
+  const k = FU.kind, W = Math.round((FU.w || 1600) / 10);
+  if (k === 'station') return `A computer workstation: a white desk ${W} x 80 cm on a light grey metal frame, a white 3-drawer pedestal on castors under its right side, a black monitor with a keyboard and mouse, a pen cup, and a black mesh-back office chair on castors in front of it.`;
+  if (k === 'desk') return `A plain white work desk ${W} x 80 cm on a light grey metal frame.`;
+  if (k === 'chair') return 'A black office chair with a mesh back and armrests, on castors.';
+  if (k === 'bench') return `An industrial workbench ${W} x 75 cm: a natural wood top on a light grey steel frame with a lower shelf, and a grey perforated pegboard above it holding a few screwdrivers and pliers; a blue plastic box on the top.`;
+  return 'A tall green potted plant in a light grey pot.';
+}
 // ---- technical cabinet: pegboard back, drawers that slide out, doors with holes / louvres and hanging ארקלית 4 ----
 const tcPerf = (kind) => {                      // blue perforated sheet: 'holes' (square holes) or 'louv' (louvre slots)
   const c = document.createElement('canvas'), L = kind === 'louv'; c.width = L ? 64 : 32; c.height = L ? 32 : 32;
@@ -3869,6 +3970,7 @@ function rebuild(keepCamera = false) {
   if (world) { scene.remove(world); world.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); }
   world = new THREE.Group();
   TAMB = DOORS = SHELVES = null; SLD = null;
+  controls.maxDistance = mode === 'scene' ? Math.max(7, Math.hypot(SCN.room.W, SCN.room.D) / 1000 * 1.6) : 7;   // a big room needs to be seen whole
   if (mode === 'scene') {
     spread = spreadTarget = 0;
     buildScene();
@@ -3907,6 +4009,12 @@ function rebuild(keepCamera = false) {
     renderExcl(mode);
     if (mode === 'excl') { const i = document.getElementById('exHandle'); i.value = EXS.excl.handleOff/10; document.getElementById('exHandleVal').textContent = `${Math.round(eb.hy/10)} ס"מ`; }
     else { const i = document.getElementById('ptHandle'); i.value = EXS.part.handleH/10; document.getElementById('ptHandleVal').textContent = `${Math.round(eb.hy/10)} ס"מ`; }
+  } else if (mode === 'furn') {
+    const fb = buildFurn();
+    world.add(fb.group); drawers = []; rods = [];
+    if (!keepCamera) frame(Math.max(fb.W, fb.D) + 300, fb.H + 100, false);
+    document.getElementById('dims').innerHTML = `${FURN_NAME[FU.kind]} · רוחב <b>${Math.round(fb.W/10)}</b> · עומק <b>${Math.round(fb.D/10)}</b> · גובה <b>${Math.round(fb.H/10)}</b> ס"מ`;
+    $('fuDeskSec').hidden = !['station', 'desk', 'bench'].includes(FU.kind);
   } else if (mode === 'arc') {
     const ab = buildArc(), M = ARC_MODELS[ARC.model];
     world.add(ab.group); drawers = []; rods = [];
@@ -4146,6 +4254,8 @@ function techBinsFit(S) {
   S.list.forEach((_, i) => fix(i)); fix('floor');
 }
 segGroup('mdColor', (v) => { MD.color = v; rebuild(true); });
+segGroup('fuKind', (v) => { FU.kind = v; rebuild(); });
+segGroup('fuW', (v) => { FU.w = +v; rebuild(true); });
 segGroup('arcModel', (v) => { ARC.model = +v; if (ARC.model > 2) ARC.div = false; rebuild(true); });
 segGroup('arcColor', (v) => { ARC.color = v; rebuild(true); });
 segGroup('arcDiv', (v) => { ARC.div = v === '1'; rebuild(true); });
@@ -4460,7 +4570,7 @@ function applyFamily(f) {
     $(px + 'DepthFld').hidden = TN[v].depthMode !== 'custom'; $(px + 'Depth').value = TN[v].depth / 10;
   }
   tenaOpenWing = f.wing || null; spreadTarget = spread = f.spread ? 1 : 0;
-  if (f.scene) { releaseBody(); SCN.room = deep(f.scene.room); SCN.items = deep(f.scene.items); SCN.next = f.scene.next || SCN.items.length + 1; SCN.shots = deep(f.scene.shots || []); renderShots && renderShots(); SCN.sel = null; SCN.editType = null; }
+  if (f.scene) { releaseBody(); SCN.room = deep(f.scene.room); SCN.items = deep(f.scene.items); SCN.zones = deep(f.scene.zones || []); SCN.next = f.scene.next || SCN.items.length + 1; SCN.shots = deep(f.scene.shots || []); renderShots && renderShots(); SCN.sel = null; SCN.editType = null; }
   $('backWall').checked = !!f.backWall;
   $('rod').checked = !!f.rod; $('labelsOn').checked = !!f.labels; $('openAll').checked = !!f.openAll;
   [...seg.children].forEach(c => c.classList.toggle('on', +c.dataset.n === current));
@@ -4748,6 +4858,7 @@ function fileStem() {
   if (mode === 'mtamb') return `tambour-metal-cabinet`;
   if (mode === 'mdoor') return `4-shelf-metal-cabinet-${MD.color}`;
   if (mode === 'tech') return `technical-cabinet-v${TC.variant}`;
+  if (mode === 'furn') return `furniture-${FU.kind}-${FU.w}`;
   if (mode === 'arc') return `pick-bins-${ARC.model}-${ARC.cols}x${ARC.rows}-${ARC.color}`;
   if (mode === 'quad') return `four-sided-tilt-bin-stand-${Math.round(stackHeight(QD.comp)/10)}-${QD.base}`;
   if (mode === 'excl') return `exclusive-cart-${Math.round(exTotal('excl')/10)}`;
@@ -4867,6 +4978,7 @@ function structureSummary() {
 function describe() {
   if (mode === 'scene') return describeScene();
   if (mode === 'arc') return describeArc();
+  if (mode === 'furn') return describeFurn();
   const base = 'Wall-mounted tilt-bin storage unit: injection-moulded body in light grey RAL 7035 (matte, slightly satin), with clear transparent polystyrene tilt-out bins';
   const flags = [];
   if ($('backWall').checked && mode === 'part') flags.push('the end without the handle touches a plain light wall at a right angle, so the partition juts out from the wall into the room, smooth floor');
@@ -5574,6 +5686,9 @@ const PRODUCT_OPTS = {
   'ארון תריס עם ארקליות':[{ l:'סידור', ch:Object.entries(ARC_CAB_LAYOUTS).map(([k, L]) => [L.he, C2(c => arcLayout(c.mt, k))]), def:(c) => arcLayoutOf(c.mt) }],
   'ארון 2 דלתות עם ארקליות':[{ l:'סידור', ch:Object.entries(ARC_CAB_LAYOUTS).map(([k, L]) => [L.he, C2(c => arcLayout(c.md, k))]), def:(c) => arcLayoutOf(c.md) }],
   'ארון עבודה טכני':[{ l:'גרסה', vars:(v) => ({ 1:'4 מדפים', 2:'8 מדפים', 3:'1 מגירה', 4:'3 מגירות' })[v.cfg.tc.variant] }],
+  'עמדת מחשב':[{ l:'רוחב השולחן', vars:(v) => String(v.cfg.fu.w / 10) }],
+  'שולחן עבודה':[{ l:'רוחב', vars:(v) => String(v.cfg.fu.w / 10) }],
+  'שולחן עבודה תעשייתי':[{ l:'רוחב', vars:(v) => String(v.cfg.fu.w / 10) }],
   'ארון 4 מדפים':[{ l:'צבע', ch:[['RAL 7035', C2(c => c.md.color = '7035')], ['כחול', C2(c => c.md.color = 'blue')]], def:(c) => c.md.color === 'blue' ? 'כחול' : 'RAL 7035' }],
 };
 // the photo of a chosen setup, when there is one (otherwise the model's own picture)
@@ -5989,6 +6104,12 @@ function addFamilies() {
       { t:'smart', name:'תא נע SMART', kw:'תא נע סמארט smart gondola', cfg:C('smart') } ] },
     { id:'walls', name:'מתלי קיר', vars:[600, 1200, 2000].map(h => ({ t:'wall', g:'מתלי קיר', name:'מתלה קיר ' + h/10, kw:'מתלה קיר wall rack פרופיל', cfg:C('wall', c => c.wall.height = h) })) },
     { id:'arcs', name:'ארקליות', vars:[1, 2, 3, 4].map(n => ({ t:'arc', g:'ארקליות', name:'ארקלית ' + n, kw:`ארקלית ארקליות אחסונית אחסוניות pick bin ${ARC_MODELS[n].code} ${n}`, cfg:C('arc', c => { c.arc = { ...ARC0, model:n }; }) })) },
+    { id:'furn', name:'ריהוט ותפאורה', vars:[
+      ...[1600, 1200].map(w => ({ t:'furn', g:'עמדת מחשב', name:`עמדת מחשב ${w/10}`, kw:'עמדה שולחן מחשב כיסא מסך workstation desk', cfg:C('furn', c => { c.fu = { kind:'station', w }; }) })),
+      ...[1600, 1200].map(w => ({ t:'furn', g:'שולחן עבודה', name:`שולחן ${w/10}`, kw:'שולחן desk table', cfg:C('furn', c => { c.fu = { kind:'desk', w }; }) })),
+      { t:'furn', name:'כיסא משרדי', kw:'כיסא chair', cfg:C('furn', c => { c.fu = { kind:'chair', w:1600 }; }) },
+      ...[1500, 2000].map(w => ({ t:'furn', g:'שולחן עבודה תעשייתי', name:`שולחן עבודה תעשייתי ${w/10}`, kw:'שולחן עבודה סדנה לוח כלים workbench', cfg:C('furn', c => { c.fu = { kind:'bench', w }; }) })),
+      { t:'furn', name:'עציץ', kw:'עציץ צמח plant', cfg:C('furn', c => { c.fu = { kind:'plant', w:1600 }; }) } ] },
     { id:'metal', name:'ארונות מתכת', vars:[
       { t:'tamb', name:'ארון מאובטח לרב תא', kw:'ארון מתכת תריס נעילה secure cabinet', cfg:C('tamb') },
       { t:'mtamb', name:'ארון תריס', kw:'ארון מתכת תריס tambour cabinet', cfg:C('mtamb') },
@@ -6400,6 +6521,7 @@ const HEADS = {
     // the tambour opens to 90% while the shelves are set (still showing), and goes back afterwards
     open:() => { const S = METAL.mtamb, was = S.target; S.target = TBX.MAXO * 0.9; return () => { S.target = was; }; } }],
   mdoor:[{ seg:'mdColor', l:'צבע' }],
+  furn:[{ seg:'fuW', l:'רוחב', if:() => ['station', 'desk', 'bench'].includes(FU.kind) }],
   tech:[{ seg:'tcVar', l:'גרסה' }, { seg:'tcAcc', l:'בדלתות', if:() => techZones(TC) }],
   arc:[{ seg:'arcModel', l:'דגם' }, { seg:'arcColor', l:'צבע' }, { seg:'arcDiv', l:'מחיצת אורך', if:() => ARC.model <= 2 }],
 };
@@ -6938,6 +7060,11 @@ async function voiceDone() {
   }
   try {
     const r = await api('/api/scene', scenePayload(text));
+    const des = (r.ops || []).find(o => o.op === 'design');
+    if (des) {                                       // a whole space / zones: plan first, build on approval
+      const d = await designFlow(des.text || text); VOICE.busy = false;
+      voiceUI('done', d.plan.understood || 'הנה התכנית'); openDesignDialog(d); return;
+    }
     const n = executeOps(r.ops || []);
     VOICE.busy = false;
     voiceUI('done', (n ? (r.understood || 'בוצע') : (r.understood ? r.understood + ' – לא היה מה לשנות' : 'לא הבנתי מה לעשות. נסו שוב.')) + (n && AI_WARN.length ? ' · שימו לב: ' + AI_WARN.join(' · ') : ''));
@@ -6967,7 +7094,7 @@ function binFaces(it) {
 }
 function cfgComp(t, c) {
   if (!c) return null;
-  if (t === 'arc') return null;
+  if (t === 'arc' || t === 'furn') return null;
   if (t === 'excl' || t === 'part') return c.exs && c.exs.comp;
   if (t === 'quad') return c.qd && c.qd.comp;
   if (t === 'tamb') return c.tb && c.tb.items && c.tb.items[0] && c.tb.items[0].comp;
@@ -6986,7 +7113,7 @@ function scenePayload(text) {
       bins_per_row_by_face:Object.fromEntries(Object.entries(faces).map(([k, rows]) => [k, rows.map(r => r.length)])),
       has_doors:i.type === 'mdoor' || i.type === 'tech' || (i.type === 'tena' && !!(cfg.tn && cfg.tn.slide && cfg.tn.slide.on)), has_tambour:i.type === 'tamb' || i.type === 'mtamb',
       arc:i.type === 'arc' ? cfg.arc : undefined,
-      contents:i.contents || '', y_cm:Math.round(yOf(i) * 100), against_walls:touchWall(i),
+      contents:i.contents || '', y_cm:Math.round(yOf(i) * 100), against_walls:touchWall(i), zone:i.zone || undefined,
       wings:(i.type === 'tena' || i.type === 'smart') && cfg.tn && cfg.tn.bySize && cfg.tn.bySize[cfg.tn.size || 4] ? cfg.tn.bySize[cfg.tn.size || 4].wings.map(w => ({ layer:w.layer, comp:w.comp })) : undefined };
   });
   const models = Object.fromEntries(Object.entries(lib.models).map(([t, ms]) => [t, Object.keys(ms)]));
@@ -7044,7 +7171,7 @@ function editorOps(ops) {
 function sceneState() { return { snap:sceneSnap(), sel:SCN.sel, t:Date.now() }; }
 function restoreState(st) {
   releaseBody(); SCN.sel = null; SCN.editType = null;
-  SCN.room = deep(st.snap.room); SCN.items = deep(st.snap.items); SCN.next = Math.max(SCN.next, st.snap.next || 0);
+  SCN.room = deep(st.snap.room); SCN.items = deep(st.snap.items); SCN.zones = deep(st.snap.zones || []); SCN.next = Math.max(SCN.next, st.snap.next || 0);
   rebuild(true);
   if (st.sel && SCN.items.some(i => i.id === st.sel)) selectItem(st.sel); else renderScene();
 }
@@ -7206,6 +7333,7 @@ function buildType(t) {                           // the 3D product of type t fr
   if (t === 'quad') return buildQuad();
   if (METAL[t]) return buildMetal(t);
   if (t === 'arc') return buildArc();
+  if (t === 'furn') return buildFurn();
   return buildTena();
 }
 let PT = null;                                     // a small renderer of its own for the product pictures
@@ -7361,6 +7489,7 @@ function cfgFromPlan(p) {
     case 'tena': set(cfg.tn, 'size', st.tena_size); if (st.doors !== null && st.doors !== undefined) cfg.tn.slide = { ...(cfg.tn.slide || { open:[0, 0, 0, 0] }), on:!!st.doors }; break;
     case 'tamb': { const c = comp(TB_MODELS); if (c) cfg.tb.items = [{ t:'bins', y:TBX.BASE, comp:c, side:'center', noSep:[...ORDER] }]; set(cfg.tb, 'align', st.align); break; }
     case 'mdoor': set(cfg.md, 'color', st.md_color); break;
+    case 'furn': cfg.fu = { ...FU0, ...(cfg.fu || {}) }; set(cfg.fu, 'kind', st.furn_kind); { const w = st.furn_w_cm || st.width_cm; if (w) cfg.fu.w = w * 10; } break;
     case 'tech': if (st.tech_variant) techVariant(cfg.tc, Math.max(1, Math.min(4, st.tech_variant)));
       if (st.door_acc && TC_ACC[st.door_acc]) cfg.tc.doorAcc = [st.door_acc, st.door_acc];
       if (st.door_bins && techZones(cfg.tc)) cfg.tc.hang = [st.door_bins.left ?? cfg.tc.hang[0], st.door_bins.right ?? cfg.tc.hang[1]].map(n => Math.max(0, Math.min(TCX.HANG_MAX, n | 0)));
@@ -7464,6 +7593,224 @@ function applyPlan(plan) {
   renderScene();
   toast(`נוספו ${made.length} מוצרים לסצנה`);
 }
+// ---------- designing a whole space: the AI plans ZONES, this engine places the products ----------
+// room coordinates here are mm from the back-left corner: X along the width (left → right), Z from the back wall toward the viewer
+const FOOT = new Map();
+function footOf(type, cfg) {                           // the product's footprint (mm, not turned) and height
+  const k = type + JSON.stringify(cfg); if (FOOT.has(k)) return FOOT.get(k);
+  const b = buildWith(type, cfg), box = new THREE.Box3().setFromObject(b.group), s = box.getSize(new THREE.Vector3());
+  b.group.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); });
+  const f = { w:Math.round(s.x * 1000), d:Math.round(s.z * 1000), h:Math.round(s.y * 1000) }; FOOT.set(k, f); return f;
+}
+const ZONE_KIND = { workstations:'שורת עמדות', workstation_island:'אי עמדות גב אל גב', wall_storage:'אחסון לאורך קיר', island:'אי במרכז', benches:'שולחנות עבודה', carts:'עגלות', decor:'עציצים' };
+const WALL_HEB = { back:'האחורי', left:'השמאלי', right:'הימני', front:'הקדמי' };
+const AISLE = 1200, SIDE_AISLE = 900;
+const fullSettings = (st) => ({ stand_type:null, base:null, height_cm:null, comp:null, arc:null, bin_layout:null, shelf_bins:null, fill_model:null, fill_to_cm:null, wings:null, cols:null, top:null, tena_size:null, doors:null, unit_bins:null, md_color:null, align:null, tech_variant:null, door_bins:null, door_acc:null, furn_kind:null, furn_w_cm:null, ...(st || {}) });
+function zoneCfg(type, st) { return cfgFromPlan({ type, saved_model:'', settings:fullSettings(st), base:deep(DEF_CFG(type)) }); }
+// a clean default for each type (not whatever happens to be in the editor)
+function DEF_CFG(type) {
+  const v = addFamilies().flatMap(c => c.vars).find(x => x.t === type && !/ארקליות|דלתות|גלגלים – /.test(x.name)) || addFamilies().flatMap(c => c.vars).find(x => x.t === type);
+  return v ? v.cfg : capCfg(type);
+}
+function layoutDesign(plan, room) {
+  const W = room.W, D = room.D, warn = [], out = [], placed = [];       // placed: { x0, x1, z0, z1, h, zone }
+  const ov = (a, b, m = 0) => a.x0 < b.x1 + m && b.x0 < a.x1 + m && a.z0 < b.z1 + m && b.z0 < a.z1 + m;
+  // doors keep 1 m clear in front of them; a window blocks only what is taller than its sill
+  const opens = (room.openings || []).map(o => {
+    const along0 = o.off - 50, along1 = o.off + o.w + 50, dp = o.kind === 'door' ? 1000 : 600;
+    const r = o.wall === 'back' ? { x0:along0, x1:along1, z0:0, z1:dp } : o.wall === 'front' ? { x0:along0, x1:along1, z0:D - dp, z1:D }
+      : o.wall === 'left' ? { x0:0, x1:dp, z0:along0, z1:along1 } : { x0:W - dp, x1:W, z0:along0, z1:along1 };
+    return { ...r, door:o.kind === 'door', sill:o.sill || 0 };
+  });
+  for (const it of SCN.items) {                                         // products that stay (not in a zone): obstacles
+    if (plan.clear_scene || it.zone || it.hidden || it.hx === undefined) continue;
+    const e = extents(it), cx = (it.x + SCN.room.W/2000) * 1000, cz = (it.z + SCN.room.D/2000) * 1000;
+    placed.push({ x0:cx - e.ex*1000, x1:cx + e.ex*1000, z0:cz - e.ez*1000, z1:cz + e.ez*1000, h:(it.h || 1) * 1000, zone:null });
+  }
+  const free = (r, h, m = 0) => r.x0 >= -1 && r.z0 >= -1 && r.x1 <= W + 1 && r.z1 <= D + 1
+    && !opens.some(o => (o.door || h > o.sill) && ov(r, o)) && !placed.some(p => ov(r, p, m));
+  // wall frame: a = along the wall (start = left end of back / front, back end of the sides), t = depth from the wall
+  const WALL = {
+    back:{ L:W, rot:0, rect:(a0, a1, t0, t1) => ({ x0:a0, x1:a1, z0:t0, z1:t1 }) },
+    front:{ L:W, rot:180, rect:(a0, a1, t0, t1) => ({ x0:a0, x1:a1, z0:D - t1, z1:D - t0 }) },
+    left:{ L:D, rot:90, rect:(a0, a1, t0, t1) => ({ x0:t0, x1:t1, z0:a0, z1:a1 }) },
+    right:{ L:D, rot:270, rect:(a0, a1, t0, t1) => ({ x0:W - t1, x1:W - t0, z0:a0, z1:a1 }) },
+  };
+  const put = (z, seg, r) => { placed.push({ ...r, h:seg.h, zone:z.id });
+    out.push({ type:seg.type, cfg:seg.cfg, rot:seg.rot, x:(r.x0 + r.x1) / 2, z:(r.z0 + r.z1) / 2, zone:z.id, name:seg.name, contents:z.contents || '' }); };
+  // a run of segments side by side along a wall: the first offset (by align) where all of them are free
+  function runOnWall(z, wall, segs, gap) {
+    const F = WALL[wall], total = segs.reduce((a, s) => a + s.along, 0) + gap * (segs.length - 1);
+    if (total > F.L) return false;
+    const slots = []; for (let a = 0; a + total <= F.L + 1; a += 50) slots.push(a);
+    const want = z.align === 'start' ? 0 : z.align === 'end' ? F.L - total : (F.L - total) / 2;
+    slots.sort((p, q) => Math.abs(p - want) - Math.abs(q - want));
+    for (const a0 of slots) {
+      let a = a0; const rs = segs.map(s => { const r = F.rect(a, a + s.along, s.t0 || 0, (s.t0 || 0) + s.depth); a += s.along + gap; return r; });
+      if (rs.every((r, i) => free(r, segs[i].h))) { rs.forEach((r, i) => put(z, { ...segs[i], rot:(F.rot + (segs[i].turn || 0)) % 360 }, r)); return true; }
+    }
+    return false;
+  }
+  // a block (w x d) in the free middle: as close to the centre as possible, an aisle all round
+  function blockInMiddle(w, d) {
+    let best = null;
+    for (let x = SIDE_AISLE; x + w <= W - SIDE_AISLE; x += 100) for (let zz = AISLE; zz + d <= D - SIDE_AISLE; zz += 100) {
+      const r = { x0:x, x1:x + w, z0:zz, z1:zz + d };
+      if (!free(r, 2500, AISLE)) continue;
+      const dist = Math.hypot(x + w/2 - W/2, zz + d/2 - D/2); if (!best || dist < best.dist) best = { ...r, dist };
+    }
+    return best;
+  }
+  const order = ['workstations', 'benches', 'wall_storage', 'workstation_island', 'island', 'carts', 'decor'];
+  const zones = [...(plan.zones || [])].sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
+  const res = {};
+  for (const z of zones) {
+    const prod = z.product || {}, n0 = z.count;
+    let made = 0, asked = n0;
+    const nameOf = (base, i) => `${z.name} – ${base} ${i + 1}`;
+    if (z.kind === 'workstations' || z.kind === 'workstation_island') {
+      const dw = z.desk_cm === 120 ? 1200 : (prod.settings && prod.settings.furn_w_cm) === 120 ? 1200 : 1600;
+      const stCfg = zoneCfg('furn', { furn_kind:'station', furn_w_cm:dw / 10 }), stF = footOf('furn', stCfg);
+      const pt = z.partition, pCfg = pt ? zoneCfg('part', { cols:pt.cols || 3, comp:pt.comp }) : null, pF = pCfg ? footOf('part', pCfg) : null;
+      const seg = (i) => ({ type:'furn', cfg:stCfg, along:stF.w, depth:stF.d, h:stF.h, name:nameOf('עמדה', i) });
+      const pseg = (i) => ({ type:'part', cfg:pCfg, along:pF.d, depth:pF.w, h:pF.h, turn:90, name:nameOf('מחיצה', i) });
+      const build = (n) => { const s2 = []; let p = 0;
+        if (pt && pt.ends) s2.push(pseg(p++));
+        for (let i = 0; i < n; i++) { s2.push(seg(i)); if (pt && (i < n - 1 || pt.ends)) s2.push(pseg(p++)); }
+        return s2; };
+      if (z.kind === 'workstations') {
+        const walls = z.wall ? [z.wall] : ['back', 'left', 'right', 'front'];
+        let n = n0 || Math.max(1, Math.floor((WALL[walls[0]].L - 1200) / (stF.w + (pF ? pF.d + 60 : 0))));
+        asked = n;
+        for (; n >= 1 && !made; n--) for (const w of walls) if (runOnWall(z, w, build(n), 30)) { made = n; break; }
+      } else {                                                   // back to back: two rows, the partitions across both
+        const pairs0 = Math.ceil((n0 || 6) / 2); asked = n0 || 6;
+        for (let k = pairs0; k >= 1 && !made; k--) {
+          const colW = stF.w + (pF ? pF.d + 60 : 0), w = k * colW + (pF && pt.ends ? pF.d + 60 : 0), d = 2 * stF.d;
+          const b = blockInMiddle(w, Math.max(d, pF ? pF.w : 0)); if (!b) continue;
+          const zc = (b.z0 + b.z1) / 2; let x = b.x0, p = 0;
+          const part = () => { const r = { x0:x, x1:x + pF.d, z0:zc - pF.w/2, z1:zc + pF.w/2 }; put(z, { type:'part', cfg:pCfg, rot:90, h:pF.h, name:nameOf('מחיצה', p++) }, r); x += pF.d + 60; };
+          if (pF && pt.ends) part();
+          for (let i = 0; i < k; i++) {
+            put(z, { type:'furn', cfg:stCfg, rot:180, h:stF.h, name:nameOf('עמדה', 2*i) }, { x0:x, x1:x + stF.w, z0:zc - stF.d, z1:zc });
+            put(z, { type:'furn', cfg:stCfg, rot:0, h:stF.h, name:nameOf('עמדה', 2*i + 1) }, { x0:x, x1:x + stF.w, z0:zc, z1:zc + stF.d });
+            x += stF.w + 60; if (pF && (i < k - 1 || pt.ends)) { x -= 60; part(); }
+          }
+          made = 2 * k;
+        }
+      }
+    } else if (z.kind === 'wall_storage' || z.kind === 'benches') {
+      const type = z.kind === 'benches' ? 'furn' : prod.type || 'mdoor';
+      const cfg = zoneCfg(type, z.kind === 'benches' ? { furn_kind:'bench', furn_w_cm:(prod.settings && prod.settings.furn_w_cm) || 200 } : prod.settings), f = footOf(type, cfg);
+      const gap = type === 'wall' ? 60 : 20, walls = z.wall ? [z.wall] : ['back', 'left', 'right', 'front'];
+      let n = n0 || Math.min(30, Math.floor((WALL[walls[0]].L + gap) / (f.w + gap)));
+      asked = n;
+      const segs = (k) => Array.from({ length:k }, (_, i) => ({ type, cfg, along:f.w, depth:f.d, h:f.h, name:nameOf(type === 'furn' ? 'שולחן' : TYPE_NAME[type], i) }));
+      for (; n >= 1 && !made; n--) for (const w of walls) if (runOnWall(z, w, segs(n), gap)) { made = n; break; }
+      if (type === 'wall') out.filter(o => o.zone === z.id).forEach(o => { o.y = 0.9; });     // wall racks hang at 90 cm
+    } else if (z.kind === 'island') {
+      const type = prod.type || 'quad', cfg = zoneCfg(type, prod.settings), f = footOf(type, cfg);
+      const gap = { quad:900, excl:700, stand:400, furn:600 }[type] ?? 0;
+      let n = n0 || 4; asked = n;
+      for (; n >= 1 && !made; n--) {
+        for (let rows = z.rows || 1; rows <= Math.min(n, 6) && !made; rows++) {
+          const cols = Math.ceil(n / rows), w = cols * f.w + (cols - 1) * gap, d = rows * f.d + (rows - 1) * AISLE;
+          const b = blockInMiddle(w, d); if (!b) continue;
+          let i = 0;
+          for (let r = 0; r < rows; r++) for (let c = 0; c < cols && i < n; c++, i++) {
+            const x0 = b.x0 + c * (f.w + gap), z0 = b.z0 + r * (f.d + AISLE);
+            put(z, { type, cfg, rot:0, h:f.h, name:nameOf(TYPE_NAME[type], i) }, { x0, x1:x0 + f.w, z0, z1:z0 + f.d });
+          }
+          made = n;
+        }
+      }
+    } else if (z.kind === 'carts' || z.kind === 'decor') {
+      const type = z.kind === 'decor' ? 'furn' : prod.type || 'excl';
+      const cfg = zoneCfg(type, z.kind === 'decor' ? { furn_kind:'plant' } : prod.settings), f = footOf(type, cfg);
+      const n = n0 || (z.kind === 'decor' ? 2 : 3); asked = n;
+      const near = placed.filter(p => p.zone && p.zone === z.near);
+      const tx = near.length ? (Math.min(...near.map(p => p.x0)) + Math.max(...near.map(p => p.x1))) / 2 : W / 2;
+      const tz = near.length ? (Math.min(...near.map(p => p.z0)) + Math.max(...near.map(p => p.z1))) / 2 : D / 2;
+      const cands = [];
+      if (z.kind === 'decor') for (const [x, zz] of [[0, 0], [W - f.w, 0], [0, D - f.d], [W - f.w, D - f.d]]) cands.push([x, zz]);
+      for (let x = 0; x + f.w <= W; x += 100) for (let zz = 0; zz + f.d <= D; zz += 100) cands.push([x, zz]);
+      cands.sort((p, q) => Math.hypot(p[0] + f.w/2 - tx, p[1] + f.d/2 - tz) - Math.hypot(q[0] + f.w/2 - tx, q[1] + f.d/2 - tz));
+      if (z.kind === 'decor') {                                  // one plant per corner, the back corners first
+        const corners = [[0, 0], [W, 0], [0, D], [W, D]], near = (c) => cands.slice().sort((p, q) => Math.hypot(p[0] + f.w/2 - c[0], p[1] + f.d/2 - c[1]) - Math.hypot(q[0] + f.w/2 - c[0], q[1] + f.d/2 - c[1]));
+        for (const c of corners) { if (made >= n) break; for (const [x, zz] of near(c).slice(0, 400)) { const r = { x0:x, x1:x + f.w, z0:zz, z1:zz + f.d };
+          if (free(r, f.h, 150)) { put(z, { type, cfg, rot:0, h:f.h, name:nameOf('עציץ', made) }, r); made++; break; } } }
+        cands.length = 0;
+      }
+      for (const [x, zz] of cands) {
+        if (made >= n) break;
+        const r = { x0:x, x1:x + f.w, z0:zz, z1:zz + f.d };
+        if (free(r, f.h, z.kind === 'decor' ? 150 : 400)) { put(z, { type, cfg, rot:0, h:f.h, name:nameOf(z.kind === 'decor' ? 'עציץ' : TYPE_NAME[type], made) }, r); made++; }
+      }
+    }
+    res[z.id] = { asked, made };
+    if (!made) warn.push(`"${z.name}" לא נכנס – אין מספיק מקום פנוי`);
+    else if (asked && made < asked) warn.push(`"${z.name}": נכנסו ${made} מתוך ${asked}`);
+  }
+  return { items:out, warn, res };
+}
+// the plan in words, for the user to approve
+function designSummary(plan, lay, room) {
+  const esc = (t) => String(t || '').replace(/</g, '&lt;');
+  const prodHe = (z) => {
+    if (z.kind === 'workstations' || z.kind === 'workstation_island') return `עמדות מחשב ${z.desk_cm || 160}${z.partition ? ` + מחיצות EXCLUSIVE ${z.partition.cols || 3} טורים${z.partition.ends ? ' (גם בקצוות)' : ''}` : ''}`;
+    if (z.kind === 'benches') return 'שולחנות עבודה תעשייתיים';
+    if (z.kind === 'decor') return 'עציצים';
+    const t = z.product && z.product.type, st = (z.product && z.product.settings) || {};
+    return (TYPE_NAME[t] || t || '') + (st.tena_size ? ` ${st.tena_size} כנפיים` : '') + (st.cols ? ` ${st.cols} טורים` : '') + (st.tech_variant ? ` – ${TECH_VAR[st.tech_variant]}` : '') + (st.bin_layout ? ' עם ארקליות' : '');
+  };
+  const rows = (plan.zones || []).map(z => {
+    const r = lay.res[z.id] || { made:0 };
+    return `<li><b>${esc(z.name)}</b> · ${ZONE_KIND[z.kind] || ''}${z.wall ? ` · קיר ${WALL_HEB[z.wall]}` : ''}<br><span class="use">${r.made} × ${esc(prodHe(z))}${r.asked && r.made < r.asked ? ` (ביקשת ${r.asked})` : ''}</span></li>`;
+  }).join('');
+  const ops = (room.openings || []).map(o => `${o.kind === 'door' ? 'דלת' : 'חלון'} ${Math.round(o.w/10)} בקיר ${WALL_HEB[o.wall]}`).join(' · ');
+  return `<p>${esc(plan.understood)}</p>
+    <p><b>החדר:</b> ${(room.W/1000).toFixed(1)} × ${(room.D/1000).toFixed(1)} מ'${ops ? ' · ' + ops : ''}${plan.clear_scene ? ' · <b>הסצנה הנוכחית תוחלף</b>' : ''}</p>
+    <ul class="dzones">${rows}</ul>
+    ${lay.warn.length ? `<p class="dwarn">${lay.warn.map(esc).join('<br>')}</p>` : ''}
+    ${plan.notes ? `<p class="use">${esc(plan.notes)}</p>` : ''}
+    <p><b>סה"כ ${lay.items.length} פריטים.</b></p>`;
+}
+// ask the designer, show the plan, build it on approval
+async function designFlow(text) {
+  const R = SCN.room, sel = SCN.items.find(i => i.id === SCN.sel); if (sel) sel.cfg = capCfg(sel.type);
+  const others = SCN.items.filter(i => !i.zone && !i.hidden).map(i => ({ name:i.name, type:i.type, x_cm:Math.round((i.x + R.W/2000) * 100), z_cm:Math.round((i.z + R.D/2000) * 100) }));
+  const room = { width_m:R.W / 1000, depth_m:R.D / 1000, back:!!R.back, left:!!R.left, right:!!R.right, front:!!R.front,
+    openings:(R.openings || []).map(o => ({ kind:o.kind, type:o.type, wall:o.wall, width_cm:Math.round(o.w/10), offset_cm:Math.round(o.off/10) })) };
+  const plan = await api('/api/design', { text, room, zones:SCN.zones || [], others });
+  // the planned room (with its openings) – the engine works on it before anything changes
+  const real = SCN.room, tmp = deep(real);
+  if (plan.room) { const r = plan.room; tmp.W = Math.max(2000, Math.min(60000, Math.round(r.width_m * 1000))); tmp.D = Math.max(2000, Math.min(60000, Math.round(r.depth_m * 1000))); tmp.back = r.back; tmp.left = r.left; tmp.right = r.right; tmp.front = r.front; }
+  let lay;
+  try {
+    SCN.room = tmp;
+    if (plan.openings) { tmp.openings = []; for (const o of plan.openings) aiOpening({ action:'add', kind:o.kind, type:o.type, wall:o.wall, width_cm:o.width_cm, height_cm:null, offset_cm:o.offset_cm, sill_cm:null }); }
+    (tmp.openings || []).forEach(openFix);
+    lay = layoutDesign(plan, tmp);
+  } finally { SCN.room = real; }
+  return { plan, lay, room:tmp };
+}
+function designApply(d) {
+  VOICE.undo.push(sceneState()); if (VOICE.undo.length > 30) VOICE.undo.shift();
+  selectItem(null, true);
+  SCN.items = d.plan.clear_scene ? [] : SCN.items.filter(i => !i.zone);
+  SCN.room = d.room; SCN.zones = deep(d.plan.zones || []);
+  const W2 = d.room.W / 2000, D2 = d.room.D / 2000;
+  for (const o of d.lay.items) SCN.items.push({ id:SCN.next++, type:o.type, cfg:deep(o.cfg), rot:o.rot, name:o.name, contents:o.contents, zone:o.zone,
+    x:o.x / 1000 - W2, z:o.z / 1000 - D2, ...(o.y ? { y:o.y } : {}) });
+  rebuild();                                                        // the whole room in view
+  renderScene();
+}
+function openDesignDialog(d) {
+  openDialog(`<h3>תכנית לסצנה</h3><div class="dplan">${designSummary(d.plan, d.lay, d.room)}</div>
+    <div class="dlg-actions"><button class="btn primary" id="dsOk">אשר ובנה</button><button class="btn" data-close>ביטול</button></div>`, (card, close) => {
+    card.querySelector('#dsOk').onclick = () => { close(); designApply(d); toast(`נבנו ${d.lay.items.length} פריטים · Ctrl+Z מבטל`); };
+  });
+}
 function openSceneAI() {
   openDialog(`
     <h3>בנייה בקול</h3>
@@ -7492,6 +7839,8 @@ function openSceneAI() {
       const go = q('#aiGo'); go.disabled = true; go.textContent = 'מבין…'; q('#aiErr').hidden = true;
       try {
         const r = await api('/api/scene', scenePayload(text));
+        const des = (r.ops || []).find(o => o.op === 'design');
+        if (des) { go.textContent = 'מתכנן…'; const d = await designFlow(des.text || text); close(); openDesignDialog(d); return; }
         plan = r;
         if (!plan || !(plan.ops || []).length) throw new Error('לא הבנתי מה לעשות. נסו לנסח שוב.');
         q('#aiPlan').innerHTML = `<h4>זה מה שהבנתי. אם זה בסדר – אשרו. אם לא – תקנו ונסו שוב.</h4><div>${(plan.understood || '').replace(/</g, '&lt;')}</div><ul>${opLines(plan.ops)}</ul>`;
@@ -7513,8 +7862,8 @@ function renderSceneTypes() {
 // ---- saved scenes: base (products only) and ready (with the full render brief and its images) ----
 function sceneSnap() {
   const s = SCN.items.find(i => i.id === SCN.sel); if (s) s.cfg = capCfg(s.type);
-  return { room:deep(SCN.room), next:SCN.next, shots:deep(SCN.shots || []),
-    items:SCN.items.map(({ id, type, cfg, x, z, y, rot, hidden, name, contents }) => deep({ id, type, cfg, x, z, y:y || 0, rot, hidden:!!hidden, name, contents:contents || '' })) };
+  return { room:deep(SCN.room), next:SCN.next, shots:deep(SCN.shots || []), zones:deep(SCN.zones || []),
+    items:SCN.items.map(({ id, type, cfg, x, z, y, rot, hidden, name, contents, zone }) => deep({ id, type, cfg, x, z, y:y || 0, rot, hidden:!!hidden, name, contents:contents || '', ...(zone ? { zone } : {}) })) };
 }
 async function uploadImage(src, kind) {
   if (!src) return null;
@@ -7545,7 +7894,7 @@ function loadScene(name) {
   const sc = lib.scenes[name]; if (!sc) return;
   if (mode !== 'scene') panels.find(p => p.dataset.mode === 'scene').querySelector('.head').click();
   releaseBody(); if (FREE.on) setFree(false);
-  SCN.room = deep(sc.scene.room); SCN.items = deep(sc.scene.items); SCN.next = sc.scene.next || SCN.items.length + 1;
+  SCN.room = deep(sc.scene.room); SCN.items = deep(sc.scene.items); SCN.zones = deep(sc.scene.zones || []); SCN.next = sc.scene.next || SCN.items.length + 1;
   SCN.shots = deep(sc.scene.shots || []); renderShots && renderShots(); SCN.sel = null; SCN.editType = null; sceneUndo.length = 0;
   rebuild(); renderScene();
   if (sc.camera) setTimeout(() => goShot(sc.camera), 60);
@@ -8230,7 +8579,7 @@ const EN_EL = [
   ['#pUnit h1', 'TILT BIN'], ['#pStand h1', 'STANDING UNIT'], ['#pWall h1', 'WALL MOUNT UNIT'],
   ['#pTena h1', 'GONDOLA DELUX'], ['#pExcl h1', 'EXCLUSIVE TILT BIN CART'], ['#pPart h1', 'MODULAR EXCLUSIVE PARTITION'], ['#pTamb h1', 'SECURED TILT BIN METAL CABINET'], ['#pSmart h1', 'GONDOLA SMART'], ['.tab[data-f="tilt"]', 'TILT BIN FAMILY'],
   ['#pQuad h1', 'FOUR-SIDED TILT BIN STAND'],
-  ['#pMtamb h1', 'TAMBOUR METAL CABINET'], ['#pMdoor h1', '4-SHELF METAL CABINET'], ['#pTech h1', 'TECHNICAL WORK CABINET'], ['.tab[data-f="metal"]', 'METAL CABINETS'],
+  ['#pMtamb h1', 'TAMBOUR METAL CABINET'], ['#pMdoor h1', '4-SHELF METAL CABINET'], ['#pTech h1', 'TECHNICAL WORK CABINET'], ['#pFurn h1', 'FURNITURE & PROPS'], ['.tab[data-f="furn"]', 'FURNITURE'], ['.tab[data-f="metal"]', 'METAL CABINETS'],
   ['#mdColor button[data-v="blue"]', 'Blue'],
 ];
 let LANG = 'he';

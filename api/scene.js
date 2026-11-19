@@ -7,8 +7,8 @@ import { isAdmin } from './_auth.js';
 export const config = { maxDuration: 60 };
 const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL || 'gpt-4.1-mini';
 
-const TYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc'];
-const OPS = ['add', 'move', 'move_to', 'rotate', 'rotate_to', 'delete', 'duplicate', 'set', 'bins', 'doors', 'tambour', 'contents', 'select', 'room', 'light', 'opening', 'clear', 'commit'];
+const TYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn'];
+const OPS = ['add', 'move', 'move_to', 'rotate', 'rotate_to', 'delete', 'duplicate', 'set', 'bins', 'doors', 'tambour', 'contents', 'select', 'room', 'light', 'opening', 'clear', 'commit', 'design'];
 
 const CATALOGUE = `
 Product types (type key – Hebrew name – footprint width x depth in cm with rot 0 – what can be set):
@@ -25,7 +25,8 @@ Product types (type key – Hebrew name – footprint width x depth in cm with r
 - arc – "ארקליות" / "ארקלית" – ONE single open-front plastic pick bin (like Huliot's "אחסוניות"): settings.arc = model (1: 50.4 deep x 30.7 wide x 19.4 high cm, 2: 35 x 21 x 19.6, 3: 23.8 x 14.5 x 12.9, 4: 17 x 9.6 x 8), color blue (default) / grey, divider (one lengthwise divider, models 1–2 only); cols, rows, height_cm stay null. Several bins = count (side by side with row), or more adds; a bin on top of something = y_cm.
 - Pick bins (ארקליות 2, 3, 4 – not 1, too deep) can stand on the shelves of mtamb and mdoor: settings.shelf_bins. "ארון תריס עם ארקליות" / "ארון 2 דלתות עם ארקליות" = that cabinet with shelf_bins (no layout given → bin_layout 'mixed'; "מלא בארקליות 3" / "רק ארקלית 3" → bin_layout 'full'; shelf_bins changes single shelves after it): model 2, cols 4, rows 1).
 - mdoor – "ארון 4 מדפים" – metal cabinet with 2 hinged doors, 90 x 40, 195 high – md_color (blue / 7035 = light grey).
-- tech – "ארון עבודה טכני" – blue workshop cabinet 100 x 56 x 195 with 2 hinged doors – tech_variant: 1 = 4 shelves, 2 = 8 levels with 4 x ארקלית 2 each (32 bins), 3 = one drawer + 2 shelves, 4 = 3 drawers + 2 shelves. Variants 3 / 4 have a pegboard back and perforated / louvre doors with ארקלית 4 hanging on them – door_bins {left, right} (default 2 and 1, 0–3 each). shelf_bins work here too (a deep bin can't sit at the height of the door bins).
+- tech – "ארון עבודה טכני" – blue workshop cabinet 100 x 56 x 195 with 2 hinged doors – tech_variant: 1 = 4 shelves, 2 = 8 levels with 4 x ארקלית 2 each (32 bins), 3 = one drawer + 2 shelves, 4 = 3 drawers + 2 shelves. Variants 3 / 4 have a pegboard back and perforated / louvre doors with ארקלית 4 hanging on them – door_bins {left, right} (default 2 and 1, 0–3 each); door_acc = what hangs inside the doors: tools ("כלי עבודה"), bins ("ארקליות"), both ("גם וגם", default) or none ("כלום", "דלתות ריקות"). shelf_bins work here too (a deep bin can't sit at the height of the door bins).
+- furn – generic furniture / props (not catalogue products): furn_kind station ("עמדת מחשב": desk + pedestal + monitor + chair, 160 x 128), desk ("שולחן"), chair ("כיסא"), bench ("שולחן עבודה", industrial workbench with a pegboard), plant ("עציץ", "צמח"); furn_w_cm = width (desk / station 120 or 160, bench 150 or 200).
 comp = how many tilt-bin units of each model, e.g. [{model:4,count:9}] (model = number of bins in the unit: 2,3,4,5,6,9; bigger ones at the bottom automatically). For "add one more level of #5" give the FULL new comp.
 Names people use (Hebrew speech, also with transcription mistakes):
 - unit: "רב תא", "רב-תא 5", "רבתא", "יחידה", "מגירות מתהפכות". The number after it is the model: "רב תא 6" = model 6.
@@ -60,7 +61,7 @@ export default async function handler(req, res) {
 
   const settings = nul({
     type:'object', additionalProperties:false,
-    required:['stand_type', 'base', 'height_cm', 'comp', 'arc', 'bin_layout', 'shelf_bins', 'fill_model', 'fill_to_cm', 'wings', 'cols', 'top', 'tena_size', 'doors', 'unit_bins', 'md_color', 'align', 'tech_variant', 'door_bins'],
+    required:['stand_type', 'base', 'height_cm', 'comp', 'arc', 'bin_layout', 'shelf_bins', 'fill_model', 'fill_to_cm', 'wings', 'cols', 'top', 'tena_size', 'doors', 'unit_bins', 'md_color', 'align', 'tech_variant', 'door_bins', 'door_acc', 'furn_kind', 'furn_w_cm'],
     properties:{
       stand_type:nul({ type:'string', enum:['single', 'double'] }),
       base:nul({ type:'string', enum:['wheels', 'legs'] }),
@@ -84,8 +85,11 @@ export default async function handler(req, res) {
       unit_bins:nul({ type:'integer', enum:[2, 3, 4, 5, 6, 9] }),
       md_color:nul({ type:'string', enum:['blue', '7035'] }),
       tech_variant:nul({ type:'integer', enum:[1, 2, 3, 4], description:'tech: 1 = 4 shelves, 2 = 8 levels with ארקליות 2, 3 = one drawer, 4 = 3 drawers' }),
+      door_acc:nul({ type:'string', enum:['tools', 'bins', 'both', 'none'], description:'tech (variants 3 / 4): what hangs inside the doors – tools = hand tools (screwdrivers, spanners), bins = ארקליות 4, both (default), none' }),
       door_bins:nul({ type:'object', additionalProperties:false, required:['left', 'right'], description:'tech (variants 3 / 4): ארקלית 4 hanging on each door', properties:{ left:{ type:'integer' }, right:{ type:'integer' } } }),
       align:nul({ type:'string', enum:['back', 'front'] }),
+      furn_kind:nul({ type:'string', enum:['station', 'desk', 'chair', 'bench', 'plant'] }),
+      furn_w_cm:nul({ type:'integer', enum:[120, 150, 160, 200] }),
     },
   });
   const bins = nul({ type:'object', additionalProperties:false, required:['face', 'rows', 'cols', 'random', 'all'], properties:{
@@ -154,6 +158,7 @@ export default async function handler(req, res) {
     '- add with wall: "על הקיר הימני", "צמוד לקיר האחורי", "על שלושה קירות" (= back, left, right – one add per wall). Several identical products on one wall = ONE add with count; "מלא את הקיר" / "על כל הקיר" / "על שלושה קירות" without a number → fill true. "מימין" for one more product = against the right wall. Height above the floor → y_cm.',
     '- opening: doors and windows in the walls (room.openings lists the ones there are). "תוסיף דלת כפולה ברוחב 1.6 בקיר השמאלי" → add, kind door, type double, wall left, width_cm 160. Sizes the user did not say stay null (the app uses the type\'s standard size). The app never places products in front of doors or windows.',
     '- light: the lighting of the scene (only the fields the user mentioned; the rest null). "תאורת סטודיו משעה 5" → type studio, clock 5. "פחות חזקה ב-20%" → power_change_pct -20. "צל רך יותר" / "צל רק יותר" (a common mis-hearing of רך) → soft softer.',
+    '- design: planning a WHOLE space or AREAS / ZONES – "תיצור לי מרחב / אולם / חנות / מחסן…", "תעשה לי אזור של עמדות עם מחיצות", "תכנן לי את החדר", "תסדר את החדר", or changing such zones ("תזיז את אזור העמדות לקיר השמאלי", "עוד שתי עמדות", "בלי העגלות" when the products are in a zone). Then return ONE op design with text = the user\'s full request, and no other op. Single products ("תוסיף מחיצה", "תזיז את זה") are NOT design.',
     '- contents also fits the kind of shop: "זו חנות ממתקים" → contents "ממתקים" on every product added (or the add\'s text field).',
     '"המתקן הזה / המוצר הזה / זה" = the selected product (target null). Products can also be named by their name, type or position ("המחיצה השנייה", "זה שליד הקיר").',
     ...(editor ? [
