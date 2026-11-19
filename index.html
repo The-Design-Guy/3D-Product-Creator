@@ -3850,12 +3850,11 @@ function buildWb() {
   // two welded end frames (legs 80 wide, a stretcher low down, a rail under the top) joined by a front and a back apron
   const LX = W/2 - 90, LZ = D/2 - 60, LH = TOPY - T;
   const LEGS = v === 3 ? [-1] : [-1, 1];                 // v3: the floor drawer cabinet replaces the right pair of legs
-  const foot = (x, z) => {                               // a slim silver levelling foot (≈15 mm stem on a small pad)
-    const st = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 7.5, 26, 12), zincMat); st.position.set(x, 17, z); root.add(st);
-    const pd = new THREE.Mesh(new THREE.CylinderGeometry(15, 16, 5, 14), zincMat); pd.position.set(x, 2.5, z); root.add(pd);
+  const foot = (x, z) => {                               // a silver levelling foot: full diameter, only ≈15 mm high
+    const f = new THREE.Mesh(new THREE.CylinderGeometry(24, 28, 15, 16), zincMat); f.position.set(x, 7.5, z); root.add(f);
   };
   for (const sx of LEGS) {
-    for (const sz of [-1, 1]) { box(80, LH - 30, 60, sx * LX, (LH - 30)/2 + 30, sz * LZ); foot(sx * LX, sz * LZ); }
+    for (const sz of [-1, 1]) { box(80, LH - 15, 60, sx * LX, (LH - 15)/2 + 15, sz * LZ); foot(sx * LX, sz * LZ); }
     box(60, 50, 2 * LZ - 60, sx * LX, 190, 0); box(70, 60, 2 * LZ, sx * LX, LH - 30, 0);
   }
   const AR = v === 3 ? W/2 - 40 - 560 : LX, AL = -LX, AW = AR - AL, AX = (AR + AL)/2;   // aprons run leg to leg (or leg to cabinet)
