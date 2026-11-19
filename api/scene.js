@@ -7,7 +7,7 @@ import { isAdmin } from './_auth.js';
 export const config = { maxDuration: 60 };
 const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL || 'gpt-4.1-mini';
 
-const TYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn', 'lock'];
+const TYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn', 'lock', 'wb'];
 const OPS = ['add', 'move', 'move_to', 'rotate', 'rotate_to', 'delete', 'duplicate', 'set', 'bins', 'doors', 'tambour', 'contents', 'select', 'room', 'light', 'opening', 'clear', 'commit', 'design'];
 
 const CATALOGUE = `
@@ -27,8 +27,11 @@ Product types (type key – Hebrew name – footprint width x depth in cm with r
 - mdoor – "ארון 4 מדפים" – metal cabinet with 2 hinged doors, 90 x 40, 195 high – md_color (blue / 7035 = light grey).
 - tech – "ארון עבודה טכני" – blue workshop cabinet 100 x 56 x 195 with 2 hinged doors – tech_variant: 1 = 4 shelves, 2 = 8 levels with 4 x ארקלית 2 each (32 bins), 3 = one drawer + 2 shelves, 4 = 3 drawers + 2 shelves. Variants 3 / 4 have a pegboard back and perforated / louvre doors with ארקלית 4 hanging on them – door_bins {left, right} (default 2 and 1, 0–3 each); door_acc = what hangs inside the doors: tools ("כלי עבודה"), bins ("ארקליות"), both ("גם וגם", default) or none ("כלום", "דלתות ריקות"). shelf_bins work here too (a deep bin can't sit at the height of the door bins).
 - lock – "לוקר 6 דלתות" – staff locker 90 x 45 x 195, light grey body, 6 blue lockable doors (3 columns x 2 rows), shelf + hanging rod in each compartment. Doors: op doors with door = 1–6 (1 = top-left, 2 = top-middle, 3 = top-right, 4 = bottom-left, 5 = bottom-middle, 6 = bottom-right) or door null = all. Names: "לוקר", "לוקרים", "ארון לוקרים", "ארון הלבשה", "ארון עובדים".
+- wb – "שולחן עבודה מאסיבי" – heavy-duty workbench 150 x 75, green anti-static top at 84 cm; wb_variant 1 = hanging 2-drawer unit, 2 = 2 drawers + blue perforated back with 2 shelves (170 high), 3 = 4-drawer floor cabinet + the back; wb_tools true = tools hanging on the back; wb_top green (anti-static, default) or white. Names: "שולחן עבודה", "שולחן עבודה טכני", "שולחן מאסיבי", "שולחן אנטי סטטי". (furn bench is only a generic prop.)
 - furn – generic furniture / props (not catalogue products): furn_kind station ("עמדת מחשב": desk + pedestal + monitor + chair, 160 x 128), desk ("שולחן"), chair ("כיסא"), bench ("שולחן עבודה", industrial workbench with a pegboard), plant ("עציץ", "צמח"); furn_w_cm = width (desk / station 120 or 160, bench 150 or 200).
 comp = how many tilt-bin units of each model, e.g. [{model:4,count:9}] (model = number of bins in the unit: 2,3,4,5,6,9; bigger ones at the bottom automatically). For "add one more level of #5" give the FULL new comp.
+The context room.obstacles lists columns, pipes and gypsum walls as boxes (cm from the left / back wall, from_floor_cm..to_cm). Never place or move a product into one (the app also refuses it); place products next to them instead. Obstacles are set by the user in the scene settings, not by ops.
+
 Names people use (Hebrew speech, also with transcription mistakes):
 - unit: "רב תא", "רב-תא 5", "רבתא", "יחידה", "מגירות מתהפכות". The number after it is the model: "רב תא 6" = model 6.
 - stand: "מעמד", "מתקן", "מתקן חד צדדי" (stand_type single), "עגלה דו צדדית" / "מתקן דו צדדי" (double), "מעמד רב תא".
@@ -62,7 +65,7 @@ export default async function handler(req, res) {
 
   const settings = nul({
     type:'object', additionalProperties:false,
-    required:['stand_type', 'base', 'height_cm', 'comp', 'arc', 'bin_layout', 'shelf_bins', 'fill_model', 'fill_to_cm', 'wings', 'cols', 'top', 'tena_size', 'doors', 'unit_bins', 'md_color', 'align', 'tech_variant', 'door_bins', 'door_acc', 'furn_kind', 'furn_w_cm'],
+    required:['stand_type', 'base', 'height_cm', 'comp', 'arc', 'bin_layout', 'shelf_bins', 'fill_model', 'fill_to_cm', 'wings', 'cols', 'top', 'tena_size', 'doors', 'unit_bins', 'md_color', 'align', 'tech_variant', 'door_bins', 'door_acc', 'furn_kind', 'furn_w_cm', 'wb_variant', 'wb_tools', 'wb_top'],
     properties:{
       stand_type:nul({ type:'string', enum:['single', 'double'] }),
       base:nul({ type:'string', enum:['wheels', 'legs'] }),
@@ -91,6 +94,9 @@ export default async function handler(req, res) {
       align:nul({ type:'string', enum:['back', 'front'] }),
       furn_kind:nul({ type:'string', enum:['station', 'desk', 'chair', 'bench', 'plant'] }),
       furn_w_cm:nul({ type:'integer', enum:[120, 150, 160, 200] }),
+      wb_variant:nul({ type:'integer', enum:[1, 2, 3] }),
+      wb_tools:nul({ type:'boolean' }),
+      wb_top:nul({ type:'string', enum:['green', 'white'], description:'wb: the work top – green anti-static (default) or white' }),
     },
   });
   const bins = nul({ type:'object', additionalProperties:false, required:['face', 'rows', 'cols', 'random', 'all'], properties:{

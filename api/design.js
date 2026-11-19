@@ -8,7 +8,7 @@ import { isAdmin } from './_auth.js';
 export const config = { maxDuration: 60 };
 const TEXT_MODEL = process.env.OPENAI_DESIGN_MODEL || process.env.OPENAI_TEXT_MODEL || 'gpt-4.1-mini';
 
-const PTYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn', 'lock'];
+const PTYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn', 'lock', 'wb'];
 
 const KNOWLEDGE = `
 You are an interior / industrial layout designer for Huliot / Medikup storage products. You plan a space as ZONES; the app places the products.
@@ -25,13 +25,14 @@ PRODUCTS (type – Hebrew name – footprint W x D cm, height – what it is goo
 - mtamb – "ארון תריס" – 90 x 45 x 195, tambour, shelves (pick bins can stand on them: bin_layout).
 - mdoor – "ארון 4 מדפים" – 90 x 40 x 195, 2 doors, grey or blue (pick bins: bin_layout).
 - tech – "ארון עבודה טכני" – 100 x 56 x 195 blue workshop cabinet; tech_variant 1 = 4 shelves, 2 = 32 pick bins, 3 = 1 drawer, 4 = 3 drawers (tools / bins on the doors) – workshops, maintenance, electronics.
+- wb – "שולחן עבודה מאסיבי" – heavy-duty workbench 150 x 75, green anti-static (ESD) top, drawers; wb_variant 1 = 2 drawers, 2 = 2 drawers + perforated back with shelves (170 high), 3 = 4-drawer cabinet + back; wb_tools = tools on the back. THE workbench for electronics, assembly, labs and workshops – use it for benches zones (product type wb) rather than the generic furn bench.
 - lock – "לוקר 6 דלתות" – staff locker 90 x 45 x 195, 6 lockable doors – changing rooms, staff areas of plants / clinics / warehouses (wall_storage along a wall, usually 2–6 side by side).
 - arc – "ארקליות" – single open pick bins (not a floor product – leave them for cabinets).
 - unit – a single tilt-bin unit (not a floor product).
 - furn – generic furniture / props: furn_kind station (computer workstation: desk + pedestal + monitor + office chair, desk 160 or 120 wide, 128 deep with the chair), desk, chair, bench (industrial workbench with a pegboard, 150 / 200 wide, 75 deep), plant.
 
 TYPICAL SPACES (pick products that fit; the user's words always win):
-- electronics / assembly hall: workstations (furn station) in rows divided by part (cols 3 or 4) with comp of small bins (#4, #5, #6, #9), excl carts next to the stations, tech cabinets (variant 4 or 2) and mdoor / mtamb with pick bins along a wall, a few benches.
+- electronics / assembly hall: workstations (furn station) in rows divided by part (cols 3 or 4) with comp of small bins (#4, #5, #6, #9), excl carts next to the stations, tech cabinets (variant 4 or 2) and mdoor / mtamb with pick bins along a wall, a few wb workbenches (variant 2 or 3), lockers for the staff.
 - spare-parts store / warehouse: tena / smart rows in the middle (back to back or single rows with aisles), stands and wall racks on the walls, a desk station near the door.
 - workshop / maintenance: benches along walls, tech cabinets, wall racks, a quad.
 - clinic / pharmacy / lab: tamb cabinets, wall racks, mdoor, a desk station, quad or excl carts.
@@ -41,6 +42,7 @@ LAYOUT RULES (the engine applies them; plan with them in mind):
 - Main aisle 120–150 cm, side aisles ≥ 90 cm. Nothing in front of a door (1 m clear). Tall cabinets not under windows.
 - Cabinets, racks, benches and workstation rows go against walls (back to the wall). Gondolas / stands / quads / back-to-back workstation islands go in the free middle.
 - A workstation row: desks side by side along the wall with a partition between every two desks (partition.ends true = also one at each end of the row).
+- room.obstacles: columns, pipes and gypsum walls (boxes in cm from the left / back wall). Nothing may stand on them; the engine routes around them. Take them into account when choosing zones and counts (a column in the middle splits the free floor). A gypsum wall with to_build true is a NEW wall built for the storage: cabinets and racks may stand against both of its faces. One with removable true may be mentioned in notes as an option to remove if it blocks a better layout. A tap (water_point) is an opportunity: keep its wall area reachable, and mention in notes that a profile system with a sink (3 cm profiles) could go there – that product is not in the catalogue yet.
 - Do not overfill: leave the room usable. If the user gives counts, use them; otherwise choose sensible counts for the room size (e.g. 10 x 10 m assembly hall → ~6–10 stations, 2–4 tall cabinets, 2–4 carts).
 `;
 
@@ -56,7 +58,7 @@ export default async function handler(req, res) {
   const others = Array.isArray(req.body?.others) ? req.body.others.slice(0, 60) : [];
 
   const settings = { type:'object', additionalProperties:false,
-    required:['comp', 'cols', 'top', 'base', 'stand_type', 'height_cm', 'tena_size', 'doors', 'md_color', 'bin_layout', 'tech_variant', 'door_acc', 'furn_kind', 'width_cm'],
+    required:['comp', 'cols', 'top', 'base', 'stand_type', 'height_cm', 'tena_size', 'doors', 'md_color', 'bin_layout', 'tech_variant', 'door_acc', 'furn_kind', 'width_cm', 'wb_variant', 'wb_tools', 'wb_top'],
     properties:{
       comp:nul({ type:'array', items:{ type:'object', additionalProperties:false, required:['model', 'count'], properties:{ model:{ type:'integer', enum:[2, 3, 4, 5, 6, 9] }, count:{ type:'integer' } } }, description:'tilt-bin units per model (part / excl / stand / quad / tamb)' }),
       cols:nul({ type:'integer', enum:[2, 3, 4], description:'part: columns' }),
@@ -72,6 +74,9 @@ export default async function handler(req, res) {
       door_acc:nul({ type:'string', enum:['tools', 'bins', 'both', 'none'] }),
       furn_kind:nul({ type:'string', enum:['station', 'desk', 'chair', 'bench', 'plant'] }),
       width_cm:nul({ type:'integer', enum:[120, 150, 160, 200], description:'furn: desk / station 120 or 160, bench 150 or 200' }),
+      wb_variant:nul({ type:'integer', enum:[1, 2, 3] }),
+      wb_tools:nul({ type:'boolean' }),
+      wb_top:nul({ type:'string', enum:['green', 'white'], description:'wb: the work top – green anti-static (default) or white' }),
     } };
   const product = { type:'object', additionalProperties:false, required:['type', 'settings'], properties:{ type:{ type:'string', enum:PTYPES }, settings } };
   const zone = { type:'object', additionalProperties:false,
@@ -80,7 +85,7 @@ export default async function handler(req, res) {
       id:{ type:'string', description:'short stable id, e.g. "z1"; keep the ids of zones that already exist' },
       name:{ type:'string', description:'Hebrew name of the zone, e.g. "עמדות הרכבה"' },
       kind:{ type:'string', enum:['workstations', 'workstation_island', 'wall_storage', 'island', 'benches', 'carts', 'decor'],
-        description:'workstations: a row of desks along a wall with partitions between them · workstation_island: two rows of desks back to back in the middle, partitions across · wall_storage: cabinets / racks / gondolas side by side along a wall · island: products in rows in the free middle of the room with aisles · benches: workbenches along a wall · carts: mobile carts / stands next to another zone (near) · decor: plants in free corners' },
+        description:'workstations: a row of desks along a wall with partitions between them · workstation_island: two rows of desks back to back in the middle, partitions across · wall_storage: cabinets / racks / gondolas side by side along a wall · island: products in rows in the free middle of the room with aisles · benches: workbenches along a wall (product wb, or furn bench) · carts: mobile carts / stands next to another zone (near) · decor: plants in free corners' },
       wall:nul({ type:'string', enum:['back', 'left', 'right', 'front'], description:'workstations / wall_storage / benches: the wall (as seen from the front of the room: back = facing the viewer)' }),
       align:nul({ type:'string', enum:['start', 'center', 'end'], description:'where along the wall: start = the left end (back / front wall) or the back end (side walls); null = center' }),
       count:nul({ type:'integer', description:'how many products (stations for workstation zones); null = as many as fit' }),
