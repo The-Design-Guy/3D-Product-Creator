@@ -4012,18 +4012,19 @@ function buildWb() {
   box(W, T, D, 0, TOPY - T/2, 0, wbEdge);
   const top = new THREE.Mesh(new THREE.PlaneGeometry(W - 16, D - 16), WB.top === 'white' ? wbWhite : wbGreen); top.rotation.x = -Math.PI/2; top.position.set(0, TOPY + 0.6, 0); top.receiveShadow = true; root.add(top);
   // two welded end frames (legs 80 wide, a stretcher low down, a rail under the top) joined by a front and a back apron
-  const LX = W/2 - 90, LZ = D/2 - 60, LH = TOPY - T;
+  const LX = W/2 - 90, LZ = D/2 - 60, LH = TOPY - T, FH = 40, FY = LH - FH;      // FH: the thin steel frame under the top – legs and drawer cases hang on it
   const LEGS = v === 3 ? [-1] : [-1, 1];                 // v3: the floor drawer cabinet replaces the right pair of legs
   const foot = (x, z) => {                               // a silver levelling foot: full diameter, only ≈15 mm high
     const f = new THREE.Mesh(new THREE.CylinderGeometry(24, 28, 15, 16), zincMat); f.position.set(x, 7.5, z); root.add(f);
   };
   for (const sx of LEGS) {
-    for (const sz of [-1, 1]) { box(80, LH - 15, 60, sx * LX, (LH - 15)/2 + 15, sz * LZ); foot(sx * LX, sz * LZ); }
-    box(60, 50, 2 * LZ - 60, sx * LX, 190, 0); box(70, 60, 2 * LZ, sx * LX, LH - 30, 0);
+    for (const sz of [-1, 1]) { box(80, FY - 15, 60, sx * LX, (FY - 15)/2 + 15, sz * LZ); foot(sx * LX, sz * LZ); }   // each end: 2 legs + a low rail = one welded part
+    box(60, 50, 2 * LZ - 60, sx * LX, 190, 0);
   }
-  const AR = v === 3 ? W/2 - 40 - 560 : LX, AL = -LX, AW = AR - AL, AX = (AR + AL)/2;   // aprons run leg to leg (or leg to cabinet)
-  box(AW, 50, 25, AX, LH - 25, LZ - 10); box(AW, 50, 25, AX, LH - 25, -LZ - 20);          // the front apron sits behind the drawer case
-  for (const sx of LEGS) for (const dx of [-14, 14]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 4, 10), zincMat); b.rotation.x = Math.PI/2; b.position.set(sx * LX + dx, LH - 22, LZ + 34); root.add(b); }
+  // the thin frame under the top (same steel and colour as the legs): front, back and both ends – the legs and the drawer cases are fixed to it
+  const FZ0 = D/2 - 30, FX = W/2 - 50;
+  box(2 * FX, FH, 30, 0, FY + FH/2, FZ0 - 15); box(2 * FX, FH, 30, 0, FY + FH/2, -FZ0 + 15);
+  for (const sx of [-1, 1]) box(30, FH, 2 * FZ0 - 60, sx * (FX - 15), FY + FH/2, 0);
   // drawers: blue fronts, a full-width silver handle, slide straight out
   const drawer = (x, yb, h, w, d, zf) => {
     const dg = new THREE.Group(); root.add(dg);
@@ -4042,10 +4043,10 @@ function buildWb() {
     let y = y0 + 22; drawersH.forEach(h => { drawer(x, y, h, CW - 36, CD - 30, zf); y += h + 6; });
     return x;
   };
-  if (v === 1) cabinet(450, 560, 320, LH - 320, [128, 128]);
-  else if (v === 2) cabinet(540, 520, 360, LH - 360, [148, 148]);
+  if (v === 1) cabinet(450, 560, 320, FY - 320, [128, 128]);              // hangs on the thin frame, not on the top
+  else if (v === 2) cabinet(540, 520, 360, FY - 360, [148, 148]);
   else {                                                 // floor cabinet 560 x 650 x 740 on feet, 4 drawers (2 shallow, 2 deep)
-    const CH = LH - 18, x = cabinet(560, 650, CH, 18, [Math.round((CH - 80) * 0.31), Math.round((CH - 80) * 0.31), Math.round((CH - 80) * 0.19), Math.round((CH - 80) * 0.19)], W/2 - 40 - 280);   // carries the top in place of the right legs
+    const CH = FY - 18, x = cabinet(560, 650, CH, 18, [Math.round((CH - 80) * 0.31), Math.round((CH - 80) * 0.31), Math.round((CH - 80) * 0.19), Math.round((CH - 80) * 0.19)], W/2 - 40 - 280);   // carries the top in place of the right legs
     for (const sx of [-1, 1]) for (const zz of [D/2 - 110, D/2 - 590]) { const f = new THREE.Mesh(new THREE.CylinderGeometry(10, 12, 18, 12), zincMat); f.position.set(x + sx * 220, 9, zz); root.add(f); }   // small feet, set in under the case
   }
   if (v >= 2) {                                          // the blue back: a perforated panel, gussets on the top, a middle shelf and a top shelf on brackets
@@ -4077,7 +4078,7 @@ function buildWb() {
 }
 function describeWb() {
   const v = WB.variant;
-  return `A heavy-duty industrial workbench, 1500 mm wide and 750 mm deep, work surface at 840 mm: a 50 mm thick top with a ${WB.top === 'white' ? 'plain white laminate' : 'green anti-static (ESD) laminate'} surface and a black rubber edge band with rounded corners, on a light grey steel frame of flat rectangular legs with a side rail low down on each end frame (no stretcher between them) and slim silver levelling feet. `
+  return `A heavy-duty industrial workbench, 1500 mm wide and 750 mm deep, work surface at 840 mm: a 50 mm thick top with a ${WB.top === 'white' ? 'plain white laminate' : 'green anti-static (ESD) laminate'} surface and a black rubber edge band with rounded corners, on a light grey steel base: a thin light grey steel frame (about 4 cm) runs right under the top on all four sides, and the two welded end frames (flat rectangular legs with a side rail low down, no stretcher between them, slim silver levelling feet) are fixed to it. The drawer cabinet is fixed to that thin frame, not directly to the thick top. `
     + (v === 3 ? 'Under the right side a light grey drawer cabinet 560 x 650 mm reaching from the floor to the top, which replaces the right pair of legs (no legs beside it), on tiny hidden feet, with 4 drawers and a key lock on the top front bar of the cabinet (2 shallow on top, 2 deep below), royal-blue drawer fronts with a full-width silver pull handle along the bottom edge of each front. ' : `Hanging under the right side of the top, a light grey drawer cabinet ${v === 1 ? '450 wide, 320 high' : '540 wide, 360 high'} with 2 drawers and a key lock on the cabinet's top front bar, royal-blue fronts with a full-width silver pull handle along the bottom edge of each front; the space below it is open. `)
     + (v >= 2 ? `At the back of the top, a royal-blue steel back up to 1700 mm overall height, with no posts at the sides: a perforated panel with square holes in a uniform grid, triangular gussets on the worktop, a middle shelf with a front lip on small triangular brackets ${WB.br === 'down' ? 'under it' : 'standing on top of it at its ends'}, and a top shelf on small brackets under it.${WB.tools === 'tools' ? ' A set of chrome spanners, a red screwdriver and a few hooks hang on the perforated board.' : ' Nothing hangs on the board.'}` : 'No back panel.');
 }
