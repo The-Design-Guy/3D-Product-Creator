@@ -37,11 +37,19 @@
   .flash { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; transition:opacity .25s; }
   .flash.on { opacity:.7; transition:none; }
   .bottom { position:absolute; bottom:0; inset-inline:0; padding:24px 14px max(16px, env(safe-area-inset-bottom)); background:linear-gradient(#0000, #000c); }
-  .thumbs { display:grid; grid-template-columns:repeat(8, 1fr); gap:5px; margin-bottom:14px; }
+  .thumbs { display:grid; grid-template-columns:repeat(8, minmax(0, 1fr)); gap:5px; margin-bottom:14px; }
   .thumbs button { aspect-ratio:3/4; border-radius:6px; border:2px solid #fff5; background:#fff2 center/cover no-repeat; color:#fff; font-size:12px; font-weight:700; padding:0; position:relative; }
   .thumbs button.next { border-color:var(--blue); box-shadow:0 0 0 2px #0088ff55; }
   .thumbs button.up::after { content:''; position:absolute; inset:auto 3px 3px auto; width:8px; height:8px; border-radius:50%; background:var(--ok); }
   .thumbs button.busy::after { content:''; position:absolute; inset:auto 3px 3px auto; width:8px; height:8px; border-radius:50%; background:#f5b400; }
+  .thumbs button.err { border-color:#ff4d4f; }
+  .thumbs button.err::after { content:'!'; position:absolute; inset:auto 2px 2px auto; width:14px; height:14px; line-height:14px; border-radius:50%; background:#ff4d4f; color:#fff; font-size:10px; }
+  .upbar { display:flex; white-space:nowrap; justify-content:space-between; align-items:center; gap:8px; font-size:13px; margin:-6px 0 10px; }
+  .upbar .e { color:#ff8a8a; font-weight:600; white-space:normal; text-align:start; }
+  .side button.go.off { background:#fff3; opacity:.75; }
+  .side button.go.ready { animation:pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow:0 0 0 8px #0088ff44; } }
+  #confetti { position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:9; }
   .row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .shutter { width:74px; height:74px; border-radius:50%; border:5px solid #fff; background:#fff3; flex:none; cursor:pointer; }
   .shutter:active { background:#fff8; }
@@ -96,10 +104,11 @@
   </svg></div>
   <div class="bottom">
     <div class="thumbs" id="thumbs"></div>
+    <div class="upbar"><span id="upCount">0/8 עלו</span><span class="e" id="upErr"></span></div>
     <div class="row">
       <div class="side"><button id="cancelBtn">ביטול</button></div>
       <button class="shutter" id="shutter" aria-label="צילום"></button>
-      <div class="side"><button id="nextBtn" class="go" hidden>לניתוח ›</button></div>
+      <div class="side"><button id="nextBtn" class="go off">סיום ושליחה ›</button></div>
     </div>
     <div class="auto" id="autoTxt"></div>
   </div>
@@ -132,6 +141,7 @@
 <!-- 5. done -->
 <section class="screen light" id="sDone" hidden>
   <div class="done"><div class="ok">✓</div><h1>נשלח</h1><p>החדר נשלח לבניית הסצנה. תודה! אפשר לסגור את הדף.</p></div>
+  <canvas id="confetti"></canvas>
 </section>
 
 <script>
@@ -159,9 +169,22 @@ if (!/^[a-z0-9]{20}$/.test(SID)) { $('startBtn').disabled = true; $('startErr').
 // the compass: Android gives it right away; iPhone only after a tap (asked on the first tap of the shutter)
 const needsAsk = () => window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function';
 let asked = false;
+// one source only (listening to both the absolute and the relative events made the needle jump between two frames), smoothed
+let cx = 0, cy = 0;
 function listenCompass() {
-  const on = (e) => { const h = typeof e.webkitCompassHeading === 'number' ? e.webkitCompassHeading : e.alpha !== null && e.alpha !== undefined ? 360 - e.alpha : null; if (h !== null) heading = (h + 360) % 360; };
-  addEventListener('deviceorientationabsolute', on); addEventListener('deviceorientation', on);
+  const on = (e) => {
+    if (e.alpha !== null && e.alpha !== undefined) got = true;
+    const h = e.alpha !== null && e.alpha !== undefined ? 360 - e.alpha : typeof e.webkitCompassHeading === 'number' ? e.webkitCompassHeading : null;
+    if (h === null || isNaN(h)) return;
+    const r = h * Math.PI / 180;
+    if (heading === null) { cx = Math.cos(r); cy = Math.sin(r); }
+    else { cx += (Math.cos(r) - cx) * 0.15; cy += (Math.sin(r) - cy) * 0.15; }
+    heading = (Math.atan2(cy, cx) * 180 / Math.PI + 360) % 360;
+  };
+  // the gyro-based (relative) event first: only the turning matters, and it does not shake near metal like the magnetic one
+  let got = false;
+  addEventListener('deviceorientation', on);
+  setTimeout(() => { if (!got && 'ondeviceorientationabsolute' in window) { removeEventListener('deviceorientation', on); heading = null; addEventListener('deviceorientationabsolute', on); } }, 1200);
 }
 async function askCompass() {
   if (asked || !needsAsk()) return; asked = true;
@@ -201,13 +224,13 @@ function loop(t) {
   const ready = compass && heading !== null;
   $('ring').hidden = !ready;
   for (let k = 0; k < N; k++) { const el = $('tk' + k); if (el) el.setAttribute('fill', shots[k] ? '#1aa66b' : k === next ? '#0088FF' : '#ffffff55'); }
-  if (next >= N) { $('autoTxt').textContent = ''; requestAnimationFrame(loop); return; }
+  if (next >= N) { $('autoTxt').textContent = 'כל 8 התמונות צולמו – לחצו "סיום ושליחה"'; requestAnimationFrame(loop); return; }
   if (ready && h0 === null && shots[0]) h0 = heading;        // the compass arrived after the first photo (iPhone asks on that tap)
   if (ready && h0 !== null) {
     const want = (h0 + next * STEP) % 360, d = diff(heading, want);
     $('needle').style.transform = `rotate(${(heading - h0 + 360) % 360}deg)`;
-    $('camSub').textContent = `תמונה ${next + 1} מתוך ${N} · ${Math.abs(d) < 6 ? 'מצוין – לא לזוז' : d < 0 ? 'המשיכו ימינה' : 'קצת חזרה שמאלה'}`;
-    if (Math.abs(d) < 5) { if (!holdT) holdT = t; else if (t - holdT > 450) { holdT = 0; capture(); } } else holdT = 0;
+    $('camSub').textContent = `תמונה ${next + 1} מתוך ${N} · ${Math.abs(d) < 8 ? 'מצוין – לא לזוז' : d < 0 ? 'המשיכו ימינה' : 'קצת חזרה שמאלה'}`;
+    if (Math.abs(d) < 7) { if (!holdT) holdT = t; else if (t - holdT > 450) { holdT = 0; capture(); } } else holdT = 0;
     $('autoTxt').textContent = 'צילום אוטומטי לפי המצפן · אפשר גם ללחוץ';
   } else {
     $('camSub').textContent = `תמונה ${next + 1} מתוך ${N}`;
@@ -237,22 +260,27 @@ async function capture() {
   renderThumbs(); busy = false;
   upload(k);
 }
+let lastErr = '';
 async function upload(k) {
   const sh = shots[k]; if (!sh) return;
-  try { await api('photo', { n:k, blob:sh.blob }, 'image/jpeg'); if (shots[k] === sh) sh.up = 'ok'; }
-  catch (e) { if (shots[k] === sh) sh.up = 'err'; $('camMsg').textContent = e.message; }
+  for (let i = 0; i < 3; i++) {
+    try { await api('photo', { n:k, blob:sh.blob }, 'image/jpeg'); if (shots[k] === sh) sh.up = 'ok'; lastErr = ''; break; }
+    catch (e) { lastErr = e.message; if (shots[k] !== sh) return; if (i < 2 && !/פג תוקף|בוטל|לא נמצא/.test(e.message)) await new Promise(r => setTimeout(r, 1500)); else { sh.up = 'err'; break; } }
+  }
   renderThumbs();
 }
 function renderThumbs() {
-  $('thumbs').innerHTML = shots.map((s, k) => `<button data-k="${k}" class="${k === next ? 'next' : ''} ${s ? (s.up === 'ok' ? 'up' : s.up === 'busy' ? 'busy' : '') : ''}" style="${s ? `background-image:url(${s.url})` : ''}">${s ? '' : k + 1}</button>`).join('');
+  $('thumbs').innerHTML = shots.map((s, k) => `<button data-k="${k}" class="${k === next ? 'next' : ''} ${s ? (s.up === 'ok' ? 'up' : s.up === 'busy' ? 'busy' : 'err') : ''}" style="${s ? `background-image:url(${s.url})` : ''}">${s ? '' : k + 1}</button>`).join('');
   $('thumbs').querySelectorAll('button').forEach(b => b.onclick = () => {
     const k = +b.dataset.k;
     if (shots[k] && shots[k].up === 'err') { shots[k].up = 'busy'; renderThumbs(); upload(k); return; }
     next = k; holdT = 0; renderThumbs();                                 // retake this one
   });
-  const all = shots.every(s => s && s.up === 'ok');
-  $('nextBtn').hidden = shots.filter(s => s && s.up === 'ok').length < 4;
-  $('nextBtn').textContent = all ? 'לניתוח ›' : 'לניתוח בלי כולן ›';
+  const ok = shots.filter(s => s && s.up === 'ok').length, bad = shots.filter(s => s && s.up === 'err').length, up = shots.filter(s => s && s.up === 'busy').length;
+  $('upCount').textContent = `${ok}/${N} עלו` + (up ? ` · ${up} עולות…` : '');
+  $('upErr').textContent = bad ? `${bad} לא עלו – לחצו על התמונה האדומה לנסות שוב` + (lastErr ? ` (${lastErr})` : '') : '';
+  $('nextBtn').classList.toggle('off', ok + up < 4);
+  $('nextBtn').classList.toggle('ready', next >= N && ok + up >= 4);
   $('camMsg').textContent = next < N ? AIM[next] : 'כל התמונות צולמו';
 }
 $('shutter').onclick = async () => { holdT = 0; await capture(); if (needsAsk() && !asked) askCompass(); };
@@ -260,8 +288,14 @@ $('cancelBtn').onclick = async () => { if (!confirm('לבטל את הצילום?
 
 // ---------- analysis ----------
 $('nextBtn').onclick = async () => {
-  if (shots.some(s => s && s.up === 'busy')) { $('camMsg').textContent = 'עוד רגע – התמונות עולות…'; return; }
-  show('sWait');
+  const cnt = () => shots.filter(s => s && s.up === 'ok').length;
+  if (shots.some(s => s && s.up === 'busy')) {
+    show('sWait'); $('waitTxt').textContent = 'מסיים להעלות את התמונות…';
+    while (shots.some(s => s && s.up === 'busy')) await new Promise(r => setTimeout(r, 300));
+  }
+  if (cnt() < 4) { show('cam'); requestAnimationFrame(loop); alert(`צריך לפחות 4 תמונות שעלו בהצלחה – כרגע עלו ${cnt()}.` + (lastErr ? `\nהשגיאה: ${lastErr}` : '')); return; }
+  if (cnt() < N && !confirm(`עלו ${cnt()} מתוך ${N} תמונות. לשלוח בכל זאת?`)) return;
+  show('sWait'); $('waitTxt').textContent = 'מנתח את החדר… (עד דקה)';
   try {
     const r = await api('analyze'); result = r.result;
     if (!result.ok) { alert(result.problem || 'לא הצלחנו להבין את החדר מהתמונות. נסו לצלם שוב באור טוב יותר.'); show('cam'); requestAnimationFrame(loop); return; }
@@ -297,10 +331,23 @@ $('buildBtn').onclick = async () => {
   if (!(w >= 2 && w <= 100 && d >= 2 && d <= 100)) { $('rvErr').textContent = 'מידות החדר צריכות להיות בין 2 ל־100 מטר.'; return; }
   result.width_m = w; result.depth_m = d;
   $('buildBtn').disabled = true;
-  try { await api('confirm', { result }); show('sDone'); }
+  try { await api('confirm', { result }); show('sDone'); confetti(); navigator.vibrate && navigator.vibrate([60, 40, 60]); }
   catch (e) { $('rvErr').textContent = e.message; $('buildBtn').disabled = false; }
 };
 $('againBtn').onclick = () => location.reload();
+function confetti() {
+  const c = $('confetti'), x = c.getContext('2d'), W = c.width = innerWidth * devicePixelRatio, H = c.height = innerHeight * devicePixelRatio;
+  const col = ['#0088FF', '#1aa66b', '#f5b400', '#ff4d6d', '#8a5cff', '#ff8a00'];
+  const P = Array.from({ length:160 }, () => ({ x:W / 2, y:H * 0.35, vx:(Math.random() - 0.5) * W * 0.03, vy:-Math.random() * H * 0.025 - H * 0.005,
+    w:(6 + Math.random() * 8) * devicePixelRatio, h:(4 + Math.random() * 6) * devicePixelRatio, r:Math.random() * 6, vr:(Math.random() - 0.5) * 0.3, c:col[Math.random() * col.length | 0] }));
+  const t0 = performance.now();
+  (function f(t) {
+    x.clearRect(0, 0, W, H);
+    for (const p of P) { p.vy += H * 0.0006; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      x.save(); x.translate(p.x, p.y); x.rotate(p.r); x.fillStyle = p.c; x.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); x.restore(); }
+    if (t - t0 < 4000) requestAnimationFrame(f); else x.clearRect(0, 0, W, H);
+  })(t0);
+}
 </script>
 </body>
 </html>
