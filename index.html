@@ -122,6 +122,10 @@
   .gal-rev .gal-imgs { display:flex; gap:12px; justify-content:center; margin-bottom:10px; } .gal-rev figure { margin:0; flex:1; max-width:420px; text-align:center; }
   .gal-rev figure img { width:100%; aspect-ratio:4/5; object-fit:contain; border-radius:10px; cursor:zoom-in; background:repeating-conic-gradient(#f1f2f4 0 25%, #fff 0 50%) 0 0/18px 18px; }
   .gal-rev figcaption { font-size:12px; color:#667; margin-top:4px; } .gal-rev .fld { display:block; } .gal-rev textarea { display:block; width:100%; box-sizing:border-box; margin-top:4px; font:inherit; }
+  #stuStats { position:fixed; top:calc(var(--hh) + var(--sh, 0px)); left:0; right:0; z-index:71; display:flex; gap:22px; justify-content:center; padding:7px 16px; font-size:13px; background:#fff; border-bottom:1px solid var(--line); direction:rtl; }
+  #stuStats b { font-weight:700; } #stuStats .s-ok b { color:#137a3a; } #stuStats .s-wait b { color:#9a6700; } #stuStats .s-redo b { color:#b42318; }
+  body.studio-on #stuGal { top:calc(var(--hh) + var(--sh, 0px) + 46px); }
+  #stuGauge { display:flex; justify-content:center; margin:4px 0 8px; } #stuGauge .pg-dial { width:150px; } #stuGauge .pg-num { font-size:44px; } #stuGauge .pg-num span { font-size:20px; } #stuGauge .pg-line { font-size:12px; min-height:34px; }
   #studio .stu-ctl { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px; } #studio .stu-ctl input { width:60px; } #studio .stu-ctl .btn { padding:4px 10px; font-size:12px; }
   #studio .stu-cur { margin:8px 0; color:#333; min-height:1.3em; } #studio .stu-log { max-height:180px; overflow:auto; color:#555; font-size:12px; line-height:1.6; } #studio .stu-log .bad { color:#b42318; }
   body.studio-on #dlg, body.studio-on .cfm-wrap { z-index:80 !important; } body.studio-on .lb { z-index:90 !important; }
@@ -1445,6 +1449,7 @@
   <button class="tb" id="resetBtn" title="פוזיציית ברירת מחדל" aria-label="פוזיציית ברירת מחדל"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span class="tl">איפוס</span></button>
   <button class="tb lang" id="langBtn" title="English" aria-label="Language / שפה">EN</button>
   <button class="tb" id="lightBtn" title="תאורה" aria-label="תאורה" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="tl">תאורה</span></button>
+  <a class="tb admin-only" id="studioLink" style="text-decoration:none;color:inherit" href="?studio=1" target="_blank" rel="noopener" title="סטודיו תמונות קטלוג – נפתח בלשונית חדשה" hidden><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>סטודיו</span></a>
   <button class="tb admin-only" id="saveBtn" title="קבע פוזיציה והגדרות כהגדרת קטלוג" aria-label="קבע פוזיציה כברירת מחדל"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span class="tl">שמירה כקטלוג</span></button>
   <button class="tb" id="archBtn" title="הארכיון: שמירה ושחזור של סצנות" aria-haspopup="menu"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/><path d="M10 13h4"/></svg><span class="tl">הארכיון</span></button>
   <button class="tb" id="sceneBtn" title="סצנה – כמה מוצרים בתמונה" aria-label="סצנה"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M5 20V9l7-5 7 5v11"/><rect x="8" y="12" width="3" height="8"/><rect x="13" y="12" width="3" height="5"/></svg><span>סצנה</span></button>
@@ -5464,6 +5469,7 @@ function renderPresetPicker() {
     names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}${n === store.active ? ' ★' : ''}</option>`).join('');
   sel.value = activeName || '';
   document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
+  { const l = document.getElementById('studioLink'); if (l && new URLSearchParams(location.search).get('studio')) l.hidden = true; }
   $('lockBtn').hidden = !server;
   $('lockBtn').classList.toggle('on', server && !!adminKey());
   // signed in: an open padlock with a check mark and the word "מנהל", in brand blue – so it is obvious at a glance
@@ -6776,10 +6782,13 @@ async function catShoot(v, onStep = () => {}) {
   let r = null;
   for (let a = 1; a <= 3; a++) {                                          // a result whose count does not match the model is rendered again
     onStep(a > 1 ? `מרנדר שוב (${a}/3)` : 'מרנדר');
-    r = await api('/api/render', body);
+    const host = document.getElementById('stuGauge'); let gauge = null;
+    if (host) { host.innerHTML = ''; host.hidden = false; gauge = renderGauge(host, gaugeLines(body, a)); }
+    try { r = await api('/api/render', body); } finally { gauge && gauge.finish(); }
     if (!r.check || r.check.ok !== false) break;
   }
   onStep('שומר');
+  { const host = document.getElementById('stuGauge'); if (host) setTimeout(() => { host.hidden = true; host.innerHTML = ''; }, 900); }
   const out = await catFit(r.image);                                      // exactly 1024 × 1280, transparent PNG
   const url = await uploadImage(out, 'catalog');
   if (!url) throw new Error('אין חיבור לאחסון התמונות');
@@ -6807,7 +6816,7 @@ function studioUI() {
   if (!el) {
     el = document.createElement('div'); el.id = 'studio';
     el.innerHTML = `<div class="stu-h"><b>סטודיו תמונות קטלוג</b><span id="stuCount"></span></div><div class="stu-bar"><i id="stuBar"></i></div>
-      <div id="stuCur" class="stu-cur"></div>
+      <div id="stuCur" class="stu-cur"></div><div id="stuGauge" hidden></div>
       <div class="stu-ctl"><button class="btn" id="stuRun">עצירה</button><label>מגבלה יומית <input id="stuLim" type="number" min="1" max="500"></label><span id="stuDay"></span><button class="btn" id="stuZip">הורדת ZIP</button></div>
       <div id="stuLog" class="stu-log"></div>`;
     document.body.appendChild(el);
@@ -6860,6 +6869,7 @@ async function studioGal(fetchIndex = true) {
   let g = document.getElementById('stuGal');
   if (!g) { g = document.createElement('aside'); g.id = 'stuGal'; document.body.appendChild(g); }
   if (fetchIndex) GAL.have = await catIndex();
+  studioStats();                                   // always: the counts follow every change (a reset, a review…)
   const all = catVariants(), prods = [...new Set(all.map(v => v.prod))];
   if (!GAL.prod) {
     const list = prods.map(p => { const vs = all.filter(v => v.prod === p), n = vs.filter(v => GAL.have[v.key]).length;
@@ -6919,6 +6929,15 @@ function galOpen(key) {
     card.querySelector('#grPrev').onclick = () => galOpen(vs[i - 1].key);
     card.querySelector('#grNext').onclick = () => galOpen(vs[i + 1].key);
   });
+}
+// the strip on top: today / approved / waiting for review / to render again – and the made-of-total in the panel, from the index
+function studioStats() {
+  let st = document.getElementById('stuStats');
+  if (!st) { st = document.createElement('div'); st.id = 'stuStats'; document.body.appendChild(st); }
+  const xs = Object.values(GAL.have), ok = xs.filter(x => x.review === 'ok').length, redo = xs.filter(x => x.review === 'redo').length;
+  st.innerHTML = `<span>היום: <b>${studioToday()}</b></span><span class="s-ok">אושרו: <b>${ok}</b></span><span class="s-wait">ממתינות לאישור: <b>${xs.length - ok - redo}</b></span><span class="s-redo">לרנדר שוב: <b>${redo}</b></span><span>בגלריה: <b>${xs.length}</b> / ${catVariants().length}</span>`;
+  const all = catVariants(); STUDIO.left = all.filter(v => !GAL.have[v.key]).length;
+  const c = document.getElementById('stuCount'); if (c) { c.textContent = `${all.length - STUDIO.left}/${all.length}`; document.getElementById('stuBar').style.width = ((all.length - STUDIO.left) / all.length * 100) + '%'; }
 }
 function studioShow(total) {
   studioDay(); const rb = document.getElementById('stuRun'); if (rb) rb.textContent = STUDIO.run ? 'עצירה' : 'המשך';
