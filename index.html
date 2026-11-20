@@ -106,6 +106,13 @@
   .selstrip { position:fixed; left:0; right:0; bottom:var(--fh); z-index:30; height:56px; display:flex; align-items:center; gap:18px; padding:0 var(--gr, 28px) 0 var(--gl, 28px); background:rgba(255,255,255,.82); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); border-top:1px solid var(--line); direction:rtl; }
   html[dir=rtl] .selstrip { padding:0 var(--gr, 28px) 0 var(--gl, 28px); }
   html[dir=ltr] .selstrip { direction:ltr; }
+  #studio { position:fixed; left:16px; bottom:calc(var(--fh, 0px) + 16px); z-index:70; width:min(420px, calc(100vw - 32px)); background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.14); padding:14px 16px; font-size:13px; direction:rtl; }
+  #studio .stu-h { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  #studio .stu-bar { height:6px; background:#eef0f2; border-radius:3px; overflow:hidden; } #studio .stu-bar i { display:block; height:100%; width:0; background:#1f6feb; transition:width .4s; }
+  #studio .stu-ctl { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px; } #studio .stu-ctl input { width:60px; } #studio .stu-ctl .btn { padding:4px 10px; font-size:12px; }
+  #studio .stu-cur { margin:8px 0; color:#333; min-height:1.3em; } #studio .stu-log { max-height:180px; overflow:auto; color:#555; font-size:12px; line-height:1.6; } #studio .stu-log .bad { color:#b42318; }
+  body.studio-on #itemBar, body.studio-on #photoBar, body.studio-on #selStrip { visibility:hidden; }
+
   /* the add-products drawer open: the product strip makes room for it instead of hiding under it */
   @media (min-width:700px) {
     body:has(#addDrawer.in:not([hidden])) .selstrip { right:min(340px, 92vw); transition:right .25s ease, left .25s ease; }
@@ -1309,6 +1316,7 @@
     <div class="body"><div class="inner">
       <div class="lbl">פריט</div>
       <div class="seg2" id="fuKind"><button data-v="station" class="on">עמדת מחשב</button><button data-v="desk">שולחן</button><button data-v="chair">כיסא</button><button data-v="plant">עציץ</button></div>
+      <div id="fuPlantSec" hidden><div class="lbl">סוג העציץ</div><div class="seg2" id="fuPlant"><button data-v="1" class="on">פיקוס</button><button data-v="2">סנסווריה</button><button data-v="3">מונסטרה</button><button data-v="4">קקטוס</button><button data-v="5">שיח עגול</button></div></div>
       <div id="fuDeskSec"><div class="lbl">רוחב (ס"מ)</div>
       <div class="seg2" id="fuW"><button data-v="1200">120</button><button data-v="1500">150</button><button data-v="1600" class="on">160</button><button data-v="2000">200</button></div></div>
       <div class="use">ריהוט כללי, לא מוצר מהקטלוג: עמדת מחשב = שולחן, שידת מגירות, מסך ומקלדת, וכיסא.</div>
@@ -4081,7 +4089,8 @@ function describeLocker() {
 // ---------- generic furniture and props (not catalogue products): for building whole scenes ----------
 //   station – desk + drawer pedestal + monitor, keyboard, mouse + office chair (the user sits on the front side)
 //   desk – the desk alone · chair – an office chair · bench – industrial workbench with a pegboard · plant – a potted plant
-const FU0 = { kind:'station', w:1600 };
+const FU0 = { kind:'station', w:1600, pv:1 };            // pv: the kind of plant (1–5)
+const PLANTS = { 1:'פיקוס', 2:'סנסווריה', 3:'מונסטרה', 4:'קקטוס', 5:'שיח עגול' };
 const FU = { ...FU0 };
 const FURN_NAME = { station:'עמדת מחשב', desk:'שולחן עבודה', chair:'כיסא משרדי', bench:'שולחן עבודה תעשייתי', plant:'עציץ' };
 const fuWhite = new THREE.MeshStandardMaterial({ color:0xf3f4f2, roughness:0.45 });
@@ -4089,6 +4098,20 @@ const fuGrey = new THREE.MeshStandardMaterial({ color:0xb9bec2, roughness:0.35, 
 const fuBlack = new THREE.MeshStandardMaterial({ color:0x1d1f22, roughness:0.6 });
 const fuMesh = new THREE.MeshStandardMaterial({ color:0x2a2c30, roughness:0.85 });
 const fuNet = new THREE.MeshStandardMaterial({ color:0x26282c, roughness:0.9, side:THREE.DoubleSide, transparent:true, opacity:0.88 });   // the chair's mesh back (seen from both sides)
+// the monitor picture: a generic landscape at dusk (mountains, a lake) – no brand, no logo
+const fuMonScreen = (() => {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 440; const x = c.getContext('2d');
+  const sky = x.createLinearGradient(0, 0, 0, 300); sky.addColorStop(0, '#1d2550'); sky.addColorStop(0.45, '#c4374a'); sky.addColorStop(0.75, '#e2876a'); sky.addColorStop(1, '#3a4b86');
+  x.fillStyle = sky; x.fillRect(0, 0, 1024, 440);
+  const hills = (pts, col) => { x.fillStyle = col; x.beginPath(); x.moveTo(0, 440); pts.forEach(([a, b]) => x.lineTo(a, b)); x.lineTo(1024, 440); x.fill(); };
+  hills([[0, 230], [120, 150], [220, 60], [320, 170], [420, 210], [560, 230], [700, 140], [820, 200], [1024, 120]], '#2e3a72');
+  hills([[0, 300], [160, 240], [300, 290], [480, 270], [640, 300], [820, 250], [1024, 290]], '#1a2350');
+  x.fillStyle = '#5a6fb0'; x.fillRect(0, 330, 1024, 40); x.fillStyle = '#0d1230'; x.fillRect(0, 370, 1024, 70);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1;
+  return new THREE.MeshStandardMaterial({ map:t, roughness:0.25, metalness:0, emissive:0xffffff, emissiveMap:t, emissiveIntensity:0.35, side:THREE.DoubleSide });
+})();
+const fuMonBody = new THREE.MeshStandardMaterial({ color:0x17181b, roughness:0.45, metalness:0.2, side:THREE.DoubleSide });
+const fuMonAccent = new THREE.MeshStandardMaterial({ color:0x2d6cf0, roughness:0.4, emissive:0x0d2a80 });
 const fuScreen = new THREE.MeshStandardMaterial({ color:0x2f4e6e, roughness:0.2, metalness:0.1, emissive:0x10202e });
 const fuWood = new THREE.MeshStandardMaterial({ color:0xc59a62, roughness:0.6 });
 const fuLeaf = new THREE.MeshStandardMaterial({ color:0x2f6b35, roughness:0.7 });
@@ -4150,10 +4173,18 @@ function buildFurn() {
     for (let i = 0; i < 3; i++) { box(380, 2, 4, x, 220 + i * 170, z + 262, fuGrey); box(120, 14, 14, x, 280 + i * 170, z + 268, fuGrey); }
     for (const [dx, dz] of [[-150, -200], [150, -200], [-150, 200], [150, 200]]) cyl(22, 22, 40, x + dx, 20, z + dz, fuBlack, root, 10);
   };
-  const screen = (zc) => {                                  // monitor, keyboard, mouse, a pen cup
-    box(560, 340, 30, 0, 1000, zc - D/2 + 170, fuBlack); box(520, 300, 4, 0, 1000, zc - D/2 + 187, fuScreen);
-    box(60, 160, 40, 0, 830, zc - D/2 + 150, fuBlack); box(240, 12, 180, 0, 758, zc - D/2 + 150, fuBlack);
-    box(440, 18, 150, 0, 762, zc - D/2 + 360, fuBlack); box(60, 22, 100, 300, 763, zc - D/2 + 360, fuBlack);
+  const screen = (zc) => {                                  // a curved ultra-wide monitor on a V stand, keyboard, mouse, a pen cup
+    const zm = zc - D/2 + 190, R = 1500, SW = 820, SH = 350, yc = 1010;
+    const arc = (r, w, hgt, m) => { const t = w / r, g = new THREE.CylinderGeometry(r, r, hgt, 40, 1, true, Math.PI - t / 2, t), o = shadowOn(new THREE.Mesh(g, m)); o.position.set(0, yc, zm + R); root.add(o); return o; };
+    arc(R + 16, SW + 16, SH + 16, fuMonBody);                                          // the thin black body
+    arc(R + 2, SW + 4, SH + 4, fuBlack);                                                  // the bezel
+    arc(R, SW - 10, SH - 14, fuMonScreen);                                                // the picture
+    box(8, 16, 4, 0, yc - SH / 2 - 2, zm - 4, fuMonAccent);                              // the small light under the screen
+    box(70, 280, 34, 0, 860, zm - 70, fuMonBody);                                         // the stand: column behind the screen …
+    box(30, 70, 6, 0, 830, zm - 52, fuMonAccent);                                         //   … with a blue accent
+    box(110, 12, 90, 0, 758, zm - 60, fuMonBody);
+    for (const sx of [-1, 1]) { const l = box(330, 12, 46, sx * 150, 760, zm - 30, fuMonBody); l.rotation.y = sx * 0.32; }   // the V feet
+    box(440, 18, 150, 0, 762, zc - D/2 + 380, fuBlack); box(60, 22, 100, 300, 763, zc - D/2 + 380, fuBlack);
     cyl(40, 36, 110, -W/2 + 180, 808, zc - D/2 + 160, fuGrey);
   };
   let w = W, d = D, h = 1200;
@@ -4173,13 +4204,39 @@ function buildFurn() {
     box(320, 110, 180, 380, 960, -60, new THREE.MeshStandardMaterial({ color:0x2f6fd6, roughness:0.5 }));   // a blue box on the top
     w = BW; d = BD; h = 1800;
   } else if (k === 'plant') {
-    cyl(200, 160, 420, 0, 210, 0, fuPot, root, 24);
-    for (let i = 0; i < 14; i++) {
-      const a = i * 2.4, r = 40 + (i % 4) * 30, leaf = shadowOn(new THREE.Mesh(new THREE.SphereGeometry(90, 10, 8), fuLeaf));
-      leaf.scale.set(0.55, 1.6, 0.25); leaf.position.set(Math.cos(a) * r * 1.6, 620 + i * 45, Math.sin(a) * r * 1.6); leaf.rotation.set(Math.sin(a) * 0.5, a, Math.cos(a) * 0.6); root.add(leaf);
+    const pv = FU.pv || 1, leafM = (hh, l = 0.32) => new THREE.MeshStandardMaterial({ color:new THREE.Color().setHSL(hh, 0.6, l * 0.62), roughness:0.7, side:THREE.DoubleSide });
+    const stem = new THREE.MeshStandardMaterial({ color:0x4b3a28, roughness:0.9 }), soil = new THREE.MeshStandardMaterial({ color:0x3a2c20, roughness:1 });
+    const leaf = (sx, sy, sz, x, y, z, rx, ry, rz, m) => { const o = shadowOn(new THREE.Mesh(new THREE.SphereGeometry(90, 12, 8), m)); o.scale.set(sx, sy, sz); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); root.add(o); return o; };
+    if (pv === 1) {                                            // ficus: a small tree in a tall grey pot
+      cyl(200, 160, 420, 0, 210, 0, fuPot, root, 24); cyl(185, 185, 6, 0, 418, 0, soil, root, 24);
+      cyl(10, 16, 760, 0, 790, 0, stem);
+      for (let i = 0; i < 46; i++) { const a = i * 2.4, r = 60 + (i % 5) * 45, y = 900 + (i % 9) * 55 + Math.sin(i) * 30;
+        leaf(0.45, 0.9, 0.18, Math.cos(a) * r, y, Math.sin(a) * r, Math.sin(a) * 0.6, a, 0.9 + Math.cos(a) * 0.4, leafM(0.32 + (i % 3) * 0.01, 0.26 + (i % 4) * 0.03)); }
+      w = 520; d = 520; h = 1420;
+    } else if (pv === 2) {                                     // snake plant: upright sword leaves in a white cylinder
+      cyl(150, 150, 300, 0, 150, 0, fuWhite, root, 24); cyl(140, 140, 6, 0, 298, 0, soil, root, 24);
+      for (let i = 0; i < 13; i++) { const a = i * 2.4, r = 25 + (i % 4) * 22, L = 450 + (i % 5) * 110, m = leafM(0.27, 0.22 + (i % 3) * 0.05);
+        const o = shadowOn(new THREE.Mesh(new THREE.ConeGeometry(48, L, 4), m)); o.scale.z = 0.3; o.position.set(Math.cos(a) * r, 300 + L / 2, Math.sin(a) * r); o.rotation.set(Math.sin(a) * 0.12, a, Math.cos(a) * 0.12); root.add(o); }
+      w = 320; d = 320; h = 900;
+    } else if (pv === 3) {                                     // monstera: big flat leaves on long stalks, a wide pot
+      cyl(210, 170, 330, 0, 165, 0, fuPot, root, 24); cyl(195, 195, 6, 0, 328, 0, soil, root, 24);
+      for (let i = 0; i < 9; i++) { const a = i * 2.5, out = 160 + (i % 3) * 70, y = 560 + (i % 4) * 110, tx = Math.cos(a) * out, tz = Math.sin(a) * out;
+        const L = Math.hypot(tx, y - 330, tz), st = cyl(6, 8, L, tx / 2, (y + 330) / 2, tz / 2, leafM(0.3, 0.3), root, 6); st.lookAt(tx, y, tz); st.rotateX(Math.PI / 2);
+        leaf(1.5, 0.08, 1.2, tx, y, tz, Math.sin(a) * 0.4, a, Math.cos(a) * 0.4, leafM(0.33, 0.2 + (i % 3) * 0.03)); }
+      w = 700; d = 700; h = 1050;
+    } else if (pv === 4) {                                     // cactus: a column with two arms in a terracotta pot
+      const tc = new THREE.MeshStandardMaterial({ color:0xb8653c, roughness:0.85 }), cm = leafM(0.3, 0.3);
+      cyl(150, 115, 260, 0, 130, 0, tc, root, 24); cyl(140, 140, 6, 0, 258, 0, soil, root, 24);
+      cyl(70, 75, 650, 0, 585, 0, cm, root, 14); leaf(0.78, 0.5, 0.78, 0, 910, 0, 0, 0, 0, cm);
+      for (const [sx, y0, hh] of [[-1, 560, 220], [1, 470, 180]]) { const ax = cyl(32, 32, 120, sx * 120, y0, 0, cm, root, 10); ax.rotation.z = Math.PI / 2;
+        cyl(42, 45, hh, sx * 175, y0 + hh / 2, 0, cm, root, 12); leaf(0.47, 0.3, 0.47, sx * 175, y0 + hh, 0, 0, 0, 0, cm); }
+      w = 420; d = 320; h = 960;
+    } else {                                                   // a round bush in a square planter
+      box(380, 380, 380, 0, 190, 0, fuWhite); box(350, 6, 350, 0, 381, 0, soil);
+      for (let i = 0; i < 22; i++) { const a = i * 2.4, r = (i % 4) * 55, y = 560 + Math.sin(i * 1.7) * 120;
+        leaf(1.4, 1.2, 1.4, Math.cos(a) * r, y, Math.sin(a) * r, 0, a, 0, leafM(0.29 + (i % 3) * 0.015, 0.24 + (i % 4) * 0.03)); }
+      w = 480; d = 480; h = 780;
     }
-    cyl(10, 14, 700, 0, 700, 0, new THREE.MeshStandardMaterial({ color:0x4b3a28, roughness:0.9 }));
-    w = 450; d = 450; h = 1350;
   }
   return { group:g, drawers:[], rods:[], W:w, D:d, H:h };
 }
@@ -4434,11 +4491,13 @@ function describeWb() {
 }
 function describeFurn() {
   const k = FU.kind, W = Math.round((FU.w || 1600) / 10);
-  if (k === 'station') return `A computer workstation (its chair: a dark grey office chair with a tall mesh back, headrest and loop armrests on a 5-star base): a white desk ${W} x 80 cm on a light grey metal frame, a white 3-drawer pedestal on castors under its right side, a black monitor with a keyboard and mouse, a pen cup, and a black mesh-back office chair on castors in front of it.`;
+  if (k === 'station') return `A computer workstation (its chair: a dark grey office chair with a tall mesh back, headrest and loop armrests on a 5-star base): a white desk ${W} x 80 cm on a light grey metal frame, a white 3-drawer pedestal on castors under its right side, a black curved ultra-wide monitor (about 34 inch, thin bezels, a V-shaped stand) showing a mountain landscape at dusk, with a keyboard and mouse, a pen cup, and a black mesh-back office chair on castors in front of it.`;
   if (k === 'desk') return `A plain white work desk ${W} x 80 cm on a light grey metal frame.`;
   if (k === 'chair') return 'A normal dark grey office chair: a tall black-framed mesh back with an upholstered headrest, an upholstered seat, black loop armrests, a gas lift and a black 5-star base on castors.';
   if (k === 'bench') return `An industrial workbench ${W} x 75 cm: a natural wood top on a light grey steel frame with a lower shelf, and a grey perforated pegboard above it holding a few screwdrivers and pliers; a blue plastic box on the top.`;
-  return 'A tall green potted plant in a light grey pot.';
+  return ({ 1:'A ficus tree about 140 cm tall in a tall light grey pot.', 2:'A snake plant (sansevieria) with upright sword-shaped dark green leaves in a white cylinder pot, about 90 cm tall.',
+    3:'A monstera with big flat glossy leaves on long stalks in a wide grey pot, about 105 cm tall.', 4:'A green column cactus with two arms in a terracotta pot, about 95 cm tall.',
+    5:'A round dense green bush in a white square planter, about 80 cm tall.' })[FU.pv || 1];
 }
 // ---- technical cabinet: pegboard back, drawers that slide out, doors with holes / louvres and hanging ארקלית 4 ----
 const tcPerf = (kind) => {                      // blue perforated sheet: 'holes' (square holes) or 'louv' (louvre slots)
@@ -4746,6 +4805,7 @@ function rebuild(keepCamera = false) {
     if (!keepCamera) frame(Math.max(fb.W, fb.D) + 300, fb.H + 100, false);
     document.getElementById('dims').innerHTML = `${FURN_NAME[FU.kind]} · רוחב <b>${Math.round(fb.W/10)}</b> · עומק <b>${Math.round(fb.D/10)}</b> · גובה <b>${Math.round(fb.H/10)}</b> ס"מ`;
     $('fuDeskSec').hidden = !['station', 'desk', 'bench'].includes(FU.kind);
+    $('fuPlantSec').hidden = FU.kind !== 'plant'; setSeg('fuPlant', String(FU.pv || 1));
   } else if (mode === 'arc') {
     const ab = buildArc(), M = ARC_MODELS[ARC.model];
     world.add(ab.group); drawers = []; rods = [];
@@ -4989,6 +5049,7 @@ function techBinsFit(S) {
 }
 segGroup('mdColor', () => { MD.color = '7035'; rebuild(true); });
 segGroup('fuKind', (v) => { FU.kind = v; rebuild(); });
+segGroup('fuPlant', (v) => { FU.pv = +v; rebuild(true); });
 segGroup('wbVar', (v) => { WB.variant = +v; rebuild(true); });
 segGroup('wbTools', (v) => { WB.tools = v; rebuild(true); });
 segGroup('wbTop', (v) => { WB.top = v; rebuild(true); });
@@ -6535,6 +6596,7 @@ const PRODUCT_OPTS = {
     { l:'משטח', ch:[['ירוק', C2(c => c.wb.top = 'green')], ['לבן', C2(c => c.wb.top = 'white')]], def:(c) => c.wb.top === 'white' ? 'לבן' : 'ירוק' },
     { l:'ציוד', ch:[['ללא ציוד', C2(c => c.wb.tools = 'none')], ['עם ציוד', C2(c => c.wb.tools = 'tools')]], def:(c) => c.wb.tools === 'tools' ? 'עם ציוד' : 'ללא ציוד' }],
   'עמדת מחשב':[{ l:'רוחב השולחן', vars:(v) => String(v.cfg.fu.w / 10) }],
+  'עציץ':[{ l:'סוג', vars:(v) => PLANTS[v.cfg.fu.pv] }],
   'שולחן עבודה':[{ l:'רוחב', vars:(v) => String(v.cfg.fu.w / 10) },
     { l:'תצוגה', ch:[['ריק', C2(c => c.fu.look = 'empty')], ['עם אווירה', C2(c => c.fu.look = 'full')]], def:(c) => c.fu.look === 'full' ? 'עם אווירה' : 'ריק' }],
   'שולחן עבודה תעשייתי':[{ l:'רוחב', vars:(v) => String(v.cfg.fu.w / 10) }],
@@ -6642,6 +6704,172 @@ function adPage(f) {
   adPageRender();
   $('adList').scrollTop = 0;
 }
+// ---------- catalogue photos: every variant of every product (not the furniture), with its content sets ----------
+// A variant = one product card + one choice of each of its options (the "תצוגה" photo-only options left out – the
+// contents come from the content sets). Each gets a stable key, so what was already made is skipped.
+const CAT_SETS = [
+  { id:'med', he:'רפואי', txt:'medical consumables: packed syringes, gauze pads and bandage rolls, alcohol prep pads, blue nitrile gloves, blood-test tubes' },
+  { id:'ind', he:'תעשייתי', txt:'industrial fasteners: zinc-plated screws and bolts, hex nuts, washers, wall plugs, brass inserts' },
+  { id:'tech', he:'הייטקי', txt:'electronics: small circuit boards, connectors, coiled USB cables, batteries, SMD component reels' },
+];
+function catHasCells(t, c) {
+  if ((c.md && c.md.shut) || (c.mt && c.mt.shut) || (c.tb && c.tb.shut)) return false;            // closed: nothing to see inside
+  if (['unit', 'stand', 'wall', 'tamb', 'excl', 'part', 'quad', 'tena', 'smart', 'arc'].includes(t)) return true;
+  if (t === 'mtamb') return !!(c.mt && ((c.mt.arc && c.mt.arc.length) || c.mt.arcFloor));
+  if (t === 'mdoor') return !!(c.md && ((c.md.arc && c.md.arc.length) || c.md.arcFloor));
+  return t === 'tech' || t === 'wb';                   // drawers / bins on the doors: worth showing filled
+}
+function catVariants() {
+  const out = [];
+  for (const fam of addFamilies()) {
+    if (fam.id === 'furn') continue;
+    for (const f of groupVars(fam.vars)) {
+      const opts = (PRODUCT_OPTS[f.name] || []).filter(o => o.ch && o.l !== 'תצוגה'), vo = (PRODUCT_OPTS[f.name] || []).find(o => o.vars);
+      f.vars.forEach((v, vi) => {
+        const walk = (i, c, labels) => {
+          if (i === opts.length) {
+            const lbl = [vo ? vo.vars(v) : (f.vars.length > 1 ? v.name : ''), ...labels].filter(Boolean), base = f.name + (lbl.length ? ' – ' + lbl.join(' · ') : '');
+            const sets = catHasCells(v.t, c) ? CAT_SETS : [null];
+            for (const st of sets) out.push({ key:base + (st ? ' – ' + st.he : ''), name:base, t:v.t, cfg:deep(c), set:st });
+            return;
+          }
+          const o = opts[i];
+          if (o.if && !o.if(c)) { walk(i + 1, c, labels); return; }
+          for (const [l, fn] of o.ch) { const c2 = deep(c); fn(c2); walk(i + 1, c2, [...labels, o.l + ' ' + l]); }
+        };
+        walk(0, deep(v.cfg), []);
+      });
+    }
+  }
+  return out;
+}
+// one catalogue photo: the variant alone in the scene → product photo → realistic render (transparent, 4:5) → Blob + index
+const CAT_SIZE = { w:1024, h:1280 };
+const nextFrames = (n = 3) => new Promise(r => { const f = () => (n-- > 0 ? requestAnimationFrame(f) : r()); f(); });
+async function catShoot(v, onStep = () => {}) {
+  if (PHOTO.on) exitPhoto();
+  if (mode !== 'scene') throw new Error('הסטודיו עובד רק במסך הסצנה');
+  onStep('מכין את המוצר');
+  SCN.items = []; SCN.sel = null;
+  const it = { id:SCN.next++, type:v.t, cfg:deep(v.cfg), rot:0, name:v.name, x:0, z:0, contents:v.set ? v.set.txt : '' };
+  SCN.items.push(it); rebuild(true); selectItem(it.id); await nextFrames();
+  enterPhoto(it); await nextFrames(6);                                   // the product alone, framed, on a transparent background
+  const cv = padToRatio(captureCanvas(1536), CAT_SIZE.w, CAT_SIZE.h);
+  let image = cv.toDataURL('image/webp', 0.95); if (!image.startsWith('data:image/webp')) image = cv.toDataURL('image/png');
+  const body = { image, background:'transparent', description:describe(), structure:[structureSummary(), profileNotes()].filter(Boolean).join('\n'),
+    size:`${CAT_SIZE.w}x${CAT_SIZE.h}`, lighting:lightingText(),
+    contents:v.set ? v.set.txt : '', backdrop:'', extra:'Catalogue product photo: the product alone, centred, nothing around it.', contentRefs:[], roomRefs:[] };
+  let r = null;
+  for (let a = 1; a <= 3; a++) {                                          // a result whose count does not match the model is rendered again
+    onStep(a > 1 ? `מרנדר שוב (${a}/3)` : 'מרנדר');
+    r = await api('/api/render', body);
+    if (!r.check || r.check.ok !== false) break;
+  }
+  onStep('שומר');
+  const out = await catFit(r.image);                                      // exactly 1024 × 1280, transparent PNG
+  const url = await uploadImage(out, 'catalog');
+  if (!url) throw new Error('אין חיבור לאחסון התמונות');
+  await api('/api/catalog', { action:'set', key:v.key, url, name:v.name, set:v.set ? v.set.id : '' });
+  exitPhoto();
+  return { url, check:r.check || null };
+}
+// the render back to the exact catalogue size, keeping it transparent
+async function catFit(src) {
+  const img = new Image(); img.crossOrigin = 'anonymous'; img.src = src; await img.decode();
+  const c = document.createElement('canvas'); c.width = CAT_SIZE.w; c.height = CAT_SIZE.h;
+  const k = Math.min(CAT_SIZE.w / img.naturalWidth, CAT_SIZE.h / img.naturalHeight), w = img.naturalWidth * k, h = img.naturalHeight * k;
+  c.getContext('2d').drawImage(img, (CAT_SIZE.w - w) / 2, (CAT_SIZE.h - h) / 2, w, h);
+  return c.toDataURL('image/png');
+}
+async function catIndex() { try { const r = await fetch('/api/catalog'); if (!r.ok) throw 0; return (await r.json()).items || {}; } catch { return {}; } }
+// ---- the studio tab (?studio=1): only makes catalogue photos, one after another, skipping what is already made ----
+const STUDIO = { on:false, run:false, done:0, fail:new Map(), left:0, cur:'' };
+function studioUI() {
+  let el = document.getElementById('studio');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'studio';
+    el.innerHTML = `<div class="stu-h"><b>סטודיו תמונות קטלוג</b><span id="stuCount"></span></div><div class="stu-bar"><i id="stuBar"></i></div>
+      <div id="stuCur" class="stu-cur"></div>
+      <div class="stu-ctl"><button class="btn" id="stuRun">עצירה</button><label>מגבלה יומית <input id="stuLim" type="number" min="1" max="500"></label><span id="stuDay"></span><button class="btn" id="stuZip">הורדת ZIP</button></div>
+      <div id="stuLog" class="stu-log"></div>`;
+    document.body.appendChild(el);
+    const lim = el.querySelector('#stuLim'); lim.value = studioLimit();
+    lim.onchange = () => { try { localStorage.setItem('rbt-studio-limit', String(Math.max(1, +lim.value || 50))); } catch {} studioDay(); if (!STUDIO.run && STUDIO.on) startStudio(); };
+    el.querySelector('#stuRun').onclick = () => { if (STUDIO.run) { STUDIO.stop = true; STUDIO.cur = 'עוצר אחרי התמונה הנוכחית…'; document.getElementById('stuCur').textContent = STUDIO.cur; } else startStudio(); };
+    el.querySelector('#stuZip').onclick = studioZip;
+  }
+  return el;
+}
+// the daily limit (it spends render credit): a count per calendar day, kept in this browser
+function studioLimit() { try { return Math.max(1, +localStorage.getItem('rbt-studio-limit') || 50); } catch { return 50; } }
+function studioToday() { const d = new Date().toISOString().slice(0, 10); try { const o = JSON.parse(localStorage.getItem('rbt-studio-day') || '{}'); return o.d === d ? o.n : 0; } catch { return 0; } }
+function studioCount() { const d = new Date().toISOString().slice(0, 10); try { localStorage.setItem('rbt-studio-day', JSON.stringify({ d, n:studioToday() + 1 })); } catch {} }
+function studioDay() { const e = document.getElementById('stuDay'); if (e) e.textContent = `היום: ${studioToday()}/${studioLimit()}`; }
+// all the catalogue photos in one ZIP (stored, not compressed – PNGs are compressed already), named after their variant
+async function studioZip() {
+  const b = document.getElementById('stuZip'); b.disabled = true;
+  try {
+    const items = Object.entries(await catIndex()); if (!items.length) { toast('עדיין אין תמונות'); return; }
+    const enc = new TextEncoder(), parts = [], dir = []; let off = 0, i = 0;
+    for (const [key, x] of items) {
+      b.textContent = `מוריד ${++i}/${items.length}`;
+      let data; try { data = new Uint8Array(await (await fetch(x.url)).arrayBuffer()); } catch { continue; }
+      const name = enc.encode(key.replace(/[\\/:*?"<>|]/g, '-').replace(/\s*–\s*/g, '_').replace(/\s*·\s*/g, '_') + '.png'), crc = crc32(data);
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true);
+      parts.push(new Uint8Array(h.buffer), name, data);
+      const c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+      dir.push(new Uint8Array(c.buffer), name); off += 30 + name.length + data.length;
+    }
+    const size = dir.reduce((a, x) => a + x.length, 0), n = dir.length / 2, e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, n, true); e.setUint16(10, n, true); e.setUint32(12, size, true); e.setUint32(16, off, true);
+    await saveFile(new Blob([...parts, ...dir, new Uint8Array(e.buffer)], { type:'application/zip' }), 'catalog-photos.zip');
+  } catch (er) { toast('ההורדה נכשלה: ' + er.message); }
+  finally { b.disabled = false; b.textContent = 'הורדת ZIP'; }
+}
+function studioShow(total) {
+  studioDay(); const rb = document.getElementById('stuRun'); if (rb) rb.textContent = STUDIO.run ? 'עצירה' : 'המשך';
+  const made = total - STUDIO.left;
+  document.getElementById('stuCount').textContent = `${made}/${total}`;
+  document.getElementById('stuBar').style.width = (total ? made / total * 100 : 0) + '%';
+  document.getElementById('stuCur').textContent = STUDIO.cur;
+}
+function studioLog(t, bad) {
+  const l = document.getElementById('stuLog'), d = document.createElement('div'); d.textContent = t; if (bad) d.className = 'bad';
+  l.prepend(d); while (l.children.length > 40) l.lastChild.remove();
+}
+async function startStudio() {
+  if (STUDIO.run) return;
+  if (!isAdmin()) { toast('הסטודיו עובד במצב ניהול בלבד'); return; }
+  STUDIO.on = STUDIO.run = true; STUDIO.stop = false; document.body.classList.add('studio-on'); studioUI();
+  if (SET_OPEN || ADD_OPEN) closeAddDrawer();
+  const all = catVariants(), total = all.length;
+  while (STUDIO.run) {
+    if (STUDIO.stop) { STUDIO.cur = 'עצור – לחצו "המשך"'; break; }
+    if (studioToday() >= studioLimit()) { STUDIO.cur = `הגעתם למגבלה היומית (${studioLimit()}) – אפשר להעלות אותה, או להמשיך מחר`; break; }
+    const have = await catIndex();
+    const todo = all.filter(v => !have[v.key] && (STUDIO.fail.get(v.key) || 0) < 3);
+    STUDIO.left = all.filter(v => !have[v.key]).length; studioShow(total);
+    if (!todo.length) { STUDIO.cur = STUDIO.left ? `הסתיים – ${STUDIO.left} נכשלו 3 פעמים (ברשימה למטה)` : '✓ כל התמונות קיימות'; studioShow(total); break; }
+    // the ones that failed go last, so one bad variant never blocks the rest
+    todo.sort((a, b) => (STUDIO.fail.get(a.key) || 0) - (STUDIO.fail.get(b.key) || 0));
+    const v = todo[0];
+    try {
+      const r = await catShoot(v, (st) => { STUDIO.cur = `${v.key} · ${st}`; studioShow(total); });
+      STUDIO.done++; studioCount(); studioLog('✓ ' + v.key + (r.check && r.check.ok === false ? ' (פער בספירה – לבדוק)' : ''), r.check && r.check.ok === false);
+    } catch (e) {
+      STUDIO.fail.set(v.key, (STUDIO.fail.get(v.key) || 0) + 1);
+      studioLog(`✗ ${v.key}: ${e.message} (ניסיון ${STUDIO.fail.get(v.key)}/3)`, true);
+      if (PHOTO.on) exitPhoto();
+      await new Promise(r => setTimeout(r, 5000));
+    }
+  }
+  STUDIO.run = false; { const have = await catIndex(), all = catVariants(); STUDIO.left = all.filter(v => !have[v.key]).length; studioShow(all.length); }
+}
+if (new URLSearchParams(location.search).get('studio')) { const go = () => setTimeout(startStudio, 2500); document.readyState === 'complete' ? go() : addEventListener('load', go); }
+window.__catV = () => catVariants();
+window.__catShoot = (i) => catShoot(catVariants()[i]);
 function adPageV() {
   const P = AD.page, f = P.f, opts = PRODUCT_OPTS[f.name] || [];
   const v = f.vars[P.vi], c = deep(v.cfg);
@@ -7085,7 +7313,7 @@ function addFamilies() {
       ...[1600, 1200].map(w => ({ t:'furn', g:'עמדת מחשב', name:`עמדת מחשב ${w/10}`, kw:'עמדה שולחן מחשב כיסא מסך workstation desk', cfg:C('furn', c => { c.fu = { kind:'station', w }; }) })),
       ...[1200, 1500, 1600, 2000].map(w => ({ t:'furn', g:'שולחן עבודה', name:`שולחן ${w/10}`, kw:'שולחן desk table', cfg:C('furn', c => { c.fu = { kind:'desk', w }; }) })),
       { t:'furn', name:'כיסא משרדי', kw:'כיסא chair', cfg:C('furn', c => { c.fu = { kind:'chair', w:1600 }; }) },
-      { t:'furn', name:'עציץ', kw:'עציץ צמח plant', cfg:C('furn', c => { c.fu = { kind:'plant', w:1600 }; }) } ] },
+      ...[1, 2, 3, 4, 5].map(n => ({ t:'furn', g:'עציץ', name:'עציץ – ' + PLANTS[n], kw:'עציץ צמח plant ' + PLANTS[n], cfg:C('furn', c => { c.fu = { kind:'plant', w:1600, pv:n }; }) })) ] },
     { id:'metal', name:'ארונות מתכת', vars:[
       { t:'tamb', name:'ארון מאובטח לרב תא', kw:'ארון מתכת תריס נעילה secure cabinet', cfg:C('tamb') },
       { t:'mtamb', name:'ארון תריס', kw:'ארון מתכת תריס tambour cabinet', cfg:C('mtamb') },
@@ -7503,7 +7731,7 @@ const HEADS = {
   mdoor:[{ seg:'lblMode', l:'תוויות', if:() => !!((MD.arc && MD.arc.length) || MD.arcFloor) }],
   shelf:[{ l:'מידות ורכיבים', panel:['shInfo'] }, { seg:'shDepth', l:'עומק' }, { seg:'shHeight', l:'גובה' }, { l:'יחידות', panel:['shBays', 'shBayAdd'] }, { seg:'shB2b', l:'גב אל גב' }, { l:'פינה 90°', panel:['shCorner', 'shCornerSec'] }, { seg:'shLod', l:'פירוט' }, { l:'מפלסים', panel:['shLvMode', 'shLevels', 'shLvAdd'], val:() => shLevels().length + (SH.lv ? ' · ידני' : '') }],
   wb:[{ seg:'wbVar', l:'גרסה' }, { seg:'wbTop', l:'משטח' }, { seg:'wbBr', l:'משולשים', if:() => WB.variant > 1 }, { seg:'wbTools', l:'על הלוח', if:() => WB.variant > 1 }, { seg:'lblMode', l:'תוויות' }],
-  furn:[{ seg:'fuW', l:'רוחב', if:() => ['station', 'desk', 'bench'].includes(FU.kind) }],
+  furn:[{ seg:'fuW', l:'רוחב', if:() => ['station', 'desk', 'bench'].includes(FU.kind) }, { seg:'fuPlant', l:'סוג העציץ', if:() => FU.kind === 'plant' }],
   tech:[{ seg:'tcVar', l:'גרסה' }, { seg:'tcAcc', l:'בדלתות', if:() => techZones(TC) }, { seg:'lblMode', l:'תוויות' }],
   arc:[{ seg:'arcModel', l:'דגם' }, { seg:'arcColor', l:'צבע' }, { seg:'arcDiv', l:'מחיצת אורך', if:() => ARC.model <= 2 }, { seg:'lblMode', l:'תוויות' }],
 };
@@ -8778,6 +9006,7 @@ function layoutDesign(plan, room) {
     } else if (z.kind === 'carts' || z.kind === 'decor') {
       const type = z.kind === 'decor' ? 'furn' : prod.type || 'excl';
       const cfg = zoneCfg(type, z.kind === 'decor' ? { furn_kind:'plant' } : prod.settings), f = footOf(type, cfg);
+      if (z.kind === 'decor' && cfg.fu) cfg.fu.pv = 1 + Math.floor(Math.random() * 5);   // a mix of plants
       const n = n0 || (z.kind === 'decor' ? 2 : 3); asked = n;
       const near = placed.filter(p => p.zone && p.zone === z.near);
       const tx = near.length ? (Math.min(...near.map(p => p.x0)) + Math.max(...near.map(p => p.x1))) / 2 : W / 2;
