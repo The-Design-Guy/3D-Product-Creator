@@ -1286,8 +1286,7 @@
       <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <div class="body"><div class="inner">
-      <div class="lbl">צבע</div>
-      <div class="seg2" id="mdColor"><button data-v="7035" class="on">RAL 7035</button><button data-v="blue">כחול</button></div>
+      <div class="seg2" id="mdColor" hidden><button data-v="7035" class="on">RAL 7035</button></div>
       <div class="lbl">מדפים מודולריים (גובה בס"מ מהרצפה)</div>
       <div class="shl" id="mdShelves"></div>
       <button class="btn" id="mdAdd">+ מדף</button>
@@ -1370,7 +1369,7 @@
     <div class="toggles">
     <div class="row"><span>מוט אבטוח</span><label class="sw"><input type="checkbox" id="rod"><span></span></label></div>
     <div class="row"><span>פתיחת כל המגירות</span><label class="sw"><input type="checkbox" id="openAll"><span></span></label></div>
-    <div class="row"><span>תוויות</span><label class="sw"><input type="checkbox" id="labelsOn"><span></span></label></div>
+    <div class="row"><span>תוויות</span><div class="seg2" id="lblMode"><button data-v="none" class="on">בלי</button><button data-v="blank">ריקות</button><button data-v="text">עם כיתוב</button></div><input type="checkbox" id="labelsOn" hidden></div>
     <div class="row"><span>סיבוב אוטומטי</span><label class="sw"><input type="checkbox" id="spin"><span></span></label></div>
     <div class="row" id="backWallRow"><span>קיר ורצפה מאחור</span><label class="sw"><input type="checkbox" id="backWall"><span></span></label></div>
     <div class="row sheetonly" id="pvDoorsRow" hidden><span id="pvDoorsTxt">דלתות</span><label class="sw"><input type="checkbox" id="pvDoors"><span></span></label></div>
@@ -1538,6 +1537,105 @@ const clearMat = clearFace();
 const edgeMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#7f97c4'), roughness:0.08, metalness:0,
   transparent:true, opacity:0.78, depthWrite:false, envMapIntensity:1.4 });
 const labelMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#fbfbf8'), roughness:0.85, metalness:0 });
+// a paper label insert for pick bins and drawer fronts (shown with the "תוויות" switch, like the tilt bin labels)
+const labelsShown = () => LBL.mode !== 'none';
+// labels per product: none / blank / text (the text comes in a later step) – kept in each product's cfg as lbl
+const LBL = { mode:'none', txt:{} };
+function setLbl(v, txt) {
+  LBL.mode = ['blank', 'text'].includes(v) ? v : 'none';
+  if (txt !== undefined) LBL.txt = txt && typeof txt === 'object' ? { ...txt } : {};
+  const e = document.getElementById('labelsOn'); if (e) e.checked = LBL.mode !== 'none';
+  const sg = document.getElementById('lblMode'); if (sg) [...sg.children].forEach(c => c.classList.toggle('on', c.dataset.v === LBL.mode));
+}
+// the paper of a label with its text on it (cached by text + shape)
+const LBL_MATS = new Map();
+function labelTextMat(text, w, h) {
+  const k = text + '|' + Math.round(w / h * 10); if (LBL_MATS.has(k)) return LBL_MATS.get(k);
+  const W = 512, H = Math.max(64, Math.round(W * h / w)), c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d'); x.fillStyle = '#fbfbf8'; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#16191c'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = 'rtl';
+  let fs = Math.round(H * 0.6); const font = (n) => `700 ${n}px Rubik, Heebo, Arial, sans-serif`;
+  x.font = font(fs); while (fs > 10 && x.measureText(text).width > W * 0.9) { fs -= 2; x.font = font(fs); }
+  x.fillText(text, W / 2, H / 2 + fs * 0.04);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  const m = new THREE.MeshStandardMaterial({ map:t, roughness:0.85, metalness:0 }); LBL_MATS.set(k, m); return m;
+}
+// number the labels of a built product (always in the same order), show or hide them and write their text
+function applyLabels(root, it) {
+  if (!root) return;
+  const list = []; root.traverse(o => { if (o.isMesh && o.name === 'label') list.push(o); });
+  const auto = LBL.mode === 'text' ? autoLabels(it, list.length) : [];
+  list.forEach((o, i) => {
+    o.userData.lblIdx = i; o.visible = LBL.mode !== 'none';
+    const t = LBL.mode === 'text' && (LBL.txt[i] || auto[i]);
+    const p = o.geometry && o.geometry.parameters;
+    o.material = t && p && p.width ? labelTextMat(t, p.width, p.height) : labelMat;
+  });
+}
+// labels nobody wrote: from the photographed inventory that belongs in this product, else from the product's
+// "bin contents" text (comma separated) – each name takes a run of neighbouring labels
+const BIN_TYPES = ['unit', 'stand', 'wall', 'tamb', 'excl', 'part', 'quad', 'tena', 'smart', 'arc'];
+function autoLabels(it, n) {
+  if (!it || !n) return [];
+  let names = [];
+  const rows = (SCN.brief && SCN.brief.inv && SCN.brief.inv.rows) || [];
+  if (rows.length && typeof NEED_RULE !== 'undefined') names = rows.filter(r => { const R = NEED_RULE[r.kind]; return R && (R.bins ? BIN_TYPES.includes(it.type) : R.type === it.type); }).map(r => r.name).filter(Boolean);
+  if (!names.length && it.contents) names = it.contents.split(/[,،;\n]/).map(x => x.trim()).filter(Boolean);
+  if (!names.length) return [];
+  return Array.from({ length:n }, (_, i) => names[Math.floor(i * names.length / n)].slice(0, 40));
+}
+// the labels of a scene product, for the render brief (its cfg must be applied)
+function labelBrief(it) {
+  if (LBL.mode === 'none') return '';
+  const g = ITEM_GROUPS.get(it.id); let n = 0; if (g) g.traverse(o => { if (o.isMesh && o.name === 'label') n++; });
+  if (!n) return '';
+  if (LBL.mode === 'blank') return ' LABELS: every label holder on its bin / drawer fronts carries a plain white paper label with nothing written on it.';
+  const auto = autoLabels(it, n), cnt = new Map();
+  for (let i = 0; i < n; i++) { const x = LBL.txt[i] || auto[i] || ''; cnt.set(x, (cnt.get(x) || 0) + 1); }
+  const parts = [...cnt].filter(([x]) => x).map(([x, c]) => `"${x}"${c > 1 ? ` (on ${c} labels)` : ''}`);
+  return ` LABELS: every label holder on its bin / drawer fronts carries a white paper label with short bold black printed text${parts.length ? ': ' + parts.join(', ') : ''}${cnt.get('') ? `; ${cnt.get('')} of them are blank` : ''}. Write the text exactly as given (Hebrew right-to-left), small, sharp and legible; neighbouring labels with the same text sit next to each other.`;
+}
+// the AI: labels on a product – mode none / blank / text, and texts (spread over all its labels, or one per label in order)
+function opLabels(it, L) {
+  if (!it || !L) return false;
+  if (it.id === SCN.sel && !it.draft) it.cfg = capCfg(it.type);
+  const c = it.cfg = { ...(it.cfg || {}) }, texts = (L.texts || []).map(t => String(t || '').trim().slice(0, 40));
+  c.lbl = ['none', 'blank', 'text'].includes(L.mode) ? L.mode : texts.some(Boolean) ? 'text' : 'blank';
+  if (texts.length) {
+    const g = ITEM_GROUPS.get(it.id); let n = 0; if (g) g.traverse(o => { if (o.isMesh && o.name === 'label') n++; });
+    c.lblTxt = {};
+    if (L.per_label || !n) texts.forEach((t, i) => { if (t) c.lblTxt[i] = t; });
+    else for (let i = 0; i < n; i++) { const t = texts[Math.floor(i * texts.length / n)]; if (t) c.lblTxt[i] = t; }
+  } else if (L.clear_texts) c.lblTxt = {};
+  if (it.id === SCN.sel) { applyCfg(it.type, c); syncUI(it.type); }
+  return true;
+}
+// the label a click landed on: the nearest part up the tree that carries one
+function labelAt(obj, top) {
+  for (let o = obj; o && o !== top; o = o.parent) { const l = o.children.find(c => c.name === 'label' && c.isMesh); if (l) return l; }
+  return null;
+}
+function askLabel(idx) {
+  const w = document.createElement('div'); w.className = 'cfm-wrap';
+  w.innerHTML = `<div class="cfm" role="dialog" aria-modal="true"><h3 style="margin:0 0 10px">כיתוב לתווית</h3><label class="fld">מה יש בתא<input id="lblTxt" maxlength="40" dir="auto" placeholder="למשל: ברגים M6"></label>
+    <div class="use" style="margin-top:6px">ריק = תווית בלי כיתוב</div><div class="dlg-actions"><button class="btn primary" id="lblOk">שמירה</button><button class="btn" data-no>ביטול</button></div></div>`;
+  const inp = w.querySelector('#lblTxt'); inp.value = LBL.txt[idx] || '';
+  const close = () => { w.remove(); removeEventListener('keydown', key, true); };
+  const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+  const go = () => {
+    const t = inp.value.trim(); if (t) LBL.txt[idx] = t; else delete LBL.txt[idx];
+    if (t && LBL.mode !== 'text') setLbl('text');
+    close(); rebuild(true);
+  };
+  w.querySelector('#lblOk').onclick = go; inp.onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  w.querySelector('[data-no]').onclick = close; w.onclick = (e) => { if (e.target === w) close(); };
+  addEventListener('keydown', key, true);
+  document.body.appendChild(w); inp.focus(); inp.select();
+}
+function labelPaper(w, h, x, y, z, parent) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), labelMat); m.position.set(x, y, z);
+  m.name = 'label'; m.userData.isLabel = true; m.visible = labelsShown(); parent.add(m); return m;
+}
 const rodMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#e3e6e9'), metalness:1, roughness:0.22 });
 
 // box faces order: +x,-x,+y,-y,+z,-z ; thin axis = y  → y faces are surfaces, others are edges
@@ -2723,7 +2821,8 @@ const TYPE_NAME = { unit:'רב תא', stand:'מעמד', excl:'עגלת רב-תא
 const SCN = { room:{ W:6000, D:5000, back:true, left:false, right:false }, items:[], sel:null, editType:null, next:1 };
 let SCENE_BUILD = false;
 const deep = (o) => JSON.parse(JSON.stringify(o));
-function capCfg(t) {
+function capCfg(t) { return { ...capCfg0(t), lbl:LBL.mode, lblTxt:{ ...LBL.txt } }; }
+function capCfg0(t) {
   if (t === 'unit') return { current };
   if (t === 'stand') return { stand:{ ...stand }, comp:deep(comp) };
   if (t === 'wall') return { wall:deep(wall), wallComp:deep(wallComp) };
@@ -2740,6 +2839,7 @@ function capCfg(t) {
   return { tn:deep(TN[t === 'smart' ? 'smart' : 'delux']) };
 }
 function applyCfg(t, c) {
+  setLbl(c && c.lbl, c ? c.lblTxt : {});
   if (t === 'unit') current = c.current;
   else if (t === 'stand') { Object.assign(stand, c.stand); for (const k in comp) delete comp[k]; Object.assign(comp, deep(c.comp)); }
   else if (t === 'wall') { Object.assign(wall, deep(c.wall)); for (const k in wallComp) delete wallComp[k]; Object.assign(wallComp, deep(c.wallComp)); }
@@ -2755,7 +2855,7 @@ function applyCfg(t, c) {
   else if (t === 'wb') Object.assign(WB, WB0, c.wb || {});
   else { const v = t === 'smart' ? 'smart' : 'delux'; for (const k in TN[v]) delete TN[v][k]; Object.assign(TN[v], deep(c.tn)); tena = TN[v]; }
 }
-const capAll = () => ({ arc:{ ...ARC }, current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD), tc:deep(TC), lk:deep(LK), fu:{ ...FU }, wb:{ ...WB }, qd:deep(QD) });
+const capAll = () => ({ lbl:LBL.mode, lblTxt:{ ...LBL.txt }, arc:{ ...ARC }, current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD), tc:deep(TC), lk:deep(LK), fu:{ ...FU }, wb:{ ...WB }, qd:deep(QD) });
 function restoreAll(a) {
   applyCfg('unit', a); applyCfg('stand', a); applyCfg('wall', a);
   applyCfg('excl', { exs:a.exs.excl }); applyCfg('part', { exs:a.exs.part });
@@ -3077,6 +3177,7 @@ function buildScene() {
     else { WING_GROUPS.clear(); SLD = null; b = buildTena(); b.sld = SLD; }
     if (it.draft) ghost(b.group);
     ITEM_DRAWERS.set(it.id, it.hidden ? [] : b.drawers);
+    applyLabels(b.group, it);                              // this product's labels: shown or not, and their text
     ITEM_PARTS.set(it.id, { slats:b.slats || null, doors:b.doors || null, sld:b.sld || null, shelves:b.shelves || null,
       wings:b.sld !== undefined ? new Map(WING_GROUPS) : null, frames:b.sld !== undefined ? new Map(WING_FRAMES) : null, travel:b.travel || 0 });
     const wo = wasOpen.get(it.id); if (wo && wo.length === b.drawers.length) b.drawers.forEach((d, i) => { if (wo[i]) { d.userData.target = d.userData.angle = d.userData.open; setDrw(d, d.userData.open); } });
@@ -3146,7 +3247,7 @@ function renderScene() {
   if (it) {
     $('scnSelName').textContent = it.name;
     const ct = $('scnContents'); if (document.activeElement !== ct) ct.value = it.contents || '';
-    ct.oninput = () => { it.contents = ct.value; };
+    ct.oninput = () => { it.contents = ct.value; if (LBL.mode === 'text') { clearTimeout(ct._lt); ct._lt = setTimeout(() => rebuild(true), 700); } };   // labels with text follow the contents
     $('scnX').value = Math.round((it.x + R.W/2000) * 100); $('scnZ').value = Math.round((it.z + R.D/2000) * 100); $('scnR').value = Math.round(((it.rot % 360) + 360) % 360); syncStripPos(it);
     const tw = touchWall(it); $('scnTouch').textContent = tw.length ? 'צמוד ל' + tw.map(w => ({ back:'קיר אחורי', left:'קיר שמאלי', right:'קיר ימני' })[w]).join(' ול') : '';
   }
@@ -3477,7 +3578,7 @@ function describeScene() {
     applyCfg(it.type, it.id === SCN.sel ? capCfg(it.type) : it.cfg);
     mode = it.type; const d = describe(); mode = m;
     const tw = touchWall(it), facing = ({ 0:'facing the camera/room', 90:'turned 90 degrees, its long side running away from the back wall', 180:'facing the back wall', 270:'turned 90 degrees, its long side running away from the back wall' })[Math.round(((it.rot % 360) + 360) % 360 / 90) * 90 % 360];
-    lines.push(`${k + 1}. ${d}${it.contents ? ` INSIDE ITS BINS: ${it.contents}.` : ''} Position: ${Math.round((it.x + R.W/2000)*100)} cm from the left side, ${Math.round((it.z + R.D/2000)*100)} cm from the back; ${facing}${tw.length ? '; touching the ' + tw.join(' and ') + ' wall' : ''}${yOf(it) > 0.005 ? `; raised ${Math.round(yOf(it)*100)} cm above the floor${restsOn(it) ? ', resting on top of product ' + (SCN.items.filter(i => !i.hidden).indexOf(restsOn(it)) + 1) : ' (wall-mounted / floating exactly at that height)'}` : ''}.`);
+    lines.push(`${k + 1}. ${d}${it.contents ? ` INSIDE ITS BINS: ${it.contents}.` : ''}${labelBrief(it)} Position: ${Math.round((it.x + R.W/2000)*100)} cm from the left side, ${Math.round((it.z + R.D/2000)*100)} cm from the back; ${facing}${tw.length ? '; touching the ' + tw.join(' and ') + ' wall' : ''}${yOf(it) > 0.005 ? `; raised ${Math.round(yOf(it)*100)} cm above the floor${restsOn(it) ? ', resting on top of product ' + (SCN.items.filter(i => !i.hidden).indexOf(restsOn(it)) + 1) : ' (wall-mounted / floating exactly at that height)'}` : ''}.`);
   });
   restoreAll(saved);
   const sel = SCN.items.find(i => i.id === SCN.sel); if (sel) applyCfg(sel.type, sel.cfg);
@@ -3556,10 +3657,10 @@ function makeArcBin(m, mat, div) {
   add(G.rimFront, 0, P.hf - G.rim * 0.5, P.zf + D * 0.008);
   const ly = P.hc + (P.hf - P.hc) * 0.45;
   if (m === 1) {                                                                       // the big one: three panels across the front, ribs between them
-    for (const k of [-1, 0, 1]) add(G.pocket, k * Wb * 0.31, ly, P.zf + 0.6, inMat);
+    for (const k of [-1, 0, 1]) { add(G.pocket, k * Wb * 0.31, ly, P.zf + 0.6, inMat); if (k === 0) labelPaper(Wb * 0.27, (P.hf - P.hc) * 0.56, 0, ly, P.zf + 1.4, g); }
     for (const k of [-1.5, -0.5, 0.5, 1.5]) add(G.pocketRib, k * Wb * 0.31, ly, P.zf + t * 0.6);
   }
-  else { add(G.label, 0, ly, P.zf + 0.6, inMat); for (const sx of [-1, 1]) add(G.labelEdge, sx * Wb * 0.26, ly, P.zf + t * 0.5); }
+  else { add(G.label, 0, ly, P.zf + 0.6, inMat); labelPaper(Wb * 0.48, H * 0.115, 0, ly, P.zf + 1.4, g); for (const sx of [-1, 1]) add(G.labelEdge, sx * Wb * 0.26, ly, P.zf + t * 0.5); }
   if (div && ARC_MODELS[m].div) add(G.div, 0, t, 0);
   return g;
 }
@@ -3774,7 +3875,7 @@ function buildMetal(k) {
   const S = METAL[k], closure = closureOf(k);
   const g = new THREE.Group(); const root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
   const { H, BASE, TOP, BACK } = TBX, SIDE = cabSide(k), D = depthOf(k), W = cabW(k);
-  const mat = (k === 'mdoor' && S.color === 'blue') || k === 'tech' ? steelBlueCab : steel7035;
+  const mat = k === 'tech' ? steelBlueCab : steel7035;      // the 4-shelf / 2-door cabinet comes in RAL 7035 only
   const box = (w, h, d, x, y, z, m = mat, par = root) => { const o = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)); o.position.set(x, y, z); par.add(o); return o; };
   // body
   for (const sx of [-1, 1]) box(SIDE, H, D, sx*(W/2 - SIDE/2), H/2, 0);
@@ -4044,6 +4145,8 @@ function buildWb() {
     const dg = new THREE.Group(); root.add(dg);
     box(w - 8, h - 8, 16, x, yb + h/2, zf - 8, wbBlue, dg);
     box(w - 24, 18, 18, x, yb + 24, zf + 7, alumMat, dg);                                        // the handle runs along the BOTTOM of the front
+    box(Math.min(110, w * 0.3) + 6, 32, 2, x, yb + h - 34, zf + 1, alumMat, dg);                   // label holder …
+    labelPaper(Math.min(110, w * 0.3), 26, x, yb + h - 34, zf + 2.2, dg);                       // … and the paper in it
     box(w - 40, 3, d - 40, x, yb + 10, zf - 16 - (d - 40)/2, wbFrame, dg);
     for (const sx of [-1, 1]) box(3, h - 40, d - 40, x + sx * (w/2 - 18), yb + h/2, zf - 16 - (d - 40)/2, wbFrame, dg);
     dg.userData = { open:1, target:0, angle:0, slide:Math.round(d * 0.7), z0:0 }; list.push(dg);
@@ -4134,6 +4237,7 @@ function techInside(root, S, o) {
       box(inW - 10, b.h - 5, 18, 0, yb + b.h/2, zF, mat, dg);                                          // front
       box(inW * 0.72, 12, 10, 0, yb + b.h - 30, zF + 22, alumMat, dg);                                 // aluminium handle
       for (const hx of [-1, 1]) box(14, 12, 16, hx * inW * 0.35, yb + b.h - 30, zF + 12, alumMat, dg);
+      if (b.h >= 90) { box(126, 36, 2, 0, yb + b.h - 72, zF + 10, alumMat, dg); labelPaper(120, 30, 0, yb + b.h - 72, zF + 11.2, dg); }   // label holder with its paper
       box(inW - 50, 3, tD, 0, yb + 8, tz, mat, dg);                                                    // the tray
       for (const sx of [-1, 1]) box(3, b.h - 35, tD, sx * (inW/2 - 26), yb + (b.h - 35)/2 + 8, tz, mat, dg);
       box(inW - 50, b.h - 35, 3, 0, yb + (b.h - 35)/2 + 8, tz - tD/2, mat, dg);
@@ -4373,7 +4477,7 @@ function rebuild(keepCamera = false) {
     world.add(tb.group); drawers = tb.drawers; rods = tb.rods; TAMB = tb.slats; DOORS = tb.doors; SHELVES = tb.shelves;
     if (!keepCamera) frame(cabW(mode) + 200, TBX.H, true);
     const D = tb.D / 10, nm = { tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים', tech:'ארון עבודה טכני' }[mode];
-    const col = (mode === 'mdoor' && MD.color === 'blue') || mode === 'tech' ? 'כחול' : 'RAL 7035';
+    const col = mode === 'tech' ? 'כחול' : 'RAL 7035';
     document.getElementById('dims').innerHTML = `${nm}${mode === 'tech' ? ' – ' + TECH_VAR[TC.variant] : ''} · רוחב <b>${cabW(mode)/10}</b> · עומק <b>${D}</b> · גובה <b>195</b> ס"מ · ${col}`;
     if (mode === 'tamb') { renderTamb(); $('tbSub').textContent = '67 × 45 × 195 ס"מ · RAL 7035 · תריס עם מנעול'; }
     else renderMetal(mode);
@@ -4437,7 +4541,8 @@ function rebuild(keepCamera = false) {
   // optional wall behind the product + floor (the wall rack has its own, with height above the floor)
   const wallAllowed = !['wall', 'excl', 'quad', 'scene'].includes(mode) && !(mode === 'stand' && stand.type === 'double');
   document.getElementById('backWallRow').hidden = !wallAllowed;
-  for (const id of ['rod', 'labelsOn']) document.getElementById(id).closest('.row').hidden = mode === 'mtamb' || mode === 'mdoor' || mode === 'tech';
+  document.getElementById('rod').closest('.row').hidden = mode === 'mtamb' || mode === 'mdoor' || mode === 'tech';
+  document.getElementById('labelsOn').closest('.row').hidden = mode === 'lock';
   if (wallAllowed && document.getElementById('backWall').checked) {
     const box = new THREE.Box3().setFromObject(world), sz = box.getSize(new THREE.Vector3());
     const ww = Math.max(4, sz.x + 3), wh = Math.max(2.7, box.max.y + 0.6);
@@ -4643,7 +4748,7 @@ function techBinsFit(S) {
     if (!f || !f.maxR) { if (i === 'floor') S.arcFloor = null; else S.arc[i] = null; } else if (a.rows && a.rows > f.maxR) a.rows = f.maxR; };
   S.list.forEach((_, i) => fix(i)); fix('floor');
 }
-segGroup('mdColor', (v) => { MD.color = v; rebuild(true); });
+segGroup('mdColor', () => { MD.color = '7035'; rebuild(true); });
 segGroup('fuKind', (v) => { FU.kind = v; rebuild(); });
 segGroup('wbVar', (v) => { WB.variant = +v; rebuild(true); });
 segGroup('wbTools', (v) => { WB.tools = v; rebuild(true); });
@@ -4691,10 +4796,12 @@ function renderComp() {
 
 // ---------- labels (plain white inserts) ----------
 function refreshLabels() {
-  const on = document.getElementById('labelsOn').checked;
+  const on = LBL.mode !== 'none';
+  if (SCN.items && SCN.items.length && !(SHEET_DRAFT && PV.on)) return;      // in a scene each product keeps its own labels (set when it is built)
   (SHEET_DRAFT && PV.on ? PV.drawers : drawers).forEach(d => { if (d.userData.label) d.userData.label.visible = on; });
+  applyLabels(SHEET_DRAFT && PV.on ? PV.group : world);
 }
-document.getElementById('labelsOn').onchange = refreshLabels;
+segGroup('lblMode', (v) => { setLbl(v); rebuild(true); refreshLabels(); });
 
 function syncCells() {
   if (mode !== 'unit') return;
@@ -4840,6 +4947,13 @@ function sceneClick(e) {
   if (!ih) { if (SCN.sel !== null && !SCN.move) selectItem(null); return; }
   let g = ih.object; while (g && !g.userData.itemId) g = g.parent;
   if (!g || g.userData.itemId !== SCN.sel || SCN.move) return;
+  if (SCN.mode === 'arrange' && LBL.mode !== 'none') {            // arrange mode: a click on a bin / drawer with a label writes on it
+    const dr0 = ITEM_DRAWERS.get(SCN.sel) || [], dh0 = ray.intersectObjects(dr0, true)[0];
+    let l = null;
+    if (dh0) { let d = dh0.object; while (d && !dr0.includes(d)) d = d.parent; l = d && (d.getObjectByName('label') || null); }
+    if (!l) for (const h of ray.intersectObject(g, true).slice(0, 6)) { l = h.object.name === 'label' ? h.object : labelAt(h.object, g); if (l) break; }
+    if (l && l.userData.lblIdx !== undefined) { askLabel(l.userData.lblIdx); return; }
+  }
   const dr = ITEM_DRAWERS.get(SCN.sel) || [];
   const hit = ray.intersectObjects(dr, true)[0];
   const dh = DOORS ? ray.intersectObjects(DOORS.meshes, true)[0] : null;
@@ -4938,7 +5052,7 @@ function captureFamily() {
     scene: (() => { const s = SCN.items.find(i => i.id === SCN.sel); if (s) s.cfg = capCfg(s.type);
       return { room:deep(SCN.room), next:SCN.next, shots:deep(SCN.shots || []), items:SCN.items.map(({ id, type, cfg, x, z, y, rot, hidden, name, contents }) => deep({ id, type, cfg, x, z, y:y || 0, rot, hidden:!!hidden, name, contents:contents || '' })) }; })(),
     backWall: $('backWall').checked,
-    rod: $('rod').checked, labels: $('labelsOn').checked, openAll: $('openAll').checked,
+    rod: $('rod').checked, labels: LBL.mode !== 'none', lbl:LBL.mode, openAll: $('openAll').checked,
     open: drawers.map((d, i) => (d.userData.target > 0.1 || d.userData.pending) ? i : -1).filter(i => i >= 0),
   };
 }
@@ -4950,7 +5064,7 @@ function applyFamily(f) {
   if (f.exs) { for (const k in f.exs) Object.assign(EXS[k], JSON.parse(JSON.stringify(f.exs[k]))); $('ptWide').checked = !!EXS.part.wide; setSeg('exSide', EXS.excl.side || 'left'); setSeg('ptSide', EXS.part.side || 'left'); setSeg('ptCols', EXS.part.cols || 2); }
   if (f.tb) { applyCfg('tamb', { tb:f.tb }); setSeg('tbClose', TB.closure); $('tbAcc').checked = TB.acc; }
   if (f.mt) Object.assign(MT, deep(f.mt));
-  if (f.md) { Object.assign(MD, deep(f.md)); setSeg('mdColor', MD.color); }
+  if (f.md) { Object.assign(MD, deep(f.md)); MD.color = '7035'; setSeg('mdColor', MD.color); }
   if (f.tc) { Object.assign(TC, deep(f.tc)); setSeg('tcVar', String(TC.variant)); }
   if (f.wall) { Object.assign(wall, f.wall); setSeg('wlHeight', wall.height); setSeg('wlWall', wall.showWall ? '1' : '0'); }
   if (f.wallComp) for (const k in f.wallComp) wallComp[k] = { ...f.wallComp[k] };
@@ -4966,7 +5080,7 @@ function applyFamily(f) {
   tenaOpenWing = f.wing || null; spreadTarget = spread = f.spread ? 1 : 0;
   if (f.scene) { releaseBody(); SCN.room = deep(f.scene.room); SCN.brief = deep(f.scene.brief || null); SCN.items = deep(f.scene.items); SCN.zones = deep(f.scene.zones || []); SCN.next = f.scene.next || SCN.items.length + 1; SCN.shots = deep(f.scene.shots || []); renderShots && renderShots(); SCN.sel = null; SCN.editType = null; }
   $('backWall').checked = !!f.backWall;
-  $('rod').checked = !!f.rod; $('labelsOn').checked = !!f.labels; $('openAll').checked = !!f.openAll;
+  $('rod').checked = !!f.rod; setLbl(f.lbl || (f.labels ? 'blank' : 'none')); $('openAll').checked = !!f.openAll;
   [...seg.children].forEach(c => c.classList.toggle('on', +c.dataset.n === current));
   setSeg('stType', stand.type); setSeg('stBase', stand.base); setSeg('stHeight', stand.height);
   setSeg('stHandle', stand.handle); setSeg('stBrake', stand.brake); syncWheelOpts();
@@ -5382,10 +5496,10 @@ function describe() {
   if ($('backWall').checked && mode === 'part') flags.push('the end without the handle touches a plain light wall at a right angle, so the partition juts out from the wall into the room, smooth floor');
   else if ($('backWall').checked && !['wall', 'excl', 'quad'].includes(mode) && !(mode === 'stand' && stand.type === 'double')) flags.push('standing against a plain light wall on a smooth floor');
   if ($('rod').checked) flags.push('a thin stainless steel security rod across the front');
-  if ($('labelsOn').checked) flags.push('plain white paper labels in the label windows');
+  if ($('labelsOn').checked) flags.push(LBL.mode === 'text' ? 'white paper labels with short black printed text in the label windows' : 'plain white paper labels in the label windows (of the tilt bins, the pick bins and the drawer fronts)');
   if (METAL[mode]) {
     const S = METAL[mode], cl = closureOf(mode), D = depthOf(mode);
-    const col = (mode === 'mdoor' && MD.color === 'blue') || mode === 'tech' ? 'deep blue' : 'light grey RAL 7035';
+    const col = mode === 'tech' ? 'deep blue' : 'light grey RAL 7035';
     const doorTxt = (st) => st[0] > 0.5 && st[1] > 0.5 ? 'both doors open' : st[0] > 0.5 ? 'the left door open, the right door closed' : st[1] > 0.5 ? 'the right door open, the left door closed' : 'both doors closed';
     const front = cl === 'tambour'
       ? `a two-part vertical-slat tambour (roller) front that slides open to the sides, with recessed handles and a lock in the middle; the tambour is ${S.open > TBX.MAXO*0.6 ? 'open' : S.open > 40 ? 'partly open' : 'closed'}`
@@ -6081,7 +6195,7 @@ let ADD_OPEN = false, AD_TICK = 0;
   const dark = parts.filter(p => !p.classList.contains('lg-blue'));
   setInterval(() => { if (document.hidden || busy) return; const p = dark[Math.random() * dark.length | 0]; p.classList.add('lg-spark'); setTimeout(() => p.classList.remove('lg-spark'), 1200); }, 2600);
 })();
-const PRODUCT_IMGS = {"wb": ["img/wb3-0.webp", "img/wb3-1.webp", "img/wb3-2.webp", "img/wb3-3.webp", "img/wb3-4.webp", "img/wb3-5.webp", "img/wb3-6.webp", "img/wb3-7.webp", "img/wb3-8.webp", "img/wb3-9.webp", "img/wb3-10.webp", "img/wb3-11.webp"], "md4": ["img/md4-0.webp", "img/md4-1.webp"], "lock": ["img/lock2-0.webp", "img/lock2-1.webp"], "mt": ["img/mt-0.webp", "img/mt-1.webp"], "tech": ["img/tech-0.webp", "img/tech-1.webp", "img/tech-2.webp", "img/tech-3.webp"], "mtarc": ["img/mtarc2-0.webp?v=2", "img/mtarc2-1.webp?v=2", "img/mtarc2-2.webp?v=2", "img/mtarc2-3.webp?v=2", "img/mtarc2-4.webp?v=2"], "mdarc": ["img/mdarc2-0.webp", "img/mdarc2-1.webp", "img/mdarc2-2.webp", "img/mdarc2-3.webp"], "arc": ["img/arcb-1.webp?v=2", "img/arcb-2.webp?v=2", "img/arcb-3.webp?v=2", "img/arcb-4.webp?v=2"], "bin2": ["img/tb2.webp"], "bin3": ["img/tb3.webp"], "bin4": ["img/tb4.webp"], "bin5": ["img/tb5.webp"], "bin6": ["img/tb6.webp"], "bin9": ["img/tb9.webp"], "stand1": ["img/stand1-0.webp", "img/stand1-1.webp", "img/stand1-2.webp", "img/stand1-3.webp", "img/stand1-4.webp", "img/stand1-5.webp", "img/stand1-6.webp", "img/stand1-7.webp", "img/stand1-8.webp", "img/stand1-9.webp", "img/stand1-10.webp", "img/stand1-11.webp", "img/stand1-12.webp", "img/stand1-13.webp"], "stand2": ["img/stand2-0.webp", "img/stand2-1.webp"], "excl": ["img/excl-0.webp", "img/excl-1.webp"], "quad": ["img/quad-0.webp", "img/quad-1.webp", "img/quad-2.webp", "img/quad-3.webp"], "part": ["img/part-0.webp", "img/part-1.webp", "img/part-2.webp", "img/part-3.webp", "img/part-4.webp", "img/part-5.webp", "img/part-6.webp"], "delux": ["img/delux-0.webp", "img/delux-1.webp", "img/delux-2.webp", "img/delux-3.webp", "img/delux-4.webp", "img/delux-5.webp", "img/delux-6.webp", "img/delux-7.webp", "img/delux-8.webp", "img/delux-9.webp", "img/delux-10.webp", "img/delux-11.webp", "img/delux-12.webp", "img/delux-13.webp", "img/delux-14.webp", "img/delux-15.webp", "img/delux-16.webp", "img/delux-17.webp"], "smart": ["img/smart-0.webp", "img/smart-1.webp", "img/smart-2.webp"], "wall": ["img/wall-0.webp", "img/wall-1.webp", "img/wall-2.webp", "img/wall-3.webp", "img/wall-4.webp", "img/wall-5.webp", "img/wall-6.webp"], "tamb": ["img/tamb2-0.webp?v=2", "img/tamb2-1.webp?v=2", "img/tamb2-2.webp?v=2", "img/tamb2-3.webp?v=2", "img/tamb2-4.webp?v=2", "img/tamb2-5.webp?v=2"]};
+const PRODUCT_IMGS = {"wb":["img/wb3-0.webp","img/wb3-1.webp","img/wb3-2.webp","img/wb3-3.webp","img/wb3-4.webp","img/wb3-5.webp","img/wb3-6.webp","img/wb3-7.webp","img/wb3-8.webp","img/wb3-9.webp","img/wb3-10.webp","img/wb3-11.webp"],"md4":["img/md4-open.webp","img/md4-files.webp","img/md4-closed.webp"],"lock":["img/lk-closed.webp","img/lk-open.webp","img/lk-full.webp"],"mt":["img/mt-closed.webp","img/mt-open.webp"],"tech":["img/tc-1.webp","img/tc-1c.webp","img/tc-2.webp","img/tc-2c.webp","img/tc-3.webp","img/tc-3c.webp","img/tc-4.webp","img/tc-4c.webp"],"mtarc":["img/mta-mix.webp","img/mta-mixc.webp","img/mta-a3.webp","img/mta-a3c.webp","img/mta-closed.webp"],"mdarc":["img/mda-mix.webp","img/mda-mixc.webp","img/mda-a3.webp","img/mda-a3c.webp","img/mda-closed.webp"],"arc":["img/ab-1.webp","img/ab-2.webp","img/ab-3.webp","img/ab-4.webp"],"bin2":["img/tb2.webp"],"bin3":["img/tb3.webp"],"bin4":["img/tb4.webp"],"bin5":["img/tb5.webp"],"bin6":["img/tb6.webp"],"bin9":["img/tb9.webp"],"stand1":["img/stl-116.webp","img/stl-116c.webp","img/stl-180.webp","img/stl-180c.webp","img/stl-200.webp","img/stl-200c.webp"],"stand2":["img/std2-116.webp","img/std2-116c.webp"],"excl":["img/exc-b.webp","img/exc-bc.webp"],"quad":["img/qd-w.webp","img/qd-wc.webp"],"part":["img/part-0.webp","img/part-1.webp","img/part-2.webp","img/part-3.webp","img/part-4.webp","img/part-5.webp","img/part-6.webp"],"delux":["img/delux-0.webp","img/delux-1.webp","img/delux-2.webp","img/delux-3.webp","img/delux-4.webp","img/delux-5.webp","img/delux-6.webp","img/delux-7.webp","img/delux-8.webp","img/delux-9.webp","img/delux-10.webp","img/delux-11.webp","img/delux-12.webp","img/delux-13.webp","img/delux-14.webp","img/delux-15.webp","img/delux-16.webp","img/delux-17.webp"],"smart":["img/smart-0.webp","img/smart-1.webp","img/smart-2.webp"],"wall":["img/wl-60.webp","img/wl-60c.webp","img/wl-120.webp","img/wl-120c.webp","img/wl-200.webp","img/wl-200c.webp"],"tamb":["img/tb-5.webp","img/tb-5c.webp","img/tb-4.webp","img/tb-4c.webp","img/tb-mix.webp","img/tb-closed.webp"]};
 const IMG_KEY = { 'שולחן עבודה מאסיבי':'wb', 'ארון 4 מדפים':'md4', 'לוקר 6 דלתות':'lock', 'ארון תריס':'mt', 'ארון עבודה טכני':'tech', 'ארון תריס עם ארקליות':'mtarc', 'ארון 2 דלתות עם ארקליות':'mdarc', 'ארקליות':'arc', 'מתקן חד צדדי':'stand1', 'עגלה דו צדדית':'stand2', 'עגלת EXCLUSIVE':'excl', 'מעמד 4 דפנות':'quad', 'מחיצת EXCLUSIVE':'part', 'תא נע DELUXE':'delux', 'תא נע SMART':'smart', 'מתלי קיר':'wall', 'ארון מאובטח לרב תא':'tamb' };
 function productImgs(f) {
   const v = f.vars[0];
@@ -6095,29 +6209,47 @@ const C2 = (fn) => (c) => fn(c);
 const PRODUCT_OPTS = {
   'רב תא':[{ l:'מספר תאים', vars:(v) => String(v.cfg.current) }],
   'מתקן חד צדדי':[{ l:'גובה', ch:[['116', C2(c => c.stand.height = 1160)], ['180', C2(c => c.stand.height = 1800)], ['200', C2(c => c.stand.height = 2000)]], def:(c) => String(c.stand.height / 10 | 0) },
-    { l:'בסיס', ch:[['רגליים', C2(c => c.stand.base = 'legs')], ['גלגלים', C2(c => c.stand.base = 'wheels')]], def:(c) => c.stand.base === 'wheels' ? 'גלגלים' : 'רגליים' }],
-  'עגלה דו צדדית':[{ l:'גובה', ch:[['116', C2(c => c.stand.height = 1160)], ['180', C2(c => c.stand.height = 1800)], ['200', C2(c => c.stand.height = 2000)]], def:(c) => String(c.stand.height / 10 | 0) }],
-  'עגלת EXCLUSIVE':[{ l:'צבע הגג', vars:(v) => v.cfg.exs.top === 'white' ? 'לבן' : 'שחור' }],
+    { l:'בסיס', ch:[['רגליים', C2(c => c.stand.base = 'legs')], ['גלגלים', C2(c => c.stand.base = 'wheels')]], def:(c) => c.stand.base === 'wheels' ? 'גלגלים' : 'רגליים' },
+    { l:'תצוגה', ch:[['ריק', C2(c => c.stand.look = 'empty')], ['עם תכולה', C2(c => c.stand.look = 'full')]], def:(c) => c.stand.look === 'full' ? 'עם תכולה' : 'ריק', if:(c) => c.stand.base !== 'wheels' }],
+  'עגלה דו צדדית':[{ l:'גובה', ch:[['116', C2(c => c.stand.height = 1160)], ['180', C2(c => c.stand.height = 1800)], ['200', C2(c => c.stand.height = 2000)]], def:(c) => String(c.stand.height / 10 | 0) },
+    { l:'תצוגה', ch:[['ריק', C2(c => c.stand.look = 'empty')], ['עם תכולה', C2(c => c.stand.look = 'full')]], def:(c) => c.stand.look === 'full' ? 'עם תכולה' : 'ריק', if:(c) => c.stand.height === 1160 }],
+  'עגלת EXCLUSIVE':[{ l:'צבע הגג', vars:(v) => v.cfg.exs.top === 'white' ? 'לבן' : 'שחור' },
+    { l:'תצוגה', ch:[['ריק', C2(c => c.exs.look = 'empty')], ['עם תכולה', C2(c => c.exs.look = 'full')]], def:(c) => c.exs.look === 'full' ? 'עם תכולה' : 'ריק', if:(c) => c.exs.top !== 'white' }],
   'מחיצת EXCLUSIVE':[{ l:'מספר טורים', vars:(v) => String(v.cfg.exs.cols) },
     { l:'צבע הגג', ch:[['שחור', C2(c => c.exs.top = 'black')], ['לבן', C2(c => c.exs.top = 'white')]], def:(c) => c.exs.top === 'white' ? 'לבן' : 'שחור' }],
   'מעמד 4 דפנות':[{ l:'בסיס', vars:(v) => v.cfg.qd.base === 'legs' ? 'רגליים' : 'גלגלים' },
-    { l:'צבע הגג', ch:[['שחור', C2(c => c.qd.top = 'black')], ['לבן', C2(c => c.qd.top = 'white')]], def:(c) => c.qd.top === 'white' ? 'לבן' : 'שחור' }],
-  'מתלי קיר':[{ l:'גובה', vars:(v) => String(v.cfg.wall.height / 10) }],
+    { l:'צבע הגג', ch:[['שחור', C2(c => c.qd.top = 'black')], ['לבן', C2(c => c.qd.top = 'white')]], def:(c) => c.qd.top === 'white' ? 'לבן' : 'שחור' },
+    { l:'תצוגה', ch:[['ריק', C2(c => c.qd.look = 'empty')], ['עם תכולה', C2(c => c.qd.look = 'full')]], def:(c) => c.qd.look === 'full' ? 'עם תכולה' : 'ריק', if:(c) => c.qd.base !== 'legs' && c.qd.top !== 'white' }],
+  'מתלי קיר':[{ l:'גובה', vars:(v) => String(v.cfg.wall.height / 10) },
+    { l:'תצוגה', ch:[['ריק', C2(c => c.wall.look = 'empty')], ['עם תכולה', C2(c => c.wall.look = 'full')]], def:(c) => c.wall.look === 'full' ? 'עם תכולה' : 'ריק' }],
   'תא נע DELUXE':[{ l:'מספר כנפיים', vars:(v) => String(v.cfg.tn.size) },
     { l:'דלתות הזזה', ch:[['בלי', C2(c => { c.tn.slide = { ...(c.tn.slide || {}), on:false, open:[0, 0, 0, 0] }; })], ['עם', C2(c => { c.tn.slide = { on:true, open:[0, 0, 0, 0] }; })]],
       def:(c) => c.tn.slide && c.tn.slide.on ? 'עם' : 'בלי', if:(c) => c.tn.size === 4 || c.tn.size === 10 }],
   'ארקליות':[{ l:'דגם', vars:(v) => 'ארקלית ' + v.cfg.arc.model },
     { l:'צבע', ch:[['כחול', C2(c => c.arc.color = 'blue')], ['אפור', C2(c => c.arc.color = 'grey')]], def:(c) => c.arc.color === 'grey' ? 'אפור' : 'כחול' }],
-  'ארון תריס עם ארקליות':[{ l:'סידור', ch:Object.entries(ARC_CAB_LAYOUTS).map(([k, L]) => [L.he, C2(c => arcLayout(c.mt, k))]), def:(c) => arcLayoutOf(c.mt) }],
-  'ארון 2 דלתות עם ארקליות':[{ l:'סידור', ch:Object.entries(ARC_CAB_LAYOUTS).map(([k, L]) => [L.he, C2(c => arcLayout(c.md, k))]), def:(c) => arcLayoutOf(c.md) }],
-  'ארון עבודה טכני':[{ l:'גרסה', vars:(v) => ({ 1:'4 מדפים', 2:'8 מדפים', 3:'1 מגירה', 4:'3 מגירות' })[v.cfg.tc.variant] }],
+  'ארון תריס עם ארקליות':[{ l:'סידור', ch:Object.entries(ARC_CAB_LAYOUTS).map(([k, L]) => [L.he, C2(c => arcLayout(c.mt, k))]), def:(c) => arcLayoutOf(c.mt) },
+    { l:'תריס', ch:[['פתוח', C2(c => c.mt.shut = false)], ['סגור', C2(c => c.mt.shut = true)]], def:(c) => c.mt.shut ? 'סגור' : 'פתוח' },
+    { l:'תצוגה', ch:[['ריק', C2(c => c.mt.look = 'empty')], ['עם תכולה', C2(c => c.mt.look = 'full')]], def:(c) => c.mt.look === 'full' ? 'עם תכולה' : 'ריק', if:(c) => !c.mt.shut }],
+  'ארון מאובטח לרב תא':[
+    { l:'תריס', ch:[['פתוח', C2(c => c.tb.shut = false)], ['סגור', C2(c => c.tb.shut = true)]], def:(c) => c.tb.shut ? 'סגור' : 'פתוח' },
+    { l:'תצוגה', ch:[['ריק', C2(c => c.tb.look = 'empty')], ['עם תכולה', C2(c => c.tb.look = 'full')]], def:(c) => c.tb.look === 'full' ? 'עם תכולה' : 'ריק', if:(c) => !c.tb.shut }],
+  'ארון 2 דלתות עם ארקליות':[{ l:'סידור', ch:Object.entries(ARC_CAB_LAYOUTS).map(([k, L]) => [L.he, C2(c => arcLayout(c.md, k))]), def:(c) => arcLayoutOf(c.md) },
+    { l:'דלתות', ch:[['פתוחות', C2(c => c.md.shut = false)], ['סגורות', C2(c => c.md.shut = true)]], def:(c) => c.md.shut ? 'סגורות' : 'פתוחות' },
+    { l:'תצוגה', ch:[['ריק', C2(c => c.md.look = 'empty')], ['עם תכולה', C2(c => c.md.look = 'full')]], def:(c) => c.md.look === 'full' ? 'עם תכולה' : 'ריק', if:(c) => !c.md.shut }],
+  'ארון עבודה טכני':[{ l:'גרסה', vars:(v) => ({ 1:'4 מדפים', 2:'8 מדפים', 3:'1 מגירה', 4:'3 מגירות' })[v.cfg.tc.variant] },
+    { l:'תצוגה', ch:[['ריק', C2(c => c.tc.look = 'empty')], ['עם תכולה', C2(c => c.tc.look = 'full')]], def:(c) => c.tc.look === 'full' ? 'עם תכולה' : 'ריק' }],
   'שולחן עבודה מאסיבי':[{ l:'גרסה', vars:(v) => ({ 1:'2 מגירות', 2:'2 מגירות + גב', 3:'4 מגירות + גב' })[v.cfg.wb.variant] },
     { l:'משטח', ch:[['ירוק', C2(c => c.wb.top = 'green')], ['לבן', C2(c => c.wb.top = 'white')]], def:(c) => c.wb.top === 'white' ? 'לבן' : 'ירוק' },
     { l:'ציוד', ch:[['ללא ציוד', C2(c => c.wb.tools = 'none')], ['עם ציוד', C2(c => c.wb.tools = 'tools')]], def:(c) => c.wb.tools === 'tools' ? 'עם ציוד' : 'ללא ציוד' }],
   'עמדת מחשב':[{ l:'רוחב השולחן', vars:(v) => String(v.cfg.fu.w / 10) }],
   'שולחן עבודה':[{ l:'רוחב', vars:(v) => String(v.cfg.fu.w / 10) }],
   'שולחן עבודה תעשייתי':[{ l:'רוחב', vars:(v) => String(v.cfg.fu.w / 10) }],
-  'ארון 4 מדפים':[{ l:'צבע', ch:[['RAL 7035', C2(c => c.md.color = '7035')], ['כחול', C2(c => c.md.color = 'blue')]], def:(c) => c.md.color === 'blue' ? 'כחול' : 'RAL 7035' }],
+  'ארון 4 מדפים':[
+    { l:'דלתות', ch:[['פתוחות', C2(c => c.md.shut = false)], ['סגורות', C2(c => c.md.shut = true)]], def:(c) => c.md.shut ? 'סגורות' : 'פתוחות' },
+    { l:'תצוגה', ch:[['ריק', C2(c => c.md.look = 'empty')], ['עם קלסרים', C2(c => c.md.look = 'full')]], def:(c) => c.md.look === 'full' ? 'עם קלסרים' : 'ריק', if:(c) => !c.md.shut }],
+  'לוקר 6 דלתות':[
+    { l:'דלת', ch:[['סגורות', C2(c => c.lk.open = false)], ['אחת פתוחה', C2(c => c.lk.open = true)]], def:(c) => c.lk.open ? 'אחת פתוחה' : 'סגורות' },
+    { l:'תצוגה', ch:[['ריק', C2(c => c.lk.look = 'empty')], ['עם תכולה', C2(c => c.lk.look = 'full')]], def:(c) => c.lk.look === 'full' ? 'עם תכולה' : 'ריק', if:(c) => !!c.lk.open }],
 };
 // the photo of a chosen setup, when there is one (otherwise the model's own picture)
 const MT_CLOSED = (c) => c.mt && !(c.mt.target > 0) && !(c.mt.open > 0);
@@ -6125,27 +6257,29 @@ function photoFor(f, c) {
   const P = PRODUCT_IMGS, g = (k, i) => P[k] && P[k][i];
   switch (f.name) {
     case 'רב תא': return g('bin' + c.current, 0);
-    case 'מתקן חד צדדי': return c.stand.base === 'wheels' ? ({ 1160:g('stand1', 2), 1800:g('stand1', 12) }[c.stand.height] || null) : g('stand1', { 1160:1, 1800:0, 2000:3 }[c.stand.height]);
-    case 'עגלה דו צדדית': return c.stand.height === 1160 ? g('stand2', 0) : null;
-    case 'עגלת EXCLUSIVE': return c.exs.top !== 'white' ? g('excl', 0) : null;
+    case 'מתקן חד צדדי': return c.stand.base === 'wheels' ? null
+      : g('stand1', { 1160:0, 1800:2, 2000:4 }[c.stand.height] + (c.stand.look === 'full' ? 1 : 0));      // legs: empty / with contents, per height
+    case 'עגלה דו צדדית': return c.stand.height === 1160 ? g('stand2', c.stand.look === 'full' ? 1 : 0) : null;
+    case 'עגלת EXCLUSIVE': return c.exs.top !== 'white' ? g('excl', c.exs.look === 'full' ? 1 : 0) : null;
     case 'מחיצת EXCLUSIVE': return c.exs.top !== 'white' ? g('part', { 2:1, 3:0, 4:2 }[c.exs.cols]) : null;
-    case 'מעמד 4 דפנות': return c.qd.base !== 'legs' && c.qd.top !== 'white' ? g('quad', 0) : null;
-    case 'מתלי קיר': return g('wall', { 600:1, 1200:0, 2000:2 }[c.wall.height]);
+    case 'מעמד 4 דפנות': return c.qd.base !== 'legs' && c.qd.top !== 'white' ? g('quad', c.qd.look === 'full' ? 1 : 0) : null;
+    case 'מתלי קיר': return g('wall', { 600:0, 1200:2, 2000:4 }[c.wall.height] + (c.wall.look === 'full' ? 1 : 0));
     case 'תא נע DELUXE': return c.tn.slide && c.tn.slide.on ? g('delux', { 4:3, 10:6 }[c.tn.size]) : g('delux', { 4:1, 7:0, 10:2 }[c.tn.size]);
     case 'תא נע SMART': return g('smart', 0);
     case 'ארון מאובטח לרב תא': {        // the photo that matches: only #5 at the front / at the back; #3 + #5 + #6 at the front
       const cm = (c.tb && c.tb.items && c.tb.items[0] && c.tb.items[0].comp) || {}, ks = Object.keys(cm).filter(n => cm[n] > 0).map(Number).sort();
-      if (ks.join() === '5') return g('tamb', c.tb.align === 'front' ? 0 : 3);
-      return ks.join() === '3,5,6' ? g('tamb', 5) : null; }
+      if (c.tb.shut) return g('tamb', 5);
+      const f = c.tb.look === 'full' ? 1 : 0, k = ks.join();
+      return k === '5' ? g('tamb', f) : k === '4' ? g('tamb', 2 + f) : k === '3,5,6' ? g('tamb', 4) : null; }
     case 'ארקליות': return c.arc.color === 'grey' ? null : g('arc', c.arc.model - 1);      // blue: the photo of that model; grey: the 3D model
-    case 'ארון 2 דלתות עם ארקליות': return c.md.color === 'blue' ? null : g('mdarc', c.md.layout === 'full' ? 2 : 0);      // the photo of the chosen layout (grey cabinet)
+    case 'ארון 2 דלתות עם ארקליות': return c.md.shut ? g('mdarc', 4) : g('mdarc', (c.md.layout === 'full' ? 2 : 0) + (c.md.look === 'full' ? 1 : 0));      // the photo of the chosen layout (grey cabinet)
     case 'ארון תריס': return g('mt', MT_CLOSED(c) ? 0 : 1);          // closed / open (with folders)
-    case 'ארון תריס עם ארקליות': return g('mtarc', c.mt && c.mt.layout === 'full' ? 2 : 0);      // the photo of the chosen layout
-    case 'ארון עבודה טכני': return g('tech', c.tc.variant - 1);
-    case 'ארון 4 מדפים': return c.md && c.md.color === 'blue' ? null : g('md4', 0);      // grey: the photo; blue: the 3D model
+    case 'ארון תריס עם ארקליות': return c.mt && c.mt.shut ? g('mtarc', 4) : g('mtarc', (c.mt && c.mt.layout === 'full' ? 2 : 0) + (c.mt && c.mt.look === 'full' ? 1 : 0));      // closed / the chosen layout, empty or with contents
+    case 'ארון עבודה טכני': return g('tech', (c.tc.variant - 1) * 2 + (c.tc.look === 'full' ? 1 : 0));      // per variant: empty / with contents
+    case 'ארון 4 מדפים': return g('md4', c.md && c.md.shut ? 2 : c.md && c.md.look === 'full' ? 1 : 0);      // grey: open (empty / with binders) or closed; blue: the 3D model
     case 'שולחן עבודה מאסיבי': { const v = (c.wb && c.wb.variant) || 1;      // per variant: green / white top, without / with equipment
       return g('wb', (v - 1) * 4 + (c.wb && c.wb.top === 'white' ? 2 : 0) + (c.wb && c.wb.tools === 'tools' ? 1 : 0)); }
-    case 'לוקר 6 דלתות': return g('lock', 0);
+    case 'לוקר 6 דלתות': return g('lock', !(c.lk && c.lk.open) ? 0 : c.lk.look === 'full' ? 2 : 1);
   }
   return null;
 }
@@ -6705,6 +6839,7 @@ function pvBuild() {
   const all = $('openAll').checked, rodOn = $('rod').checked, lab = $('labelsOn').checked;
   PV.rods.forEach(r => { r.visible = rodOn; });
   PV.drawers.forEach((d, i) => { if (d.userData.label) d.userData.label.visible = lab; if (all || (was.size === PV.drawers.length && was.get(i))) { d.userData.target = d.userData.angle = d.userData.open; setDrw(d, d.userData.open); } });
+  applyLabels(PV.group);
   if (!PV.framed) {                              // frame it once; after that the angle the user chose stays
     const box = new THREE.Box3().setFromObject(PV.group), c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
     const host = $('spPic'), w = host.clientWidth || 300, h = host.clientHeight || 375;
@@ -6844,7 +6979,7 @@ function syncVol() {
 function sheetSwitches(t) {
   const bins = !['mtamb', 'mdoor', 'tech', 'lock'].includes(t), wings = t === 'tena' || t === 'smart';
   const doors = t === 'mdoor' || t === 'tech' || t === 'lock' || t === 'tamb' || t === 'mtamb' || (t === 'tena' && tena.slide && tena.slide.on);
-  $('rod').closest('.row').hidden = !bins; $('openAll').closest('.row').hidden = !bins; $('labelsOn').closest('.row').hidden = !bins;
+  $('rod').closest('.row').hidden = !bins; $('openAll').closest('.row').hidden = !bins; $('labelsOn').closest('.row').hidden = t === 'lock' || t === 'furn';
   $('pvDoorsRow').hidden = !doors; $('pvDoorsTxt').textContent = t === 'tamb' || t === 'mtamb' ? 'תריס פתוח' : 'דלתות פתוחות';
   const S = METAL[t]; $('pvDoors').checked = S ? (t === 'mdoor' || t === 'tech' || t === 'lock' ? S.doors.some(Boolean) : S.target > 0) : !!(tena.slide && tena.slide.open && tena.slide.open.some(Boolean));
   $('pvIdentRow').hidden = !bins && !wings; $('pvIdentTxt').textContent = wings ? 'זהה כנפיים' : 'זהה מגירות'; $('pvIdent').checked = false; PV.ident = false;
@@ -7055,26 +7190,26 @@ function renderStrip(it, md) {
 // the choices drive the product's existing controls, so every rule they have still applies.
 const COMP = (...ids) => ({ l:'הרכב התאים', panel:ids });
 const HEADS = {
-  unit:[{ seg:'models', l:'מספר תאים בסט', f:(t) => t + ' תאים' }],
+  unit:[{ seg:'models', l:'מספר תאים בסט', f:(t) => t + ' תאים' }, { seg:'lblMode', l:'תוויות' }],
   stand:[{ seg:'stHeight', l:'גובה', f:(t) => t + ' ס"מ' }, { seg:'stBase', l:'בסיס' }, { seg:'stHandle', l:'ידית', if:() => stand.base === 'wheels' }, { seg:'stBrake', l:'גלגלים', if:() => stand.base === 'wheels' },
-    { l:'עומק בסיס', node:'stDepthRow', if:() => stand.type !== 'double', val:() => (standDepth()/10).toFixed(1) + ' ס"מ' }, COMP('comp', 'useBar', 'useTxt')],
-  excl:[COMP('exComp', 'exBar', 'exUse'), { seg:'exTop', l:'צבע הגג' }, { seg:'exSide', l:'ידית' }],
-  part:[{ seg:'ptCols', l:'מספר טורים', f:(t) => t + ' טורים' }, COMP('ptComp', 'ptBar', 'ptUse'), { seg:'ptTop', l:'צבע הגג' }, { seg:'ptSide', l:'ידית' }],
-  quad:[COMP('quComp', 'quBar', 'quUse'), { seg:'quBase', l:'בסיס' }, { seg:'quTop', l:'צבע הגג' }],
-  wall:[{ seg:'wlHeight', l:'גובה', f:(t) => t + ' ס"מ' }, { seg:'wlWall', l:'קיר' }, COMP('wlComp', 'wlBar', 'wlUse')],
+    { l:'עומק בסיס', node:'stDepthRow', if:() => stand.type !== 'double', val:() => (standDepth()/10).toFixed(1) + ' ס"מ' }, COMP('comp', 'useBar', 'useTxt'), { seg:'lblMode', l:'תוויות' }],
+  excl:[COMP('exComp', 'exBar', 'exUse'), { seg:'exTop', l:'צבע הגג' }, { seg:'exSide', l:'ידית' }, { seg:'lblMode', l:'תוויות' }],
+  part:[{ seg:'ptCols', l:'מספר טורים', f:(t) => t + ' טורים' }, COMP('ptComp', 'ptBar', 'ptUse'), { seg:'ptTop', l:'צבע הגג' }, { seg:'ptSide', l:'ידית' }, { seg:'lblMode', l:'תוויות' }],
+  quad:[COMP('quComp', 'quBar', 'quUse'), { seg:'quBase', l:'בסיס' }, { seg:'quTop', l:'צבע הגג' }, { seg:'lblMode', l:'תוויות' }],
+  wall:[{ seg:'wlHeight', l:'גובה', f:(t) => t + ' ס"מ' }, { seg:'wlWall', l:'קיר' }, COMP('wlComp', 'wlBar', 'wlUse'), { seg:'lblMode', l:'תוויות' }],
   tena:[{ seg:'tnSize', l:'מספר כנפיים' }, { seg:'tnDepthMode', l:'עומק' },
     { l:'הרכב הכנפיים', action:() => wfOpen() },
-    { l:'דלתות הזזה', opts:[{ t:'בלי', v:false }, { t:'עם דלתות הזזה', v:true }], get:() => !!$('tnSlide').checked, set:(v) => { if ($('tnSlide').checked !== v) $('tnSlide').click(); } }],
-  smart:[{ l:'הרכב הכנפיים', action:() => wfOpen() }],
-  tamb:[COMP('tbZones', 'tbBar', 'tbUse'), { seg:'tbAlign', l:'יישור', if:() => tbOneModel() }],
+    { l:'דלתות הזזה', opts:[{ t:'בלי', v:false }, { t:'עם דלתות הזזה', v:true }], get:() => !!$('tnSlide').checked, set:(v) => { if ($('tnSlide').checked !== v) $('tnSlide').click(); } }, { seg:'lblMode', l:'תוויות' }],
+  smart:[{ l:'הרכב הכנפיים', action:() => wfOpen() }, { seg:'lblMode', l:'תוויות' }],
+  tamb:[COMP('tbZones', 'tbBar', 'tbUse'), { seg:'tbAlign', l:'יישור', if:() => tbOneModel() }, { seg:'lblMode', l:'תוויות' }],
   mtamb:[{ l:'מיקום ומספר המדפים', panel:['mtShelves', 'mtAdd'],
     // the tambour opens to 90% while the shelves are set (still showing), and goes back afterwards
-    open:() => { const S = METAL.mtamb, was = S.target; S.target = TBX.MAXO * 0.9; return () => { S.target = was; }; } }],
-  mdoor:[{ seg:'mdColor', l:'צבע' }],
-  wb:[{ seg:'wbVar', l:'גרסה' }, { seg:'wbTop', l:'משטח' }, { seg:'wbBr', l:'משולשים', if:() => WB.variant > 1 }, { seg:'wbTools', l:'על הלוח', if:() => WB.variant > 1 }],
+    open:() => { const S = METAL.mtamb, was = S.target; S.target = TBX.MAXO * 0.9; return () => { S.target = was; }; } }, { seg:'lblMode', l:'תוויות', if:() => !!((MT.arc && MT.arc.length) || MT.arcFloor) }],
+  mdoor:[{ seg:'lblMode', l:'תוויות', if:() => !!((MD.arc && MD.arc.length) || MD.arcFloor) }],
+  wb:[{ seg:'wbVar', l:'גרסה' }, { seg:'wbTop', l:'משטח' }, { seg:'wbBr', l:'משולשים', if:() => WB.variant > 1 }, { seg:'wbTools', l:'על הלוח', if:() => WB.variant > 1 }, { seg:'lblMode', l:'תוויות' }],
   furn:[{ seg:'fuW', l:'רוחב', if:() => ['station', 'desk', 'bench'].includes(FU.kind) }],
-  tech:[{ seg:'tcVar', l:'גרסה' }, { seg:'tcAcc', l:'בדלתות', if:() => techZones(TC) }],
-  arc:[{ seg:'arcModel', l:'דגם' }, { seg:'arcColor', l:'צבע' }, { seg:'arcDiv', l:'מחיצת אורך', if:() => ARC.model <= 2 }],
+  tech:[{ seg:'tcVar', l:'גרסה' }, { seg:'tcAcc', l:'בדלתות', if:() => techZones(TC) }, { seg:'lblMode', l:'תוויות' }],
+  arc:[{ seg:'arcModel', l:'דגם' }, { seg:'arcColor', l:'צבע' }, { seg:'arcDiv', l:'מחיצת אורך', if:() => ARC.model <= 2 }, { seg:'lblMode', l:'תוויות' }],
 };
 const segBtns = (id) => { const s = $(id); return s ? [...s.children].filter(b => b.tagName === 'BUTTON') : []; };
 const segVal = (b) => b.dataset.v ?? b.dataset.n ?? b.dataset.m;
@@ -7671,7 +7806,7 @@ function scenePayload(text) {
       bins_per_row_by_face:Object.fromEntries(Object.entries(faces).map(([k, rows]) => [k, rows.map(r => r.length)])),
       has_doors:i.type === 'mdoor' || i.type === 'tech' || i.type === 'lock' || (i.type === 'tena' && !!(cfg.tn && cfg.tn.slide && cfg.tn.slide.on)), has_tambour:i.type === 'tamb' || i.type === 'mtamb',
       arc:i.type === 'arc' ? cfg.arc : undefined,
-      contents:i.contents || '', y_cm:Math.round(yOf(i) * 100), against_walls:touchWall(i), zone:i.zone || undefined,
+      contents:i.contents || '', labels:(i.cfg && i.cfg.lbl) || 'none', y_cm:Math.round(yOf(i) * 100), against_walls:touchWall(i), zone:i.zone || undefined,
       wings:(i.type === 'tena' || i.type === 'smart') && cfg.tn && cfg.tn.bySize && cfg.tn.bySize[cfg.tn.size || 4] ? cfg.tn.bySize[cfg.tn.size || 4].wings.map(w => ({ layer:w.layer, comp:w.comp })) : undefined };
   });
   const models = Object.fromEntries(Object.entries(lib.models).map(([t, ms]) => [t, Object.keys(ms)]));
@@ -7721,6 +7856,7 @@ function editorOps(ops) {
         if (sel.length) done++; break; }
       case 'doors': case 'tambour': $('pvDoors').checked = o.open !== false; $('pvDoors').onchange({ target:$('pvDoors') }); done++; break;
       case 'contents': d.contents = o.text || ''; done++; break;
+      case 'labels': if (opLabels(d, o.labels)) done++; break;
       case 'commit': if (o.count) $('spCount').value = o.count; sheetDraftDone(true); done++; return done;
     }
   }
@@ -7782,6 +7918,7 @@ function executeOps0(ops, walled, WROT) {
         if (it.id === SCN.sel) { applyCfg(it.type, it.cfg); syncUI(it.type); }
         done++; } break;
       case 'contents': if (it) { it.contents = o.text || ''; done++; } break;
+      case 'labels': if (opLabels(it, o.labels)) done++; break;
       default: post.push(o);
     }
   }
@@ -8053,7 +8190,7 @@ function cfgFromPlan(p) {
     case 'wall': { if (st.height_cm) cfg.wall.height = nearest(st.height_cm * 10, [600, 1200, 2000]); const c = comp(); if (c) cfg.wallComp[cfg.wall.height] = c; break; }
     case 'tena': set(cfg.tn, 'size', st.tena_size); if (st.doors !== null && st.doors !== undefined) cfg.tn.slide = { ...(cfg.tn.slide || { open:[0, 0, 0, 0] }), on:!!st.doors }; break;
     case 'tamb': { const c = comp(TB_MODELS); if (c) cfg.tb.items = [{ t:'bins', y:TBX.BASE, comp:c, side:'center', noSep:[...ORDER] }]; set(cfg.tb, 'align', st.align); break; }
-    case 'mdoor': set(cfg.md, 'color', st.md_color); break;
+    case 'mdoor': cfg.md.color = '7035'; break;          // RAL 7035 only
     case 'wb': cfg.wb = { ...WB0, ...(cfg.wb || {}) }; if (st.wb_variant) cfg.wb.variant = Math.max(1, Math.min(3, st.wb_variant)); if (st.wb_tools !== null && st.wb_tools !== undefined) cfg.wb.tools = st.wb_tools ? 'tools' : 'none'; if (st.wb_top) cfg.wb.top = st.wb_top; break;
     case 'furn': cfg.fu = { ...FU0, ...(cfg.fu || {}) }; set(cfg.fu, 'kind', st.furn_kind); { const w = st.furn_w_cm || st.width_cm; if (w) cfg.fu.w = w * 10; } break;
     case 'tech': if (st.tech_variant) techVariant(cfg.tc, Math.max(1, Math.min(4, st.tech_variant)));
@@ -8101,6 +8238,7 @@ function opLines(ops) {
       case 'doors': return `<li>${o.open === false ? 'סגירת' : 'פתיחת'} דלתות ב־${nm(o)}</li>`;
       case 'tambour': return `<li>${o.open === false ? 'סגירת' : 'פתיחת'} התריס ב־${nm(o)}</li>`;
       case 'contents': return `<li>תוכן התאים ב־${nm(o)}: ${(o.text || '').replace(/</g, '&lt;')}</li>`;
+      case 'labels': { const L = o.labels || {}, tx = (L.texts || []).filter(Boolean); return `<li>תוויות ב־${nm(o)}: ${({ none:'בלי', blank:'ריקות', text:'עם כיתוב' })[L.mode] || 'ריקות'}${tx.length ? ' – ' + tx.join(', ').replace(/</g, '&lt;') : ''}</li>`; }
       case 'select': return `<li>בחירת ${nm(o)}</li>`;
       case 'room': return `<li>החדר: ${o.room ? o.room.width_m + ' × ' + o.room.depth_m + " מ'" : ''}</li>`;
       case 'opening': { const q = o.opening || {}; const T = q.kind && OPEN_TYPES[q.kind] && OPEN_TYPES[q.kind][q.type]; const what = T ? T.he : q.kind === 'window' ? 'חלון' : 'דלת';
@@ -8125,7 +8263,7 @@ function planLines(plan) {
     if (st.doors) o.push('עם דלתות הזזה');
     if (st.unit_bins) o.push(`${st.unit_bins} תאים`);
     if (st.top) o.push(st.top === 'white' ? 'גג לבן' : 'גג שחור');
-    if (st.md_color) o.push(st.md_color === 'blue' ? 'כחול' : 'RAL 7035');
+
     if (st.align) o.push(st.align === 'front' ? 'יישור קדמי' : 'יישור אחורי');
     if (st.comp && st.comp.length) o.push(st.comp.filter(c => c.count > 0).map(c => `${c.count} × #${c.model}`).join(' + '));
     return o.join(' · ');
@@ -8224,7 +8362,8 @@ function layoutDesign(plan, room) {
   const ROOMW = ['back', 'left', 'right', 'front'];
   const wallsFor = (z) => z.wall === 'gypsum' ? (GYP.length ? GYP : ROOMW) : z.wall ? [z.wall] : [...GYP, ...ROOMW];
   const put = (z, seg, r) => { placed.push({ ...r, h:seg.h, zone:z.id });
-    out.push({ type:seg.type, cfg:seg.cfg, rot:seg.rot, x:(r.x0 + r.x1) / 2, z:(r.z0 + r.z1) / 2, zone:z.id, name:seg.name, contents:z.contents || '' }); };
+    out.push({ type:seg.type, cfg:seg.cfg, rot:seg.rot, x:(r.x0 + r.x1) / 2, z:(r.z0 + r.z1) / 2, zone:z.id, name:seg.name, contents:z.contents || '' });
+    if (z.labels && z.labels !== 'none') out[out.length - 1].cfg = { ...seg.cfg, lbl:z.labels }; };
   // a run of segments side by side along a wall: the first offset (by align) where all of them are free
   function runOnWall(z, wall, segs, gap) {
     const F = WALL[wall], total = segs.reduce((a, s) => a + s.along, 0) + gap * (segs.length - 1);
@@ -9543,7 +9682,6 @@ const EN_EL = [
   ['#pTena h1', 'GONDOLA DELUX'], ['#pExcl h1', 'EXCLUSIVE TILT BIN CART'], ['#pPart h1', 'MODULAR EXCLUSIVE PARTITION'], ['#pTamb h1', 'SECURED TILT BIN METAL CABINET'], ['#pSmart h1', 'GONDOLA SMART'], ['.tab[data-f="tilt"]', 'TILT BIN FAMILY'],
   ['#pQuad h1', 'FOUR-SIDED TILT BIN STAND'],
   ['#pMtamb h1', 'TAMBOUR METAL CABINET'], ['#pMdoor h1', '4-SHELF METAL CABINET'], ['#pTech h1', 'TECHNICAL WORK CABINET'], ['#pLock h1', '6-DOOR LOCKER'], ['#pWb h1', 'HEAVY-DUTY WORKBENCH'], ['#pFurn h1', 'FURNITURE & PROPS'], ['.tab[data-f="furn"]', 'FURNITURE'], ['.tab[data-f="metal"]', 'METAL CABINETS'],
-  ['#mdColor button[data-v="blue"]', 'Blue'],
 ];
 let LANG = 'he';
 try { LANG = location.hash === '#en' ? 'en' : location.hash === '#he' ? 'he' : (localStorage.getItem('rbt-lang') || 'he'); } catch {}

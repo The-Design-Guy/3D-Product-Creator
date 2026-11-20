@@ -7,6 +7,8 @@
 //   POST ?a=analyze&id=…             (phone)  → { result }                    the AI reads the room
 //   POST ?a=confirm&id=…             (phone)  JSON { result } → { ok }        the (corrected) room goes to the computer
 //   POST ?a=cancel&id=…              (either)
+//   POST ?a=new&share=1              (admin)  → { id, exp }                   a link to send to someone else: works for an hour
+//   GET  ?a=check&id=…               (phone)  → { ok, share, exp }            is the link still good
 //
 // The phone has no admin password: the session id (random, 20 characters, 30 minutes) is what lets it in.
 import { randomBytes } from 'node:crypto';
@@ -24,7 +26,8 @@ async function load(id) {
   const raw = await redis(['GET', key(id)]);
   return raw ? JSON.parse(raw) : null;
 }
-const save = (id, s) => redis(['SET', key(id), JSON.stringify(s), 'EX', String(TTL)]);
+const SHARE_TTL = 3600, KEEP = 7 * 86400;           // a shared link works for an hour; its result is kept for a week
+const save = (id, s) => redis(['SET', key(id), JSON.stringify(s), 'EX', String(s.share ? KEEP : TTL)]);
 async function rawBody(req) {
   if (Buffer.isBuffer(req.body)) return req.body;
   const chunks = []; for await (const c of req) chunks.push(c); return Buffer.concat(chunks);
@@ -74,18 +77,22 @@ export default async function handler(req, res) {
       if (!isAdmin(req)) return res.status(401).json({ error:'נדרש מצב ניהול' });
       if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) return res.status(501).json({ error:'לא חובר אחסון תמונות (Vercel Blob) – ראו README' });
       const nid = randomBytes(15).toString('base64').replace(/[^a-z0-9]/gi, '').toLowerCase().padEnd(20, '0').slice(0, 20);
-      await save(nid, { status:'waiting', created:Date.now(), photos:Array(MAX_PHOTOS).fill(null), result:null, error:'' });
-      return res.status(200).json({ id:nid, ttl:TTL });
+      const share = String(req.query?.share || '') === '1', now = Date.now();
+      await save(nid, { status:'waiting', created:now, photos:Array(MAX_PHOTOS).fill(null), result:null, error:'', ...(share ? { share:true, exp:now + SHARE_TTL * 1000 } : {}) });
+      return res.status(200).json({ id:nid, ttl:share ? SHARE_TTL : TTL, exp:share ? now + SHARE_TTL * 1000 : now + TTL * 1000 });
     }
     const s = await load(id);
     if (!s) return res.status(404).json({ error:'הסשן לא נמצא או שפג תוקפו – סרקו שוב את הברקוד מהמחשב' });
 
+    const expired = s.share && Date.now() > s.exp && s.status !== 'done';
+    if (a === 'check') return res.status(200).json({ ok:!expired && s.status !== 'cancelled' && s.status !== 'done', share:!!s.share, exp:s.exp || null, status:s.status });
     if (a === 'status') {
       if (!isAdmin(req)) return res.status(401).json({ error:'נדרש מצב ניהול' });
       return res.status(200).json(s);
     }
     if (req.method !== 'POST') return res.status(405).json({ error:'method not allowed' });
     if (s.status === 'cancelled') return res.status(410).json({ error:'הצילום בוטל במחשב' });
+    if (expired && a !== 'cancel') return res.status(410).json({ error:'הקישור פג תוקף (הוא תקף לשעה) – בקשו קישור חדש' });
 
     if (a === 'photo') {
       const n = Number(req.query?.n);

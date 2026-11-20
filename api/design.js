@@ -10,7 +10,7 @@ const TEXT_MODEL = process.env.OPENAI_DESIGN_MODEL || process.env.OPENAI_TEXT_MO
 
 const PTYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn', 'lock', 'wb'];
 
-const KNOWLEDGE = `
+export const KNOWLEDGE = `
 You are an interior / industrial layout designer for Huliot / Medikup storage products. You plan a space as ZONES; the app places the products.
 
 PRODUCTS (type – Hebrew name – footprint W x D cm, height – what it is good for):
@@ -23,7 +23,7 @@ PRODUCTS (type – Hebrew name – footprint W x D cm, height – what it is goo
 - wall – "מתלה קיר" – tilt-bin wall rack, 60 wide, hangs on a wall (height 60 / 120 / 200).
 - tamb – "ארון מאובטח לרב תא" – 67 x 45 x 195, tambour + lock, tilt bins inside – medicine, controlled items, clinics.
 - mtamb – "ארון תריס" – 90 x 45 x 195, tambour, shelves (pick bins can stand on them: bin_layout).
-- mdoor – "ארון 4 מדפים" – 90 x 40 x 195, 2 doors, grey or blue (pick bins: bin_layout).
+- mdoor – "ארון 4 מדפים" – 90 x 40 x 195, 2 doors, light grey RAL 7035 only (pick bins: bin_layout).
 - tech – "ארון עבודה טכני" – 100 x 56 x 195 blue workshop cabinet; tech_variant 1 = 4 shelves, 2 = 32 pick bins, 3 = 1 drawer, 4 = 3 drawers (tools / bins on the doors) – workshops, maintenance, electronics.
 - wb – "שולחן עבודה מאסיבי" – heavy-duty workbench 150 x 75, green anti-static (ESD) top, drawers; wb_variant 1 = 2 drawers, 2 = 2 drawers + perforated back with shelves (170 high), 3 = 4-drawer cabinet + back; wb_tools = tools on the back. THE workbench for electronics, assembly, labs and workshops – use it for benches zones (product type wb) rather than the generic furn bench.
 - lock – "לוקר 6 דלתות" – staff locker 90 x 45 x 195, 6 lockable doors – changing rooms, staff areas of plants / clinics / warehouses (wall_storage along a wall, usually 2–6 side by side).
@@ -42,21 +42,13 @@ LAYOUT RULES (the engine applies them; plan with them in mind):
 - Main aisle 120–150 cm, side aisles ≥ 90 cm. Nothing in front of a door (1 m clear). Tall cabinets not under windows.
 - Cabinets, racks, benches and workstation rows go against walls (back to the wall). Gondolas / stands / quads / back-to-back workstation islands go in the free middle.
 - A workstation row: desks side by side along the wall with a partition between every two desks (partition.ends true = also one at each end of the row).
-- room.obstacles: columns, pipes and gypsum walls (boxes in cm from the left / back wall). Nothing may stand on them; the engine routes around them. Take them into account when choosing zones and counts (a column in the middle splits the free floor). A gypsum wall with to_build true is a NEW wall built for the storage: cabinets and racks may stand against both of its faces. One with removable true may be mentioned in notes as an option to remove if it blocks a better layout. A tap (water_point) is an opportunity: keep its wall area reachable, and mention in notes that a profile system with a sink (3 cm profiles) could go there – that product is not in the catalogue yet.
+- room.obstacles: columns, pipes and gypsum walls (boxes in cm from the left / back wall). Nothing may stand on them; the engine routes around them. Take them into account when choosing zones and counts (a column in the middle splits the free floor). A gypsum wall with to_build true is a NEW wall built for the storage: cabinets and racks may stand against both of its faces – use wall "gypsum" for a zone that goes on it. One with removable true may be mentioned in notes as an option to remove if it blocks a better layout. A tap (water_point) is an opportunity: keep its wall area reachable, and mention in notes that a profile system with a sink (3 cm profiles) could go there – that product is not in the catalogue yet.
 - Do not overfill: leave the room usable. If the user gives counts, use them; otherwise choose sensible counts for the room size (e.g. 10 x 10 m assembly hall → ~6–10 stations, 2–4 tall cabinets, 2–4 carts).
 `;
 
 const nul = (t) => ({ anyOf:[t, { type:'null' }] });
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error:'method not allowed' });
-  if (!isAdmin(req)) return res.status(401).json({ error:'נדרש מצב ניהול' });
-  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error:'OPENAI_API_KEY is not set' });
-  const text = String(req.body?.text || '').slice(0, 4000);
-  if (!text.trim()) return res.status(400).json({ error:'אין טקסט לפרש' });
-  const room = req.body?.room || {};
-  const zones = Array.isArray(req.body?.zones) ? req.body.zones.slice(0, 30) : [];
-  const others = Array.isArray(req.body?.others) ? req.body.others.slice(0, 60) : [];
-
+// the plan schema (shared with /api/recreate)
+export function planSchema() {
   const settings = { type:'object', additionalProperties:false,
     required:['comp', 'cols', 'top', 'base', 'stand_type', 'height_cm', 'tena_size', 'doors', 'md_color', 'bin_layout', 'tech_variant', 'door_acc', 'furn_kind', 'width_cm', 'wb_variant', 'wb_tools', 'wb_top'],
     properties:{
@@ -68,7 +60,7 @@ export default async function handler(req, res) {
       height_cm:nul({ type:'number', description:'stand 116/180/200, wall rack 60/120/200' }),
       tena_size:nul({ type:'integer', enum:[4, 7, 10] }),
       doors:nul({ type:'boolean', description:'tena sliding doors (size 4 / 10 only)' }),
-      md_color:nul({ type:'string', enum:['blue', '7035'] }),
+      md_color:nul({ type:'string', enum:['7035'] }),
       bin_layout:nul({ type:'string', enum:['mixed', 'full'], description:'mtamb / mdoor with pick bins on the shelves' }),
       tech_variant:nul({ type:'integer', enum:[1, 2, 3, 4] }),
       door_acc:nul({ type:'string', enum:['tools', 'bins', 'both', 'none'] }),
@@ -80,14 +72,15 @@ export default async function handler(req, res) {
     } };
   const product = { type:'object', additionalProperties:false, required:['type', 'settings'], properties:{ type:{ type:'string', enum:PTYPES }, settings } };
   const zone = { type:'object', additionalProperties:false,
-    required:['id', 'name', 'kind', 'wall', 'align', 'count', 'rows', 'product', 'partition', 'desk_cm', 'near', 'contents'],
+    required:['id', 'name', 'kind', 'wall', 'align', 'offset_cm', 'count', 'rows', 'product', 'partition', 'desk_cm', 'near', 'contents', 'labels'],
     properties:{
       id:{ type:'string', description:'short stable id, e.g. "z1"; keep the ids of zones that already exist' },
       name:{ type:'string', description:'Hebrew name of the zone, e.g. "עמדות הרכבה"' },
       kind:{ type:'string', enum:['workstations', 'workstation_island', 'wall_storage', 'island', 'benches', 'carts', 'decor'],
         description:'workstations: a row of desks along a wall with partitions between them · workstation_island: two rows of desks back to back in the middle, partitions across · wall_storage: cabinets / racks / gondolas side by side along a wall · island: products in rows in the free middle of the room with aisles · benches: workbenches along a wall (product wb, or furn bench) · carts: mobile carts / stands next to another zone (near) · decor: plants in free corners' },
-      wall:nul({ type:'string', enum:['back', 'left', 'right', 'front'], description:'workstations / wall_storage / benches: the wall (as seen from the front of the room: back = facing the viewer)' }),
+      wall:nul({ type:'string', enum:['back', 'left', 'right', 'front', 'gypsum'], description:'workstations / wall_storage / benches: the wall (as seen from the front of the room: back = facing the viewer); gypsum = against the gypsum wall(s) in room.obstacles (both faces); null = the app picks (gypsum walls first)' }),
       align:nul({ type:'string', enum:['start', 'center', 'end'], description:'where along the wall: start = the left end (back / front wall) or the back end (side walls); null = center' }),
+      offset_cm:nul({ type:'number', description:'where the run starts along its wall, in cm from the start end (left end of back / front, back end of the side walls) – for recreating a real space exactly; null = by align' }),
       count:nul({ type:'integer', description:'how many products (stations for workstation zones); null = as many as fit' }),
       rows:nul({ type:'integer', description:'island: number of rows (null = the app decides)' }),
       product:nul(product),
@@ -98,6 +91,7 @@ export default async function handler(req, res) {
       desk_cm:nul({ type:'integer', enum:[120, 160], description:'workstation zones: desk width' }),
       near:nul({ type:'string', description:'carts / decor: id of the zone to stand next to' }),
       contents:nul({ type:'string', description:'what is in the bins of this zone, for the realistic render (in the user\'s words or fitting the kind of space)' }),
+      labels:nul({ type:'string', enum:['none', 'blank', 'text'], description:'paper labels on the bin / drawer fronts of this zone\'s products: text = written labels (they show the inventory that belongs there, else the contents), blank = plain white, none / null = no labels. Use text when the user asks for labels with writing or an organised / labelled store, blank for plain labels.' }),
     } };
   const schema = { type:'object', additionalProperties:false, required:['understood', 'room', 'openings', 'clear_scene', 'zones', 'notes'],
     properties:{
@@ -114,14 +108,30 @@ export default async function handler(req, res) {
       notes:{ type:'string', description:'short design notes for the user in the language of the request (why this layout); can be empty' },
     } };
 
+  return { schema, zone, product, settings };
+}
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error:'method not allowed' });
+  if (!isAdmin(req)) return res.status(401).json({ error:'נדרש מצב ניהול' });
+  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error:'OPENAI_API_KEY is not set' });
+  const text = String(req.body?.text || '').slice(0, 4000);
+  if (!text.trim()) return res.status(400).json({ error:'אין טקסט לפרש' });
+  const room = req.body?.room || {};
+  const zones = Array.isArray(req.body?.zones) ? req.body.zones.slice(0, 30) : [];
+  const others = Array.isArray(req.body?.others) ? req.body.others.slice(0, 60) : [];
+  const needs = Array.isArray(req.body?.needs) ? req.body.needs.slice(0, 20) : [];
+
+  const { schema } = planSchema();
+
   const system = [
     KNOWLEDGE,
     'Answer with the room, the openings, and the FULL list of zones. Zones that exist now are given with their ids: keep them as they are unless the request changes them ("תזיז את העמדות לקיר השמאלי" → change that zone\'s wall; "עוד 2 עמדות" → count + 2; "בלי העגלות" → drop that zone).',
     'A new space ("תיצור לי…", "תכנן לי…", a size of a room) → clear_scene true, set the room (all four walls true unless the user says open), add a door on the front wall (double, 160) if the user did not mention doors, and plan zones for the whole space.',
     'Every zone needs a product (except workstation zones: product = the furn station / desk, partition = the partitions). Keep settings minimal: only what matters; the rest null.',
     'Write names, understood and notes in the language of the request. Never invent products that are not in the list.',
+    ...(needs.length ? ['REQUIRED PRODUCTS are given (computed from the client\'s inventory): the storage zones must contain exactly these product types with these counts and settings (you may split one into several zones, e.g. two walls). Do not add other storage products; workstations, benches, carts and decor only if the request asks for them. If they cannot all fit in the room, keep the most important ones and say in notes what is missing and why.'] : []),
   ].join('\n');
-  const user = `Room now: ${JSON.stringify(room)}\nZones now: ${JSON.stringify(zones)}\nOther products in the scene (not in zones): ${JSON.stringify(others)}\n\nRequest:\n${text}`;
+  const user = `Room now: ${JSON.stringify(room)}\nZones now: ${JSON.stringify(zones)}\nOther products in the scene (not in zones): ${JSON.stringify(others)}\n${needs.length ? `REQUIRED PRODUCTS: ${JSON.stringify(needs)}\n` : ''}\nRequest:\n${text}`;
   try {
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method:'POST',

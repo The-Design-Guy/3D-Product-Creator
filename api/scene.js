@@ -8,7 +8,7 @@ export const config = { maxDuration: 60 };
 const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL || 'gpt-4.1-mini';
 
 const TYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn', 'lock', 'wb'];
-const OPS = ['add', 'move', 'move_to', 'rotate', 'rotate_to', 'delete', 'duplicate', 'set', 'bins', 'doors', 'tambour', 'contents', 'select', 'room', 'light', 'opening', 'obstacle', 'photo', 'clear', 'commit', 'design'];
+const OPS = ['add', 'move', 'move_to', 'rotate', 'rotate_to', 'delete', 'duplicate', 'set', 'bins', 'doors', 'tambour', 'contents', 'labels', 'select', 'room', 'light', 'opening', 'obstacle', 'photo', 'clear', 'commit', 'design'];
 
 const CATALOGUE = `
 Product types (type key – Hebrew name – footprint width x depth in cm with rot 0 – what can be set):
@@ -24,7 +24,7 @@ Product types (type key – Hebrew name – footprint width x depth in cm with r
 - mtamb – "ארון תריס" – metal tambour cabinet with shelves, 90 x 45, 195 high.
 - arc – "ארקליות" / "ארקלית" – ONE single open-front plastic pick bin (like Huliot's "אחסוניות"): settings.arc = model (1: 50.4 deep x 30.7 wide x 19.4 high cm, 2: 35 x 21 x 19.6, 3: 23.8 x 14.5 x 12.9, 4: 17 x 9.6 x 8), color blue (default) / grey, divider (one lengthwise divider, models 1–2 only); cols, rows, height_cm stay null. Several bins = count (side by side with row), or more adds; a bin on top of something = y_cm.
 - Pick bins (ארקליות 2, 3, 4 – not 1, too deep) can stand on the shelves of mtamb and mdoor: settings.shelf_bins. "ארון תריס עם ארקליות" / "ארון 2 דלתות עם ארקליות" = that cabinet with shelf_bins (no layout given → bin_layout 'mixed'; "מלא בארקליות 3" / "רק ארקלית 3" → bin_layout 'full'; shelf_bins changes single shelves after it): model 2, cols 4, rows 1).
-- mdoor – "ארון 4 מדפים" – metal cabinet with 2 hinged doors, 90 x 40, 195 high – md_color (blue / 7035 = light grey).
+- mdoor – "ארון 4 מדפים" – metal cabinet with 2 hinged doors, 90 x 40, 195 high – light grey RAL 7035 only (md_color always 7035 or null).
 - tech – "ארון עבודה טכני" – blue workshop cabinet 100 x 56 x 195 with 2 hinged doors – tech_variant: 1 = 4 shelves, 2 = 8 levels with 4 x ארקלית 2 each (32 bins), 3 = one drawer + 2 shelves, 4 = 3 drawers + 2 shelves. Variants 3 / 4 have a pegboard back and perforated / louvre doors with ארקלית 4 hanging on them – door_bins {left, right} (default 2 and 1, 0–3 each); door_acc = what hangs inside the doors: tools ("כלי עבודה"), bins ("ארקליות"), both ("גם וגם", default) or none ("כלום", "דלתות ריקות"). shelf_bins work here too (a deep bin can't sit at the height of the door bins).
 - lock – "לוקר 6 דלתות" – staff locker 90 x 45 x 195, light grey body, 6 blue lockable doors (3 columns x 2 rows), shelf + hanging rod in each compartment. Doors: op doors with door = 1–6 (1 = top-left, 2 = top-middle, 3 = top-right, 4 = bottom-left, 5 = bottom-middle, 6 = bottom-right) or door null = all. Names: "לוקר", "לוקרים", "ארון לוקרים", "ארון הלבשה", "ארון עובדים".
 - wb – "שולחן עבודה מאסיבי" – heavy-duty workbench 150 x 75, green anti-static top at 84 cm; wb_variant 1 = hanging 2-drawer unit, 2 = 2 drawers + blue perforated back with 2 shelves (170 high), 3 = 4-drawer floor cabinet + the back; wb_tools true = tools hanging on the back; wb_top green (anti-static, default) or white. Names: "שולחן עבודה", "שולחן עבודה טכני", "שולחן מאסיבי", "שולחן אנטי סטטי". (furn bench is only a generic prop.)
@@ -87,7 +87,7 @@ export default async function handler(req, res) {
       tena_size:nul({ type:'integer', enum:[4, 7, 10] }),
       doors:nul({ type:'boolean' }),
       unit_bins:nul({ type:'integer', enum:[2, 3, 4, 5, 6, 9] }),
-      md_color:nul({ type:'string', enum:['blue', '7035'] }),
+      md_color:nul({ type:'string', enum:['7035'] }),
       tech_variant:nul({ type:'integer', enum:[1, 2, 3, 4], description:'tech: 1 = 4 shelves, 2 = 8 levels with ארקליות 2, 3 = one drawer, 4 = 3 drawers' }),
       door_acc:nul({ type:'string', enum:['tools', 'bins', 'both', 'none'], description:'tech (variants 3 / 4): what hangs inside the doors – tools = hand tools (screwdrivers, spanners), bins = ארקליות 4, both (default), none' }),
       door_bins:nul({ type:'object', additionalProperties:false, required:['left', 'right'], description:'tech (variants 3 / 4): ארקלית 4 hanging on each door', properties:{ left:{ type:'integer' }, right:{ type:'integer' } } }),
@@ -106,7 +106,7 @@ export default async function handler(req, res) {
     random:{ type:'integer', description:'>0: open / close only this many bins chosen at random among the selected ones' },
     all:{ type:'boolean', description:'true = every bin of the product on every side' } } });
   const op = { type:'object', additionalProperties:false,
-    required:['op', 'target', 'type', 'saved_model', 'count', 'name', 'settings', 'x_cm', 'z_cm', 'rot', 'row', 'wall', 'fill', 'y_cm', 'dx_cm', 'dz_cm', 'dy_cm', 'deg', 'open', 'bins', 'which', 'door', 'text', 'room', 'light', 'opening', 'obstacle', 'photo'],
+    required:['op', 'target', 'type', 'saved_model', 'count', 'name', 'settings', 'x_cm', 'z_cm', 'rot', 'row', 'wall', 'fill', 'y_cm', 'dx_cm', 'dz_cm', 'dy_cm', 'deg', 'open', 'bins', 'which', 'door', 'text', 'labels', 'room', 'light', 'opening', 'obstacle', 'photo'],
     properties:{
       op:{ type:'string', enum:OPS },
       target:nul({ type:'integer', description:'id of the product the action is about; null = the selected product (or, right after an add, the product just added)' }),
@@ -127,6 +127,11 @@ export default async function handler(req, res) {
       which:nul({ type:'string', enum:['all', 'left', 'right'], description:'doors: which door(s)' }),
       door:nul({ type:'integer', description:'doors on a lock (locker): door number 1–6 (top row 1–3 from the left, bottom row 4–6); null = all its doors' }),
       text:nul({ type:'string', description:'contents (and add): what goes inside the bins of this product (for the realistic render), in the user\'s words' }),
+      labels:nul({ type:'object', additionalProperties:false, required:['mode', 'texts', 'per_label', 'clear_texts'], description:'labels op: the paper labels on the bin / drawer fronts of the product', properties:{
+        mode:{ type:'string', enum:['none', 'blank', 'text'], description:'none = no labels, blank = plain white labels, text = labels with writing' },
+        texts:{ type:'array', items:{ type:'string' }, description:'what to write, in the user\'s words (Hebrew as said), short (≤ 40 chars each); empty = keep the texts it has (with mode text and no texts the labels show the product\'s contents)' },
+        per_label:{ type:'boolean', description:'true = texts[0] on label 1, texts[1] on label 2 … ("על התא הראשון…"); false = the texts are spread over all its labels, each over a run of neighbours' },
+        clear_texts:{ type:'boolean', description:'true = erase the texts written before' } } }),
       room:nul({ type:'object', additionalProperties:false, required:['width_m', 'depth_m', 'back', 'left', 'right', 'front'], properties:{
         width_m:{ type:'number' }, depth_m:{ type:'number' }, back:{ type:'boolean' }, left:{ type:'boolean' }, right:{ type:'boolean' }, front:nul({ type:'boolean' }) } }),
       opening:nul({ type:'object', additionalProperties:false, required:['action', 'index', 'kind', 'type', 'wall', 'width_cm', 'height_cm', 'offset_cm', 'sill_cm'], properties:{
@@ -179,6 +184,7 @@ export default async function handler(req, res) {
     '- photo: a catalogue / product picture ("תמונה לקטלוג", "בתמונה 4:5", "צילום מוצר") → photo with the ratio (default 4:5) and view (default front); it frames the camera on the products and presets the render ratio. Put it LAST, after the products. For a catalogue shot also clear the scene first if the user asks for only these products, keep the room with no side walls, and use light type studio.',
     '- light: the lighting of the scene (only the fields the user mentioned; the rest null). "תאורת סטודיו משעה 5" → type studio, clock 5. "פחות חזקה ב-20%" → power_change_pct -20. "צל רך יותר" / "צל רק יותר" (a common mis-hearing of רך) → soft softer.',
     '- design: planning a WHOLE space or AREAS / ZONES – "תיצור לי מרחב / אולם / חנות / מחסן…", "תעשה לי אזור של עמדות עם מחיצות", "תכנן לי את החדר", "תסדר את החדר", or changing such zones ("תזיז את אזור העמדות לקיר השמאלי", "עוד שתי עמדות", "בלי העגלות" when the products are in a zone). Then return ONE op design with text = the user\'s full request, and no other op. Single products ("תוסיף מחיצה", "תזיז את זה") are NOT design.',
+    '- labels: the paper labels on the fronts of bins, pick bins and drawers (tilt-bin products, ארקליות, the workbench and technical-cabinet drawers). "תשים תוויות" → mode blank; "תוויות עם כיתוב" / "תכתוב על התוויות ברגים, אומים" → mode text with texts ["ברגים","אומים"] (per_label false); "בלי תוויות" → none. With mode text and no texts, the labels show what the product holds (its contents). Each product in the scene lists its labels mode.',
     '- contents also fits the kind of shop: "זו חנות ממתקים" → contents "ממתקים" on every product added (or the add\'s text field).',
     '"המתקן הזה / המוצר הזה / זה" = the selected product (target null). Products can also be named by their name, type or position ("המחיצה השנייה", "זה שליד הקיר").',
     ...(editor ? [
