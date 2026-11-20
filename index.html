@@ -1341,6 +1341,36 @@
       <div class="slot"></div>
     </div></div>
   </div>
+  <div class="panel" id="pShelf" data-mode="shelf" data-family="metal" hidden>
+    <button class="head" aria-expanded="false">
+      <span class="ttl"><h1>מידוף לעומס בינוני</h1><span class="sub" id="shSub">עמודים כחולים · קורות כתומות · סיפונים מגולוונים</span></span>
+      <svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="body"><div class="inner">
+      <div class="lbl">עומק</div>
+      <div class="seg2" id="shDepth"><button data-v="500">50 ס"מ</button><button data-v="600" class="on">60 ס"מ</button><button data-v="800">80 ס"מ</button></div>
+      <div class="lbl">גובה העמודים</div>
+      <div class="seg2" id="shHeight"><button data-v="2000" class="on">200 ס"מ</button><button data-v="2500">250 ס"מ</button></div>
+      <div class="lbl">יחידות ברצף (רוחב נטו בין העמודים)</div>
+      <div class="shl" id="shBays"></div>
+      <button class="btn" id="shBayAdd">+ יחידת המשך</button>
+      <div class="lbl">גב אל גב (עומק כפול)</div>
+      <div class="seg2" id="shB2b"><button data-v="0" class="on">בלי</button><button data-v="1">עם שורה נוספת מאחור</button></div>
+      <div class="lbl">רצף בזווית 90°</div>
+      <div class="seg2" id="shCorner"><button data-v="none" class="on">בלי</button><button data-v="right">בקצה הימני</button><button data-v="left">בקצה השמאלי</button></div>
+      <div id="shCornerSec" hidden><div class="shl" id="shCBays" style="margin-top:6px"></div><button class="btn" id="shCBayAdd">+ יחידה ברצף הפינתי</button></div>
+      <div class="lbl">מפלסים (גובה ראש הקורה, ס"מ)</div>
+      <div class="seg2" id="shLvMode"><button data-v="even" class="on">חלוקה אחידה</button><button data-v="manual">ידני</button></div>
+      <div class="shl" id="shLevels" style="margin-top:6px"></div>
+      <button class="btn" id="shLvAdd">+ מפלס</button>
+      <div class="use" id="shUse">הגבהים נצמדים לפסיעת החירור (5 ס"מ). שינוי גובה של מפלס עובר לחלוקה ידנית.</div>
+      <div class="lbl">רמת פירוט (לא משנה מידות או רכיבים)</div>
+      <div class="seg2" id="shLod"><button data-v="auto" class="on">אוטומטי</button><button data-v="high">גבוהה</button><button data-v="std">רגילה</button><button data-v="low">נמוכה</button></div>
+      <div class="lbl">מידות ורכיבים</div>
+      <div class="use" id="shInfo" style="line-height:1.7"></div>
+      <div class="slot"></div>
+    </div></div>
+  </div>
   <div class="panel" id="pTech" data-mode="tech" data-family="metal" hidden>
     <button class="head" aria-expanded="false">
       <span class="ttl"><h1>ארון עבודה טכני</h1><span class="sub" id="tcSub">100 × 56 × 195 ס"מ · כחול · דלתות ציר עם מנעול</span></span>
@@ -2817,7 +2847,7 @@ const ARC_MODELS = {
 const ARC0 = { model:2, cols:1, rows:1, color:'blue', div:false };     // one single bin per product
 const ARC = { ...ARC0 };
 const TYPE_NAME = { unit:'רב תא', stand:'מעמד', excl:'עגלת רב-תא EXCLUSIVE', part:'מחיצת EXCLUSIVE מודולרית', quad:'מעמד 4 דפנות',
-  wall:'מתלה קיר', tena:'תא-נע DELUX', smart:'תא-נע SMART', tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים', tech:'ארון עבודה טכני', arc:'ארקליות', furn:'ריהוט', lock:'לוקר 6 דלתות', wb:'שולחן עבודה מאסיבי' };
+  wall:'מתלה קיר', tena:'תא-נע DELUX', smart:'תא-נע SMART', tamb:'ארון מתכת מאובטח לרב תא', mtamb:'ארון תריס', mdoor:'ארון 4 מדפים', tech:'ארון עבודה טכני', arc:'ארקליות', furn:'ריהוט', lock:'לוקר 6 דלתות', wb:'שולחן עבודה מאסיבי', shelf:'מידוף לעומס בינוני' };
 const SCN = { room:{ W:6000, D:5000, back:true, left:false, right:false }, items:[], sel:null, editType:null, next:1 };
 let SCENE_BUILD = false;
 const deep = (o) => JSON.parse(JSON.stringify(o));
@@ -2836,6 +2866,7 @@ function capCfg0(t) {
   if (t === 'arc') return { arc:{ ...ARC } };
   if (t === 'furn') return { fu:{ ...FU } };
   if (t === 'wb') return { wb:{ ...WB } };
+  if (t === 'shelf') return { sh:deep(SH) };
   return { tn:deep(TN[t === 'smart' ? 'smart' : 'delux']) };
 }
 function applyCfg(t, c) {
@@ -2853,9 +2884,10 @@ function applyCfg(t, c) {
   else if (t === 'arc') { Object.assign(ARC, ARC0, c.arc || {}); ARC.cols = ARC.rows = 1; }
   else if (t === 'furn') Object.assign(FU, FU0, c.fu || {});
   else if (t === 'wb') Object.assign(WB, WB0, c.wb || {});
+  else if (t === 'shelf') { Object.assign(SH, deep(SH0), deep(c.sh || {})); if (!Array.isArray(SH.bays) || !SH.bays.length) SH.bays = [1800]; }
   else { const v = t === 'smart' ? 'smart' : 'delux'; for (const k in TN[v]) delete TN[v][k]; Object.assign(TN[v], deep(c.tn)); tena = TN[v]; }
 }
-const capAll = () => ({ lbl:LBL.mode, lblTxt:{ ...LBL.txt }, arc:{ ...ARC }, current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD), tc:deep(TC), lk:deep(LK), fu:{ ...FU }, wb:{ ...WB }, qd:deep(QD) });
+const capAll = () => ({ lbl:LBL.mode, lblTxt:{ ...LBL.txt }, sh:deep(SH), arc:{ ...ARC }, current, stand:{ ...stand }, comp:deep(comp), wall:deep(wall), wallComp:deep(wallComp), exs:deep(EXS), tn:deep(TN), tb:deep(TB), mt:deep(MT), md:deep(MD), tc:deep(TC), lk:deep(LK), fu:{ ...FU }, wb:{ ...WB }, qd:deep(QD) });
 function restoreAll(a) {
   applyCfg('unit', a); applyCfg('stand', a); applyCfg('wall', a);
   applyCfg('excl', { exs:a.exs.excl }); applyCfg('part', { exs:a.exs.part });
@@ -2863,6 +2895,7 @@ function restoreAll(a) {
   if (a.arc) applyCfg('arc', { arc:a.arc });
   if (a.fu) applyCfg('furn', { fu:a.fu });
   if (a.wb) applyCfg('wb', { wb:a.wb });
+  if (a.sh) applyCfg('shelf', { sh:a.sh });
   if (a.mt) applyCfg('mtamb', { mt:a.mt }); if (a.md) applyCfg('mdoor', { md:a.md }); if (a.tc) applyCfg('tech', { tc:a.tc }); if (a.lk) applyCfg('lock', { lk:a.lk }); if (a.qd) applyCfg('quad', { qd:a.qd });
 }
 // the selected item's settings live in the globals while it is being edited
@@ -2890,6 +2923,7 @@ function refreshEditor(t) {
   else if (t === 'quad') renderQuad();
   else if (t === 'mtamb' || t === 'mdoor' || t === 'tech') renderMetal(t);
   else if (t === 'lock') renderLocker();
+  else if (t === 'shelf') renderShelfUI();
 }
 const panelOf = (t) => panels.find(p => p.dataset.mode === t);
 let borrowed = null;                              // { body, panel }
@@ -2897,7 +2931,8 @@ function borrowBody(t) {
   releaseBody();
   if (!t || t === 'unit') { $('scnEditHint').hidden = t !== 'unit'; return; }
   $('scnEditHint').hidden = true;
-  const p = panelOf(t), body = p.querySelector(':scope > .body');
+  const p = panelOf(t); if (!p) return;
+  const body = p.querySelector(':scope > .body');
   $('scnEdit').appendChild(body); borrowed = { body, panel:p };
 }
 function releaseBody() {
@@ -3162,6 +3197,8 @@ function buildScene() {
     const ln = new THREE.Mesh(new THREE.BoxGeometry(W, 0.012, 0.012), new THREE.MeshStandardMaterial({ color:0x9aa1a7 })); ln.position.set(0, 0.35, D/2); world.add(ln);
   }
   SCENE_BUILD = true;
+  { const bays = SCN.items.filter(i => i.type === 'shelf' && !i.hidden).reduce((a, i) => { const c = (i.cfg && i.cfg.sh) || SH0; return a + (c.bays || []).length * (c.b2b ? 2 : 1) + (c.corner ? (c.cbays || []).length : 0); }, 0);
+    SH_AUTO = bays > 16 ? 'low' : 'std'; }
   for (const it of SCN.items) {
     applyCfg(it.type, it.cfg);
     let b;
@@ -3174,6 +3211,7 @@ function buildScene() {
     else if (it.type === 'arc') b = buildArc();
     else if (it.type === 'furn') b = buildFurn();
     else if (it.type === 'wb') b = buildWb();
+    else if (it.type === 'shelf') b = buildShelf();
     else { WING_GROUPS.clear(); SLD = null; b = buildTena(); b.sld = SLD; }
     if (it.draft) ghost(b.group);
     ITEM_DRAWERS.set(it.id, it.hidden ? [] : b.drawers);
@@ -4105,6 +4143,161 @@ function buildFurn() {
   }
   return { group:g, drawers:[], rods:[], W:w, D:d, H:h };
 }
+// ---------- מידוף לעומס בינוני (MEDIKUP Medium Duty Shelving) – one parametric assembly engine ----------
+// Every dimension below that is not in the brief's option lists is an ESTIMATE (status 'est'), editable here, not a verified
+// production size. Each value keeps its source. Load data: the photographed sticker (600 / 650 kg) is a research note only.
+const SHX = {
+  UPW:  { v:70,  src:'brief §3, brochure', st:'est' },        // upright width (face toward the front), mm
+  UPD:  { v:50,  src:'brochure 02 profile', st:'est' },       // upright section depth, mm
+  PITCH:{ v:50,  src:'brief §3', st:'est' },                  // hole pitch, mm
+  SLOT: { v:[13, 26], src:'brochure 01', st:'est' },          // rectangular hole w × h, mm (front faces)
+  ROUND:{ v:7,   src:'brochure 01', st:'est' },               // round hole diameter, mm (side faces)
+  BMH:  { v:60,  src:'brief §3', st:'est' },                  // beam height, mm
+  BMD:  { v:40,  src:'brief §3', st:'est' },                  // beam depth, mm
+  DECKN:{ v:300, src:'brief §3', st:'est' },                  // deck module (nominal), mm
+  DECKP:{ v:295, src:'brief §3, Royi', st:'est' },            // deck physical width, mm
+  DECKH:{ v:30,  src:'brochure 01', st:'est' },               // deck fold height, mm
+  PLATE:{ v:[110, 6, 90], src:'photos', st:'est' },          // base plate w × t × d, mm
+  BRACE:{ v:[40, 20], src:'photos', st:'est' },               // horizontal / diagonal brace section, mm
+  LOAD_NOTE:{ v:'sticker 600 / 650 kg seen on a 7-deck (2100) shelf – research note only, no load data', src:'brochure, Royi', st:'note' },
+};
+const SH_W = [1200, 1500, 1800, 2100, 2400], SH_D = [500, 600, 800], SH_H = [2000, 2500];
+const SH0 = { bays:[1800], depth:600, height:2000, levels:4, lv:null, lod:'auto', b2b:false, corner:null, cbays:[1800] };   // b2b: a second run back to back; corner: 'left' / 'right' – a run at 90° (cbays), no joint between them      // lv: manual beam heights (mm, top of beam) or null = even
+const SH = { ...SH0, bays:[...SH0.bays] };
+const shBlue = new THREE.MeshStandardMaterial({ color:0x1d4fc4, roughness:0.42, metalness:0.35 });
+const shOrange = new THREE.MeshStandardMaterial({ color:0xff6316, roughness:0.45, metalness:0.25 });
+const shDark = new THREE.MeshStandardMaterial({ color:0x0d1a33, roughness:0.7 });
+const shGalv = [0, 1, 2, 3].map(i => new THREE.MeshStandardMaterial({ color:new THREE.Color().setHSL(0.58, 0.05, 0.70 + i * 0.018), roughness:0.32 + i * 0.03, metalness:0.82 }));   // galvanised, a little variation
+const shDeckCount = (w) => Math.round(w / SHX.DECKN.v);
+// level of detail: 'auto' follows how the shelving is shown – high on its own (product photo / editor), standard in a scene,
+// low in a scene with many bays. It changes only what is drawn: never a size, a count or the BOM.
+let SH_AUTO = 'high';
+const shLod = (c) => ['high', 'std', 'low'].includes(c.lod) ? c.lod : SH_AUTO;
+const SH_B2B = 100;                                  // the gap between two runs back to back (row spacers), mm – estimate
+const shOuterW = (bays) => bays.reduce((a, w) => a + w, 0) + (bays.length + 1) * SHX.UPW.v;
+const shSnap = (y) => Math.round(y / SHX.PITCH.v) * SHX.PITCH.v;
+// beam heights (top of the beam, mm): even from just above the floor to just under the top of the uprights, on the hole grid
+function shLevels(c = SH) {
+  if (Array.isArray(c.lv) && c.lv.length) return c.lv.map(shSnap).filter(y => y >= 100 && y <= c.height - 50).sort((a, b) => a - b);
+  const n = Math.max(1, c.levels | 0), lo = 150, hi = c.height - 50;
+  return n === 1 ? [lo] : Array.from({ length:n }, (_, i) => shSnap(lo + (hi - lo) * i / (n - 1)));
+}
+// a perforated face: a cut-out (alpha) texture, one hole pitch tall, repeated up the upright
+const SH_TEX = {};
+function shHoleTex(kind) {
+  if (SH_TEX[kind]) return SH_TEX[kind];
+  const P = SHX.PITCH.v, W = kind === 'slot' ? SHX.UPW.v : SHX.UPD.v, S = 4, c = document.createElement('canvas');
+  c.width = W * S; c.height = P * S; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#000';
+  if (kind === 'slot') { const [sw, sh] = SHX.SLOT.v; x.beginPath(); x.roundRect((W - sw) / 2 * S, (P - sh) / 2 * S, sw * S, sh * S, 3 * S); x.fill(); }
+  else { x.beginPath(); x.arc(W / 2 * S, P / 2 * S, SHX.ROUND.v / 2 * S, 0, 7); x.fill(); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = THREE.ClampToEdgeWrapping; t.wrapT = THREE.RepeatWrapping;
+  return (SH_TEX[kind] = t);
+}
+function shFaceMat(kind, H) {
+  const t = shHoleTex(kind).clone(); t.needsUpdate = true; t.repeat.set(1, H / SHX.PITCH.v);
+  return new THREE.MeshStandardMaterial({ color:shBlue.color, roughness:0.42, metalness:0.35, alphaMap:t, alphaTest:0.5, side:THREE.DoubleSide });
+}
+function buildShelf(c = SH) {
+  const g = new THREE.Group(), root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
+  const D = c.depth, main = shRun(c, c.bays); root.add(main);
+  if (c.b2b) { const back = shRun(c, c.bays); back.rotation.y = Math.PI; back.position.z = -(D + SH_B2B); root.add(back); }
+  if (c.corner && (c.cbays || []).length) {                  // a run at 90° at one end, its back on the line of that end, in front of the main run
+    const cw = shOuterW(c.cbays), tw = shOuterW(c.bays), sx = c.corner === 'left' ? -1 : 1, cr = shRun(c, c.cbays);
+    cr.rotation.y = sx * -Math.PI / 2; cr.position.set(sx * (tw / 2 - D / 2), 0, D / 2 + 10 + cw / 2); root.add(cr);
+  }
+  g.updateMatrixWorld(true);
+  const bb = new THREE.Box3().setFromObject(root), ctr = bb.getCenter(new THREE.Vector3()).multiplyScalar(1000);   // centre the whole thing on its footprint
+  root.children.forEach(o => { o.position.x -= ctr.x; o.position.z -= ctr.z; });
+  const sz = bb.getSize(new THREE.Vector3()).multiplyScalar(1000);
+  return { group:g, drawers:[], rods:[], W:Math.round(sz.x), D:Math.round(sz.z), H:c.height };
+}
+// one run of bays in a row: N bays, N + 1 side frames (shared between neighbours), centred on x = 0, z = 0 (mm)
+function shRun(c, bays) {
+  const root = new THREE.Group();
+  const lod = shLod(c), hi = lod !== 'low', top = lod === 'high', D = c.depth, H = c.height, UW = SHX.UPW.v, UD = SHX.UPD.v, BH = SHX.BMH.v, BD = SHX.BMD.v;
+  const box = (w, h, d, x, y, z, m) => { const o = shadowOn(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)); o.position.set(x, y, z); root.add(o); return o; };
+  const TW = shOuterW(bays), zF = D / 2 - UD / 2, levels = shLevels(c);
+  const frontMat = hi ? shFaceMat('slot', H - 8) : shBlue, sideMat = hi ? shFaceMat('round', H - 8) : shBlue;
+  // an upright: a hollow steel section – perforated front and back faces, round holes on the sides – on its base plate
+  const upright = (x, z) => {
+    if (hi) {
+      for (const s of [-1, 1]) {
+        const f = shadowOn(new THREE.Mesh(new THREE.PlaneGeometry(UW, H - 8), frontMat)); f.position.set(x, 8 + (H - 8) / 2, z + s * UD / 2); root.add(f);
+        const sd = shadowOn(new THREE.Mesh(new THREE.PlaneGeometry(UD, H - 8), sideMat)); sd.rotation.y = Math.PI / 2; sd.position.set(x + s * UW / 2, 8 + (H - 8) / 2, z); root.add(sd);
+      }
+      box(UW, 2, UD, x, H - 1, z, shBlue);                                            // top cap
+    } else box(UW, H - 8, UD, x, 8 + (H - 8) / 2, z, shBlue);
+    const [pw, pt, pd] = SHX.PLATE.v; box(pw, pt, pd, x, pt / 2, z, shBlue);         // base plate
+    if (hi) for (const sx of [-1, 1]) box(10, 1, 10, x + sx * (pw / 2 - 14), pt + 0.4, z + (z > 0 ? 1 : -1) * (pd / 2 - 12), shDark);   // anchor holes
+  };
+  // a side frame: two uprights, horizontal braces at the bottom and the top, diagonals between them (in the side plane)
+  const frame = (x) => {
+    upright(x, zF); upright(x, -zF);
+    const [bw, bt] = SHX.BRACE.v, span = 2 * zF - UD, yB = 140, yT = H - 120;
+    for (const y of [yB, yT]) { box(bt, bw, span, x, y, 0, shBlue); if (top) for (const sz of [-1, 1]) for (const sx of [-1, 1]) box(3, 9, 9, x + sx * (bt / 2 + 1.5), y, sz * (span / 2 - 12), shDark); }   // bolts at the ends
+    const n = Math.max(2, Math.round((yT - yB) / (D * 0.95)));                           // how many diagonals: about square bays
+    for (let i = 0; i < n; i++) {
+      const y0 = yB + (yT - yB) * i / n, y1 = yB + (yT - yB) * (i + 1) / n, z0 = i % 2 ? -span / 2 : span / 2, z1 = -z0;
+      const L = Math.hypot(z1 - z0, y1 - y0), d = box(bt, bw, L, x, (y0 + y1) / 2, 0, shBlue); d.rotation.x = -Math.atan2(y1 - y0, z1 - z0);
+    }
+  };
+  // one bay: per level a front and a back orange beam (with their end connectors) and the separate galvanised decks
+  const bay = (x0, w, bi) => {
+    const nD = shDeckCount(w), pitch = w / nD, dp = SHX.DECKP.v, dh = SHX.DECKH.v, dl = 2 * zF + UD - 2 * 6;
+    levels.forEach((y, li) => {
+      for (const s of [-1, 1]) {
+        const zb = s * (zF + UD / 2 - BD / 2);
+        box(w, BH, BD, x0 + w / 2, y - BH / 2, zb, shOrange);
+        if (top) box(w - 12, 6, 10, x0 + w / 2, y - 3, zb - s * (BD / 2 + 5), shOrange);       // the step on the inner top edge the decks sit in
+        if (hi) for (const e of [0, 1]) {                                                // end connector: a plate against the upright, 3 slots
+          const xe = e ? x0 + w - 4 : x0 + 4; box(8, BH + 60, BD + 6, xe, y - BH / 2 - 15, zb, shOrange);
+          for (let k = 0; k < 3; k++) box(9, 14, 5, xe, y - BH / 2 - 15 + (k - 1) * 30, zb + s * (BD / 2 + 3), shDark);
+          if (top) box(4, 10, 10, xe + (e ? -6 : 6), y - BH / 2, zb, shDark);                 // the safety pin
+        }
+      }
+      for (let k = 0; k < nD; k++) {                                                     // the decks: each its own folded sheet
+        const xc = x0 + pitch * (k + 0.5), m = shGalv[(bi * 7 + li * 3 + k) % shGalv.length];
+        box(dp, 1.5, dl, xc, y + 0.75, 0, m);
+        if (hi) for (const sx of [-1, 1]) box(1.5, dh, dl, xc + sx * (dp / 2 - 0.75), y - dh / 2, 0, m);
+        if (top) for (const sz of [-1, 1]) box(dp - 3, dh * 0.5, 1.5, xc, y - dh * 0.25, sz * (dl / 2 - 0.75), m);   // folded ends
+      }
+    });
+  };
+  let x = -TW / 2 + UW / 2;
+  frame(x);
+  bays.forEach((w, i) => { bay(x + UW / 2, w, i); x += UW + w; frame(x); });
+  return root;
+}
+// what the shelving is made of (the BOM) – counted from the same geometry, nothing twice
+function shelfBOM(c = SH) {
+  const runs = [c.bays, ...(c.b2b ? [c.bays] : []), ...(c.corner && (c.cbays || []).length ? [c.cbays] : [])], out = {};
+  runs.forEach(b => { const r = shelfRunBOM(c, b); for (const k in r) out[k] = (out[k] || 0) + r[k]; });
+  return out;
+}
+function shelfRunBOM(c, bays) {
+  const N = bays.length, L = shLevels(c).length, n = Math.max(2, Math.round((c.height - 260) / (c.depth * 0.95)));
+  return { frames:N + 1, uprights:2 * (N + 1), plates:2 * (N + 1), beams:2 * L * N, connectors:4 * L * N,
+    decks:bays.reduce((a, w) => a + shDeckCount(w) * L, 0), hBraces:2 * (N + 1), dBraces:n * (N + 1) };
+}
+// outer size, the parts list and the geometric capacity (deck area) – for the panel and the strip
+function shSize(c = SH) {
+  const tw = shOuterW(c.bays), d = c.depth + (c.b2b ? c.depth + SH_B2B : 0);
+  if (!(c.corner && (c.cbays || []).length)) return { W:tw, D:d };
+  return { W:tw, D:d + 10 + shOuterW(c.cbays) };
+}
+function shInfoHtml(c = SH) {
+  const S = shSize(c), B = shelfBOM(c), L = shLevels(c).length;
+  const runs = [c.bays, ...(c.b2b ? [c.bays] : []), ...(c.corner && (c.cbays || []).length ? [c.cbays] : [])];
+  const area = runs.reduce((a, b) => a + b.reduce((x, w) => x + w, 0), 0) * c.depth * L / 1e6;
+  return `מידות חיצוניות (משוער): <b>${Math.round(S.W / 10)}</b> × <b>${Math.round(S.D / 10)}</b> × <b>${c.height / 10}</b> ס"מ<br>`
+    + `מסגרות צד ${B.frames} · עמודים ${B.uprights} · פלטות בסיס ${B.plates}<br>קורות כתומות ${B.beams} · מחברי קצה ${B.connectors} · סיפונים ${B.decks}<br>`
+    + `קושרות: ${B.hBraces} אופקיות, ${B.dBraces} אלכסוניות<br>שטח מדפים: ${area.toFixed(1)} מ"ר ב־${L} מפלסים`
+    + `<br><span style="font-size:11px">כל המידות הטכניות הן אומדנים לבדיקה מול MEDIKUP; ללא נתוני עומס.</span>`;
+}
+function describeShelf(c = SH) {
+  const L = shLevels(c), W = shOuterW(c.bays);
+  return `Medium-duty steel shelving (MEDIKUP): ${c.bays.length > 1 ? `a run of ${c.bays.length} bays (${c.bays.map(w => w / 10).join(' + ')} cm clear between the uprights)` : `one bay, ${c.bays[0] / 10} cm clear between the uprights`}, about ${Math.round(W / 10)} cm wide overall, ${c.depth / 10} cm deep, ${c.height / 10} cm high. Royal-blue perforated steel uprights (a column of rectangular slots on the front, round holes on the sides) on small blue base plates; each side frame has a blue horizontal brace low and high and blue diagonal braces in a zig-zag in the side plane. ${L.length} levels, each with a bright orange box-section beam at the front and at the back hooked into the uprights by orange end-connector plates; on the beams, separate galvanised steel decks (${c.bays.map(shDeckCount).join(' / ')} per level, 29.5 cm wide with folded edges and thin gaps between them), silver-grey zinc finish, not chrome. Levels at ${L.map(y => Math.round(y / 10)).join(', ')} cm.${c.b2b ? ` A second identical run stands back to back behind it (${SH_B2B / 10} cm apart), making a double-depth shelving block.` : ''}${c.corner && (c.cbays || []).length ? ` At its ${c.corner} end a second run (${c.cbays.map(w => w / 10).join(' + ')} cm bays) turns 90° toward the front, forming an L; the two runs stand side by side with no joint.` : ''}`;
+}
 // ---------- שולחן עבודה מאסיבי (300MYWB09): 150 × 75, work top at 84, 170 with the back ----------
 //   1 – a hanging 2-drawer unit · 2 – the same + a blue perforated back with 2 shelves · 3 – a 4-drawer floor cabinet + the back
 const WB0 = { variant:1, tools:'none', top:'green', br:'up' };
@@ -4495,6 +4688,12 @@ function rebuild(keepCamera = false) {
     renderExcl(mode);
     if (mode === 'excl') { const i = document.getElementById('exHandle'); i.value = EXS.excl.handleOff/10; document.getElementById('exHandleVal').textContent = `${Math.round(eb.hy/10)} ס"מ`; }
     else { const i = document.getElementById('ptHandle'); i.value = EXS.part.handleH/10; document.getElementById('ptHandleVal').textContent = `${Math.round(eb.hy/10)} ס"מ`; }
+  } else if (mode === 'shelf') {
+    SH_AUTO = 'high'; const sh = buildShelf();
+    world.add(sh.group); drawers = []; rods = [];
+    if (!keepCamera) frame(Math.max(sh.W, sh.H) * 1.1, sh.H, false);
+    document.getElementById('dims').innerHTML = `מידוף לעומס בינוני · <b>${Math.round(sh.W / 10)}</b> × <b>${Math.round(sh.D / 10)}</b> × <b>${sh.H / 10}</b> ס"מ · ${shLevels().length} מפלסים · ${shelfBOM().decks} סיפונים`;
+    renderShelfUI();
   } else if (mode === 'wb') {
     const wb = buildWb();
     world.add(wb.group); drawers = wb.drawers; rods = [];
@@ -4753,6 +4952,56 @@ segGroup('fuKind', (v) => { FU.kind = v; rebuild(); });
 segGroup('wbVar', (v) => { WB.variant = +v; rebuild(true); });
 segGroup('wbTools', (v) => { WB.tools = v; rebuild(true); });
 segGroup('wbTop', (v) => { WB.top = v; rebuild(true); });
+// ---- the levels of the shelving: even (count) or manual (heights), always on the hole grid ----
+const SH_GAP = 200;                                   // the smallest step between two levels, mm
+function shSetLevels(list) { SH.lv = [...new Set(list.map(shSnap))].filter(y => y >= 100 && y <= SH.height - 50).sort((a, b) => a - b); SH.levels = SH.lv.length; }
+function shAddLevel() {
+  const L = shLevels();
+  if (!SH.lv) { if (L.length < 12) SH.levels = L.length + 1; return; }
+  const pts = [100, ...L, SH.height - 50]; let best = 0, at = 0;
+  for (let i = 0; i < pts.length - 1; i++) if (pts[i + 1] - pts[i] > best) { best = pts[i + 1] - pts[i]; at = (pts[i] + pts[i + 1]) / 2; }
+  if (best >= 2 * SH_GAP) shSetLevels([...L, at]);
+}
+function shBayRows(boxId, list) {
+  const box = $(boxId); box.innerHTML = '';
+  list.forEach((w, i) => {
+    const row = document.createElement('div'); row.className = 'srow';
+    row.innerHTML = `<span class="sname" style="cursor:default">${i ? 'יחידת המשך ' + i : 'יחידת בסיס'}</span><select class="num" aria-label="רוחב היחידה" style="width:90px">${SH_W.map(v => `<option value="${v}"${v === w ? ' selected' : ''}>${v / 10} ס"מ</option>`).join('')}</select><button class="sb" title="הסרת היחידה" aria-label="הסרת היחידה"${list.length < 2 ? ' disabled' : ''}>✕</button>`;
+    row.querySelector('select').onchange = (e) => { list[i] = +e.target.value; rebuild(true); };
+    row.querySelector('.sb').onclick = () => { if (list.length < 2) return; list.splice(i, 1); rebuild(true); };
+    box.appendChild(row);
+  });
+}
+function renderShelfUI() {
+  const box = $('shLevels'); if (!box) return;
+  setSeg('shDepth', String(SH.depth)); setSeg('shHeight', String(SH.height)); setSeg('shLod', SH.lod || 'auto');
+  const info = $('shInfo'); if (info) info.innerHTML = shInfoHtml();
+  shBayRows('shBays', SH.bays); setSeg('shB2b', SH.b2b ? '1' : '0'); setSeg('shCorner', SH.corner || 'none');
+  $('shCornerSec').hidden = !SH.corner; if (SH.corner) { if (!(SH.cbays || []).length) SH.cbays = [SH.bays[0]]; shBayRows('shCBays', SH.cbays); }
+  const L = shLevels(); box.innerHTML = '';
+  setSeg('shLvMode', SH.lv ? 'manual' : 'even');
+  [...L].map((y, i) => ({ y, i })).reverse().forEach(({ y, i }, k) => {
+    const row = document.createElement('div'); row.className = 'srow';
+    row.innerHTML = `<span class="sname" style="cursor:default">מפלס ${k + 1}</span><input class="num" type="number" step="5" min="10" max="${SH.height / 10 - 5}" value="${y / 10}" aria-label="גובה המפלס בס&quot;מ" style="width:80px"><button class="sb" title="הסרת המפלס" aria-label="הסרת המפלס"${L.length < 2 ? ' disabled' : ''}>✕</button>`;
+    row.querySelector('input').onchange = (e) => {
+      const ny = shSnap(+e.target.value * 10), rest = L.filter((_, j) => j !== i);
+      if (rest.some(o => Math.abs(o - ny) < SH_GAP)) { toast('צריך לפחות 20 ס"מ בין מפלסים'); renderShelfUI(); return; }
+      shSetLevels([...rest, ny]); rebuild(true);
+    };
+    row.querySelector('.sb').onclick = () => { if (L.length < 2) return; if (SH.lv) shSetLevels(L.filter((_, j) => j !== i)); else SH.levels = L.length - 1; rebuild(true); };
+    box.appendChild(row);
+  });
+}
+document.getElementById('shLvAdd').onclick = () => { shAddLevel(); rebuild(true); };
+document.getElementById('shBayAdd').onclick = () => { if (SH.bays.length < 12) SH.bays.push(SH.bays[SH.bays.length - 1]); rebuild(true); };
+document.getElementById('shCBayAdd').onclick = () => { if (SH.cbays.length < 12) SH.cbays.push(SH.cbays[SH.cbays.length - 1]); rebuild(true); };
+segGroup('shB2b', (v) => { SH.b2b = v === '1'; rebuild(true); });
+segGroup('shDepth', (v) => { SH.depth = +v; rebuild(true); });
+segGroup('shLod', (v) => { SH.lod = v; rebuild(true); });
+segGroup('shHeight', (v) => { SH.height = +v; if (SH.lv) shSetLevels(SH.lv); rebuild(true); });
+segGroup('shCorner', (v) => { SH.corner = v === 'none' ? null : v; if (SH.corner && !(SH.cbays || []).length) SH.cbays = [SH.bays[0]]; rebuild(true); });
+segGroup('shLvMode', (v) => { const L = shLevels(); if (v === 'even') { SH.lv = null; SH.levels = L.length; } else shSetLevels(L); rebuild(true); });
+
 segGroup('wbBr', (v) => { WB.br = v; rebuild(true); });
 segGroup('fuW', (v) => { FU.w = +v; rebuild(true); });
 segGroup('arcModel', (v) => { ARC.model = +v; if (ARC.model > 2) ARC.div = false; rebuild(true); });
@@ -5368,6 +5617,7 @@ function fileStem() {
   if (mode === 'tech') return `technical-cabinet-v${TC.variant}`;
   if (mode === 'lock') return `locker-6-doors`;
   if (mode === 'furn') return `furniture-${FU.kind}-${FU.w}`;
+  if (mode === 'shelf') return `shelving-${SH.bays.join('+')}x${SH.depth}x${SH.height}-${shLevels().length}`;
   if (mode === 'wb') return `workbench-v${WB.variant}-${WB.tools}-${WB.top || 'green'}-${WB.br || 'up'}`;
   if (mode === 'arc') return `pick-bins-${ARC.model}-${ARC.cols}x${ARC.rows}-${ARC.color}`;
   if (mode === 'quad') return `four-sided-tilt-bin-stand-${Math.round(stackHeight(QD.comp)/10)}-${QD.base}`;
@@ -5490,6 +5740,7 @@ function describe() {
   if (mode === 'arc') return describeArc();
   if (mode === 'furn') return describeFurn();
   if (mode === 'wb') return describeWb();
+  if (mode === 'shelf') return describeShelf();
   if (mode === 'lock') return describeLocker();
   const base = 'Wall-mounted tilt-bin storage unit: injection-moulded body in light grey RAL 7035 (matte, slightly satin), with clear transparent polystyrene tilt-out bins';
   const flags = [];
@@ -6799,6 +7050,7 @@ function addFamilies() {
       { t:'mtamb', name:'ארון תריס עם ארקליות', kw:'ארון תריס ארקליות אחסוניות tambour pick bins', cfg:C('mtamb', c => arcLayout(c.mt, 'mixed')) },
       { t:'mdoor', name:'ארון 2 דלתות עם ארקליות', kw:'ארון דלתות ארקליות אחסוניות doors pick bins', cfg:C('mdoor', c => { arcLayout(c.md, 'mixed'); c.md.color = '7035'; }) },
       ...[1, 2, 3].map(v => ({ t:'wb', g:'שולחן עבודה מאסיבי', name:'שולחן עבודה מאסיבי – ' + WB_VAR[v], kw:'שולחן עבודה מאסיבי טכני אנטי סטטי מגירות לוח מחורר workbench', cfg:C('wb', c => { c.wb = { variant:v, tools:'none' }; }) })),
+      { t:'shelf', name:'מידוף לעומס בינוני', kw:'מדף מדפים מידוף עומס בינוני מחסן קרטונים סיפונים medium duty shelving rack', cfg:C('shelf') },
       { t:'lock', name:'לוקר 6 דלתות', kw:'לוקר לוקרים ארון הלבשה ארון עובדים locker', cfg:C('lock', c => { c.lk = deep(LK0); }) },
       ...[1, 2, 3, 4].map(v => ({ t:'tech', g:'ארון עבודה טכני', name:'ארון עבודה טכני – ' + TECH_VAR[v], kw:'ארון עבודה טכני מגירות מדפים לוח כלים ארקליות technical workshop cabinet drawers', cfg:C('tech', c => techVariant(c.tc, v)) })) ] },
   ];
@@ -7206,6 +7458,7 @@ const HEADS = {
     // the tambour opens to 90% while the shelves are set (still showing), and goes back afterwards
     open:() => { const S = METAL.mtamb, was = S.target; S.target = TBX.MAXO * 0.9; return () => { S.target = was; }; } }, { seg:'lblMode', l:'תוויות', if:() => !!((MT.arc && MT.arc.length) || MT.arcFloor) }],
   mdoor:[{ seg:'lblMode', l:'תוויות', if:() => !!((MD.arc && MD.arc.length) || MD.arcFloor) }],
+  shelf:[{ l:'מידות ורכיבים', panel:['shInfo'] }, { seg:'shDepth', l:'עומק' }, { seg:'shHeight', l:'גובה' }, { l:'יחידות', panel:['shBays', 'shBayAdd'] }, { seg:'shB2b', l:'גב אל גב' }, { l:'פינה 90°', panel:['shCorner', 'shCornerSec'] }, { seg:'shLod', l:'פירוט' }, { l:'מפלסים', panel:['shLvMode', 'shLevels', 'shLvAdd'], val:() => shLevels().length + (SH.lv ? ' · ידני' : '') }],
   wb:[{ seg:'wbVar', l:'גרסה' }, { seg:'wbTop', l:'משטח' }, { seg:'wbBr', l:'משולשים', if:() => WB.variant > 1 }, { seg:'wbTools', l:'על הלוח', if:() => WB.variant > 1 }, { seg:'lblMode', l:'תוויות' }],
   furn:[{ seg:'fuW', l:'רוחב', if:() => ['station', 'desk', 'bench'].includes(FU.kind) }],
   tech:[{ seg:'tcVar', l:'גרסה' }, { seg:'tcAcc', l:'בדלתות', if:() => techZones(TC) }, { seg:'lblMode', l:'תוויות' }],
@@ -7787,7 +8040,7 @@ function binFaces(it) {
 }
 function cfgComp(t, c) {
   if (!c) return null;
-  if (t === 'arc' || t === 'furn' || t === 'wb') return null;
+  if (t === 'arc' || t === 'furn' || t === 'wb' || t === 'shelf') return null;
   if (t === 'excl' || t === 'part') return c.exs && c.exs.comp;
   if (t === 'quad') return c.qd && c.qd.comp;
   if (t === 'tamb') return c.tb && c.tb.items && c.tb.items[0] && c.tb.items[0].comp;
@@ -8036,6 +8289,7 @@ function buildType(t) {                           // the 3D product of type t fr
   if (t === 'arc') return buildArc();
   if (t === 'furn') return buildFurn();
   if (t === 'wb') return buildWb();
+  if (t === 'shelf') { const was = SH_AUTO; SH_AUTO = 'high'; const r = buildShelf(); SH_AUTO = was; return r; }   // on its own: full detail
   return buildTena();
 }
 let PT = null;                                     // a small renderer of its own for the product pictures
@@ -8192,6 +8446,13 @@ function cfgFromPlan(p) {
     case 'tamb': { const c = comp(TB_MODELS); if (c) cfg.tb.items = [{ t:'bins', y:TBX.BASE, comp:c, side:'center', noSep:[...ORDER] }]; set(cfg.tb, 'align', st.align); break; }
     case 'mdoor': cfg.md.color = '7035'; break;          // RAL 7035 only
     case 'wb': cfg.wb = { ...WB0, ...(cfg.wb || {}) }; if (st.wb_variant) cfg.wb.variant = Math.max(1, Math.min(3, st.wb_variant)); if (st.wb_tools !== null && st.wb_tools !== undefined) cfg.wb.tools = st.wb_tools ? 'tools' : 'none'; if (st.wb_top) cfg.wb.top = st.wb_top; break;
+    case 'shelf': { cfg.sh = { ...deep(SH0), ...(cfg.sh || {}) }; const q = st.shelving || {};
+      if ((q.bays_cm || []).length) cfg.sh.bays = q.bays_cm.map(w => SH_W.includes(w * 10) ? w * 10 : 1800).slice(0, 12);
+      if (q.depth_cm) cfg.sh.depth = q.depth_cm * 10; if (q.height_cm) cfg.sh.height = q.height_cm * 10;
+      if (q.levels) { cfg.sh.levels = Math.max(1, Math.min(12, q.levels)); cfg.sh.lv = null; }
+      if (q.back_to_back !== null && q.back_to_back !== undefined) cfg.sh.b2b = !!q.back_to_back;
+      if (q.corner) { cfg.sh.corner = q.corner === 'none' ? null : q.corner; if (cfg.sh.corner) cfg.sh.cbays = [cfg.sh.bays[0]]; }
+      break; }
     case 'furn': cfg.fu = { ...FU0, ...(cfg.fu || {}) }; set(cfg.fu, 'kind', st.furn_kind); { const w = st.furn_w_cm || st.width_cm; if (w) cfg.fu.w = w * 10; } break;
     case 'tech': if (st.tech_variant) techVariant(cfg.tc, Math.max(1, Math.min(4, st.tech_variant)));
       if (st.door_acc && TC_ACC[st.door_acc]) cfg.tc.doorAcc = [st.door_acc, st.door_acc];
@@ -8739,8 +9000,8 @@ const NEED_RULE = {        // per kind: the product, its capacity, and what is m
   documents:{ type:'mtamb', settings:{}, he:'ארון תריס', perQty:60, litres:450 },
   personal:{ type:'lock', settings:{}, he:'לוקר 6 דלתות', perQty:6 },
   mobile:{ type:'excl', settings:{}, he:'עגלת EXCLUSIVE', perQty:20, litres:80 },
-  boxed_goods:{ type:'mdoor', settings:{ md_color:'7035' }, he:'ארון 4 מדפים (זמני)', perQty:16, litres:380, gap:'מדפים לעומס בינוני / לה פורטצה / HUNI – עוד לא בקטלוג' },
-  long_items:{ type:'mdoor', settings:{ md_color:'7035' }, he:'ארון 4 מדפים (זמני)', perQty:20, litres:380, gap:'מדפים לפריטים ארוכים – עוד לא בקטלוג' },
+  boxed_goods:{ type:'shelf', settings:{}, he:'מידוף לעומס בינוני 180 × 60 × 200 (4 מפלסים)', perQty:24, litres:1400 },      // ~6 cartons a level; ~70% of 1.8 × 0.6 × 4 levels × ~45 cm
+  long_items:{ type:'shelf', settings:{ shelving:{ bays_cm:[240], depth_cm:60, height_cm:200, levels:4, back_to_back:null, corner:null } }, he:'מידוף לעומס בינוני 240 × 60 (4 מפלסים)', perQty:20, litres:1800 },
   heavy:{ type:'mdoor', settings:{ md_color:'7035' }, he:'ארון 4 מדפים (זמני)', perQty:8, litres:380, gap:'מידוף כבד (עד ~800 ק"ג למדף) – אין עדיין פתרון במערכת' },
 };
 function computeNeeds(rows) {
