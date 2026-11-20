@@ -109,8 +109,22 @@
   #studio { position:fixed; left:16px; bottom:calc(var(--fh, 0px) + 16px); z-index:70; width:min(420px, calc(100vw - 32px)); background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.14); padding:14px 16px; font-size:13px; direction:rtl; }
   #studio .stu-h { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
   #studio .stu-bar { height:6px; background:#eef0f2; border-radius:3px; overflow:hidden; } #studio .stu-bar i { display:block; height:100%; width:0; background:#1f6feb; transition:width .4s; }
+  #stuGal { position:fixed; top:calc(var(--hh) + var(--sh, 0px) + 12px); right:12px; bottom:calc(var(--fh, 0px) + 12px); width:min(400px, 40vw); z-index:69; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.12); display:flex; flex-direction:column; direction:rtl; font-size:13px; }
+  #stuGal .gal-h { display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--line); } #stuGal .gal-h b { flex:1; } #stuGal .gal-h .btn { padding:4px 10px; font-size:12px; }
+  #stuGal .gal-list { overflow:auto; padding:6px; } #stuGal .gal-p { display:flex; width:100%; justify-content:space-between; gap:8px; padding:10px; border:0; background:none; border-radius:8px; cursor:pointer; text-align:right; font:inherit; }
+  #stuGal .gal-p:hover { background:#f3f5f7; } #stuGal .gal-p b { color:#667; font-weight:600; } #stuGal .gal-p b.full { color:#137a3a; }
+  #stuGal .gal-grid { overflow:auto; padding:10px; display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:10px; }
+  #stuGal .gal-c { display:flex; flex-direction:column; gap:4px; padding:6px; border:1px solid var(--line); border-radius:10px; background:#fff; cursor:pointer; font:inherit; text-align:right; }
+  #stuGal .gal-c[disabled] { cursor:default; opacity:.7; } #stuGal .gal-c img, #stuGal .gal-c i { display:block; width:100%; aspect-ratio:4/5; object-fit:contain; background:repeating-conic-gradient(#f1f2f4 0 25%, #fff 0 50%) 0 0/16px 16px; border-radius:6px; }
+  #stuGal .gal-l { font-size:11px; line-height:1.35; color:#333; } #stuGal .gal-s { font-size:11px; font-weight:600; color:#889; }
+  #stuGal .st-now { border-color:#1f6feb; } #stuGal .st-now .gal-s { color:#1f6feb; } #stuGal .st-ok { border-color:#2da44e; } #stuGal .st-ok .gal-s { color:#137a3a; } #stuGal .st-redo { border-color:#d1242f; } #stuGal .st-redo .gal-s { color:#b42318; } #stuGal .st-done .gal-s { color:#555; }
+  .gal-rev .gal-rh { display:flex; align-items:center; gap:10px; margin-bottom:10px; } .gal-rev .gal-rh h3 { flex:1; margin:0; font-size:15px; text-align:center; }
+  .gal-rev .gal-imgs { display:flex; gap:12px; justify-content:center; margin-bottom:10px; } .gal-rev figure { margin:0; flex:1; max-width:420px; text-align:center; }
+  .gal-rev figure img { width:100%; aspect-ratio:4/5; object-fit:contain; border-radius:10px; cursor:zoom-in; background:repeating-conic-gradient(#f1f2f4 0 25%, #fff 0 50%) 0 0/18px 18px; }
+  .gal-rev figcaption { font-size:12px; color:#667; margin-top:4px; } .gal-rev .fld { display:block; } .gal-rev textarea { display:block; width:100%; box-sizing:border-box; margin-top:4px; font:inherit; }
   #studio .stu-ctl { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px; } #studio .stu-ctl input { width:60px; } #studio .stu-ctl .btn { padding:4px 10px; font-size:12px; }
   #studio .stu-cur { margin:8px 0; color:#333; min-height:1.3em; } #studio .stu-log { max-height:180px; overflow:auto; color:#555; font-size:12px; line-height:1.6; } #studio .stu-log .bad { color:#b42318; }
+  body.studio-on #dlg, body.studio-on .cfm-wrap { z-index:80 !important; } body.studio-on .lb { z-index:90 !important; }
   body.studio-on #itemBar, body.studio-on #photoBar, body.studio-on #selStrip { visibility:hidden; }
 
   /* the add-products drawer open: the product strip makes room for it instead of hiding under it */
@@ -640,7 +654,7 @@
   .r-base .t small { color:var(--muted); display:block; }
   .r-later { font-weight:400; color:var(--muted); }
   .linkbtn { border:0; background:none; color:#1d4ea8; text-decoration:underline; cursor:pointer; font:inherit; padding:0 4px; }
-  #rApprove.warnbtn { border-color:#e6a39d; color:#a3261d; }
+  #rApprove.warnbtn, .gal-rev .warnbtn { border-color:#e6a39d; color:#a3261d; }
   .r-layout { margin:6px 0 10px; font-size:12.5px; color:var(--muted); }
   .r-layout summary { cursor:pointer; }
   .r-layout pre { white-space:pre-wrap; font:12px/1.5 ui-monospace,Menlo,monospace; background:#f3f5f7; border-radius:8px; padding:8px 10px; margin:6px 0 0; color:var(--ink); max-height:180px; overflow:auto; }
@@ -6730,7 +6744,7 @@ function catVariants() {
           if (i === opts.length) {
             const lbl = [vo ? vo.vars(v) : (f.vars.length > 1 ? v.name : ''), ...labels].filter(Boolean), base = f.name + (lbl.length ? ' – ' + lbl.join(' · ') : '');
             const sets = catHasCells(v.t, c) ? CAT_SETS : [null];
-            for (const st of sets) out.push({ key:base + (st ? ' – ' + st.he : ''), name:base, t:v.t, cfg:deep(c), set:st });
+            for (const st of sets) out.push({ key:base + (st ? ' – ' + st.he : ''), name:base, prod:f.name, t:v.t, cfg:deep(c), set:st });
             return;
           }
           const o = opts[i];
@@ -6758,7 +6772,7 @@ async function catShoot(v, onStep = () => {}) {
   let image = cv.toDataURL('image/webp', 0.95); if (!image.startsWith('data:image/webp')) image = cv.toDataURL('image/png');
   const body = { image, background:'transparent', description:describe(), structure:[structureSummary(), profileNotes()].filter(Boolean).join('\n'),
     size:`${CAT_SIZE.w}x${CAT_SIZE.h}`, lighting:lightingText(),
-    contents:v.set ? v.set.txt : '', backdrop:'', extra:'Catalogue product photo: the product alone, centred, nothing around it.', contentRefs:[], roomRefs:[] };
+    contents:v.set ? v.set.txt : '', backdrop:'', extra:'Catalogue product photo: the product alone, centred, nothing around it.' + (v.fix ? ' CORRECTIONS from the review of the previous attempt (apply them): ' + v.fix : ''), contentRefs:[], roomRefs:[] };
   let r = null;
   for (let a = 1; a <= 3; a++) {                                          // a result whose count does not match the model is rendered again
     onStep(a > 1 ? `מרנדר שוב (${a}/3)` : 'מרנדר');
@@ -6828,6 +6842,61 @@ async function studioZip() {
   } catch (er) { toast('ההורדה נכשלה: ' + er.message); }
   finally { b.disabled = false; b.textContent = 'הורדת ZIP'; }
 }
+// ---- the gallery on the right: products with their progress → the variants of one product, live ----
+const GAL = { prod:null, have:{} };
+const galEsc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+function galState(v) {
+  const x = GAL.have[v.key];
+  if (!x) return STUDIO.curKey === v.key ? 'now' : 'wait';
+  if (STUDIO.curKey === v.key) return 'now';
+  return x.review === 'ok' ? 'ok' : x.review === 'redo' ? 'redo' : 'done';
+}
+const GAL_TXT = { wait:'ממתין', now:'מרנדר עכשיו…', done:'מרונדר – לבדיקה', ok:'✓ טוב', redo:'לתיקון (בתור)' };
+async function studioGal(fetchIndex = true) {
+  let g = document.getElementById('stuGal');
+  if (!g) { g = document.createElement('aside'); g.id = 'stuGal'; document.body.appendChild(g); }
+  if (fetchIndex) GAL.have = await catIndex();
+  const all = catVariants(), prods = [...new Set(all.map(v => v.prod))];
+  if (!GAL.prod) {
+    const list = prods.map(p => { const vs = all.filter(v => v.prod === p), n = vs.filter(v => GAL.have[v.key]).length;
+      return `<button class="gal-p" data-p="${galEsc(p)}"><span>${galEsc(p)}</span><b class="${n === vs.length ? 'full' : ''}">${n === vs.length ? '✓ הושלם' : `${n}/${vs.length}`}</b></button>`; }).join('');
+    g.innerHTML = `<div class="gal-h"><b>גלריה</b></div><div class="gal-list">${list}</div>`;
+    g.querySelectorAll('.gal-p').forEach(b => b.onclick = () => { GAL.prod = b.dataset.p; GAL.touched = true; studioGal(false); });
+    return;
+  }
+  const vs = all.filter(v => v.prod === GAL.prod), n = vs.filter(v => GAL.have[v.key]).length;
+  g.innerHTML = `<div class="gal-h"><button class="btn" id="galBack">→ כל המוצרים</button><b>${galEsc(GAL.prod)}</b><span>${n}/${vs.length}</span></div>
+    <div class="gal-grid">${vs.map(v => { const st = galState(v), x = GAL.have[v.key], lbl = v.key.slice(v.prod.length).replace(/^\s*–\s*/, '') || v.prod;
+      return `<button class="gal-c st-${st}" data-k="${galEsc(v.key)}" ${x ? '' : 'disabled'}>${x ? `<img src="${galEsc(x.url)}" alt="" loading="lazy">` : '<i></i>'}<span class="gal-l">${galEsc(lbl)}</span><span class="gal-s">${GAL_TXT[st]}</span></button>`; }).join('')}</div>`;
+  g.querySelector('#galBack').onclick = () => { GAL.prod = null; GAL.touched = true; studioGal(false); };
+  g.querySelectorAll('.gal-c:not([disabled])').forEach(b => b.onclick = () => galOpen(b.dataset.k));
+}
+// the review pop-up: the photo big, good / do again + notes, download, the one before it (after a redo) and ‹ › within the product
+function galOpen(key) {
+  const x = GAL.have[key]; if (!x) return;
+  const vs = catVariants().filter(v => v.prod === GAL.prod && GAL.have[v.key]), i = vs.findIndex(v => v.key === key);
+  openDialog(`<div class="gal-rev">
+      <div class="gal-rh"><button class="btn" id="grPrev" ${i > 0 ? '' : 'disabled'} aria-label="הקודמת">›</button><h3>${galEsc(key)}</h3><button class="btn" id="grNext" ${i < vs.length - 1 ? '' : 'disabled'} aria-label="הבאה">‹</button></div>
+      <div class="gal-imgs">${x.prev ? `<figure><img src="${galEsc(x.prev)}" alt=""><figcaption>הגרסה הקודמת${x.prevNote ? ' – ' + galEsc(x.prevNote) : ''}</figcaption></figure>` : ''}<figure><img src="${galEsc(x.url)}" alt="" id="grImg"><figcaption>${x.prev ? 'החדשה' : ''}</figcaption></figure></div>
+      <label class="fld">הערות (מה לתקן)<textarea id="grNote" rows="2" placeholder="למשל: התכולה גדולה מדי, חסר תא בטור השמאלי">${galEsc(x.note || '')}</textarea></label>
+      <div class="dlg-actions"><button class="btn primary" id="grOk">טוב ✓</button><button class="btn warnbtn" id="grRedo">לעשות שוב</button><button class="btn" id="grDl">הורדה</button><button class="btn" data-close>סגירה</button></div>
+    </div>`, (card, close) => {
+    card.classList.add('wide');
+    const save = async (review) => {
+      const note = card.querySelector('#grNote').value.trim();
+      if (review === 'redo' && !note && !(await askConfirm('לעשות שוב בלי הערה? כדאי לכתוב מה לתקן.', 'בכל זאת'))) return;
+      try { await api('/api/catalog', { action:'review', key, review, note }); GAL.have[key] = { ...x, review, note }; studioGal(false); }
+      catch (e) { toast('השמירה נכשלה: ' + e.message); return; }
+      if (i < vs.length - 1) galOpen(vs[i + 1].key); else close();       // straight on to the next one
+    };
+    card.querySelector('#grOk').onclick = () => save('ok');
+    card.querySelector('#grRedo').onclick = () => save('redo');
+    card.querySelector('#grDl').onclick = async () => saveFile(await (await fetch(x.url)).blob(), key.replace(/[\\/:*?"<>|]/g, '-').replace(/\s*–\s*/g, '_').replace(/\s*·\s*/g, '_') + '.png');
+    card.querySelector('#grImg').onclick = () => openLightbox(x.url);
+    card.querySelector('#grPrev').onclick = () => galOpen(vs[i - 1].key);
+    card.querySelector('#grNext').onclick = () => galOpen(vs[i + 1].key);
+  });
+}
 function studioShow(total) {
   studioDay(); const rb = document.getElementById('stuRun'); if (rb) rb.textContent = STUDIO.run ? 'עצירה' : 'המשך';
   const made = total - STUDIO.left;
@@ -6842,22 +6911,29 @@ function studioLog(t, bad) {
 async function startStudio() {
   if (STUDIO.run) return;
   if (!isAdmin()) { toast('הסטודיו עובד במצב ניהול בלבד'); return; }
-  STUDIO.on = STUDIO.run = true; STUDIO.stop = false; document.body.classList.add('studio-on'); studioUI();
+  STUDIO.on = STUDIO.run = true; STUDIO.stop = false; document.body.classList.add('studio-on'); studioUI(); await studioGal();
   if (SET_OPEN || ADD_OPEN) closeAddDrawer();
   const all = catVariants(), total = all.length;
   while (STUDIO.run) {
     if (STUDIO.stop) { STUDIO.cur = 'עצור – לחצו "המשך"'; break; }
     if (studioToday() >= studioLimit()) { STUDIO.cur = `הגעתם למגבלה היומית (${studioLimit()}) – אפשר להעלות אותה, או להמשיך מחר`; break; }
     const have = await catIndex();
-    const todo = all.filter(v => !have[v.key] && (STUDIO.fail.get(v.key) || 0) < 3);
+    // first everything that has no photo yet; then the ones you marked "do again" (with your notes); nothing else is ever rendered twice
+    const ok = (v) => (STUDIO.fail.get(v.key) || 0) < 3;
+    let todo = all.filter(v => !have[v.key] && ok(v));
+    if (!todo.length) todo = all.filter(v => have[v.key] && have[v.key].review === 'redo' && ok(v)).map(v => ({ ...v, fix:have[v.key].note || '' }));
     STUDIO.left = all.filter(v => !have[v.key]).length; studioShow(total);
-    if (!todo.length) { STUDIO.cur = STUDIO.left ? `הסתיים – ${STUDIO.left} נכשלו 3 פעמים (ברשימה למטה)` : '✓ כל התמונות קיימות'; studioShow(total); break; }
-    // the ones that failed go last, so one bad variant never blocks the rest
-    todo.sort((a, b) => (STUDIO.fail.get(a.key) || 0) - (STUDIO.fail.get(b.key) || 0));
-    const v = todo[0];
+    if (!todo.length) {                              // all done: wait for new "do again" marks, without spending anything
+      STUDIO.cur = STUDIO.left ? `הסתיים – ${STUDIO.left} נכשלו 3 פעמים (ברשימה למטה)` : '✓ כל התמונות קיימות – ממתין לסימוני "לעשות שוב"'; studioShow(total);
+      await new Promise(r => setTimeout(r, 20000)); continue;
+    }
+    // product by product: all the variants of the first unfinished product, in order; one that failed is tried again at the end of its product
+    const prod = todo[0].prod, mine = todo.filter(v => v.prod === prod);
+    mine.sort((a, b) => (STUDIO.fail.get(a.key) || 0) - (STUDIO.fail.get(b.key) || 0));
+    const v = mine[0]; STUDIO.curKey = v.key; if (!GAL.prod && !GAL.touched) GAL.prod = v.prod; studioGal(false);     // follows the work until you pick for yourself
     try {
       const r = await catShoot(v, (st) => { STUDIO.cur = `${v.key} · ${st}`; studioShow(total); });
-      STUDIO.done++; studioCount(); studioLog('✓ ' + v.key + (r.check && r.check.ok === false ? ' (פער בספירה – לבדוק)' : ''), r.check && r.check.ok === false);
+      STUDIO.done++; studioCount(); STUDIO.curKey = ''; studioGal(); studioLog((v.fix !== undefined ? '↻ ' : '✓ ') + v.key + (r.check && r.check.ok === false ? ' (פער בספירה – לבדוק)' : ''), r.check && r.check.ok === false);
     } catch (e) {
       STUDIO.fail.set(v.key, (STUDIO.fail.get(v.key) || 0) + 1);
       studioLog(`✗ ${v.key}: ${e.message} (ניסיון ${STUDIO.fail.get(v.key)}/3)`, true);
