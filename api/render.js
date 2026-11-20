@@ -19,14 +19,16 @@ const REF_TEXT = {
   tech:'a TECHNICAL DRAWING of this same product: front and side orthographic views, flat colour-coded parts (orange = aluminium profiles, blue = tilt-bin units, tan = base board) with dimensions in mm. Use it ONLY to understand the construction, the proportions and the true thickness and depth of every part – for example the aluminium profiles are only 30 mm thick and the depth comes from the tilt-bin units. NEVER copy its flat colours, lines, arrows, labels, numbers or text into the result',
 };
 
+const HOLES = 'HANGING HOLES: the keyhole-shaped hanging slots and the small round holes in the back wall (and sides) of a tilt-bin housing are EMPTY OPENINGS cut through the grey plastic – you may see the background or the wall through them. Never put anything in them: no rivets, no screws, no bolts, no metal studs, no grommets, no shiny metal circles.';
 // stage 1 (or the single-stage render): photorealistic photo from the 3D view
 function prompt(description, background, lighting, brief, labels, structure, productRef, stage) {
   const n = 1 + labels.length + (productRef ? 1 : 0);
   return [
     `You receive ${n} image${n > 1 ? 's' : ''}. The FIRST image is the 3D viewport render of the product: turn it into a photorealistic photograph of the exact same object.`,
     labels.length ? `Reference images: ${refLines(labels)}. Use each one ONLY for what it is labelled; never copy a product, shelf or storage unit from a reference image.` : '',
-    productRef ? `The LAST image is an official catalogue photo of ONE real tilt-bin unit (a 5-bin unit). Use it ONLY as the construction and material reference for every tilt-bin unit in the result: the light grey housing with flat, solid side walls that run the full depth of the unit, its rounded edges, the clear angled bin fronts with their label window and small screw, and exactly how each clear bin sits INSIDE the housing between the side walls – a bin never sticks out past the side walls and its clear sides are hidden by the housing, only the clear front shows. Do NOT copy its number of bins, its size, angle or position: the units, their sizes and the number of bins come ONLY from the FIRST image.` : '',
+    productRef ? `The LAST image is an official catalogue photo of ONE real tilt-bin unit (a 5-bin unit). Use it ONLY as the construction and material reference for every tilt-bin unit in the result: the light grey housing with flat, solid side walls that run the full depth of the unit, its rounded edges, the clear angled bin fronts with their label window, and exactly how each clear bin sits INSIDE the housing between the side walls – a bin never sticks out past the side walls and its clear sides are hidden by the housing, only the clear front shows. Do NOT copy its number of bins, its size, angle or position: the units, their sizes and the number of bins come ONLY from the FIRST image.` : '',
     `Product: ${description}`,
+    /tilt-bin/i.test(description) ? HOLES : '',
     'Keep EVERYTHING about the object identical: geometry, proportions, number of bins and units, their order, the camera angle, framing and perspective.',
     'Do not add, remove, move or redesign any part of the product. Do not add text or logos.',
     brief
@@ -56,6 +58,7 @@ function editPrompt(description, background, brief, labels, structure) {
     `You receive ${n} image${n > 1 ? 's' : ''}. The FIRST image is an approved photorealistic photograph of the product(s) with EMPTY bins. EDIT this photograph: keep every product, unit, bin, profile, frame, wall and floor, the materials, the lighting, the camera angle, perspective and framing exactly as they are – the result must look like the same photograph with things added.`,
     labels.length ? `Reference images: ${refLines(labels)}. Use each one ONLY for what it is labelled; never copy a product, shelf or storage unit from a reference image.` : '',
     `Product: ${description}`,
+    /tilt-bin/i.test(description) ? HOLES : '',
     brief
       ? 'Client brief (may be in Hebrew). Carry it out by ADDING things – contents inside the existing bins, and anything else the brief names. Never change, move, resize or recolour the products themselves, and keep the room as it is:\n<<' + brief + '>>'
       : 'Do not add anything.',
