@@ -110,7 +110,7 @@
   #studio .stu-h { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
   #studio .stu-bar { height:6px; background:#eef0f2; border-radius:3px; overflow:hidden; } #studio .stu-bar i { display:block; height:100%; width:0; background:#1f6feb; transition:width .4s; }
   #stuGal { position:fixed; top:calc(var(--hh) + var(--sh, 0px) + 12px); right:12px; bottom:calc(var(--fh, 0px) + 12px); width:min(400px, 40vw); z-index:69; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.12); display:flex; flex-direction:column; direction:rtl; font-size:13px; }
-  #stuGal .gal-h { display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--line); } #stuGal .gal-h b { flex:1; } #stuGal .gal-h .btn { padding:4px 10px; font-size:12px; }
+  #stuGal .gal-h { display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--line); } #stuGal .gal-h b { flex:1; } #stuGal .gal-h .btn { padding:4px 10px; font-size:12px; } #stuGal .gal-h { flex-wrap:wrap; } #stuGal .warnbtn { border-color:#e6a39d; color:#a3261d; }
   #stuGal .gal-list { overflow:auto; padding:6px; } #stuGal .gal-p { display:flex; width:100%; justify-content:space-between; gap:8px; padding:10px; border:0; background:none; border-radius:8px; cursor:pointer; text-align:right; font:inherit; }
   #stuGal .gal-p:hover { background:#f3f5f7; } #stuGal .gal-p b { color:#667; font-weight:600; } #stuGal .gal-p b.full { color:#137a3a; }
   #stuGal .gal-grid { overflow:auto; padding:10px; display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:10px; }
@@ -6865,10 +6865,17 @@ async function studioGal(fetchIndex = true) {
     return;
   }
   const vs = all.filter(v => v.prod === GAL.prod), n = vs.filter(v => GAL.have[v.key]).length;
-  g.innerHTML = `<div class="gal-h"><button class="btn" id="galBack">→ כל המוצרים</button><b>${galEsc(GAL.prod)}</b><span>${n}/${vs.length}</span></div>
+  g.innerHTML = `<div class="gal-h"><button class="btn" id="galBack">→ כל המוצרים</button><b>${galEsc(GAL.prod)}</b><span>${n}/${vs.length}</span><button class="btn warnbtn" id="galAll" ${n ? '' : 'disabled'} title="מוחק את כל התמונות של המוצר, והסטודיו מרנדר אותן מחדש">לרנדר הכול מחדש</button></div>
     <div class="gal-grid">${vs.map(v => { const st = galState(v), x = GAL.have[v.key], lbl = v.key.slice(v.prod.length).replace(/^\s*–\s*/, '') || v.prod;
       return `<button class="gal-c st-${st}" data-k="${galEsc(v.key)}" ${x ? '' : 'disabled'}>${x ? `<img src="${galEsc(x.url)}" alt="" loading="lazy">` : '<i></i>'}<span class="gal-l">${galEsc(lbl)}</span><span class="gal-s">${GAL_TXT[st]}</span></button>`; }).join('')}</div>`;
   g.querySelector('#galBack').onclick = () => { GAL.prod = null; GAL.touched = true; studioGal(false); };
+  g.querySelector('#galAll').onclick = async () => {
+    const mine = vs.filter(v => GAL.have[v.key]);
+    if (!(await askConfirm(`למחוק את ${mine.length} התמונות של "${GAL.prod}" ולרנדר את כולן מחדש? (זה עולה קרדיט רינדור)`, 'למחוק ולרנדר מחדש'))) return;
+    for (const v of mine) { try { await api('/api/catalog', { action:'delete', key:v.key }); delete GAL.have[v.key]; } catch (e) { toast('המחיקה נכשלה: ' + e.message); break; } }
+    STUDIO.fail.clear(); studioGal(false); toast('נמחק – הסטודיו ירנדר אותן מחדש');
+    if (!STUDIO.run) startStudio();
+  };
   g.querySelectorAll('.gal-c:not([disabled])').forEach(b => b.onclick = () => galOpen(b.dataset.k));
 }
 // the review pop-up: the photo big, good / do again + notes, download, the one before it (after a redo) and ‹ › within the product
