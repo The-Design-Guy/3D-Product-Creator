@@ -112,7 +112,7 @@
   #stuGal { position:fixed; top:calc(var(--hh) + var(--sh, 0px) + 12px); right:12px; bottom:calc(var(--fh, 0px) + 12px); width:min(400px, 40vw); z-index:69; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.12); display:flex; flex-direction:column; direction:rtl; font-size:13px; }
   #stuGal .gal-h { display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--line); } #stuGal .gal-h b { flex:1; } #stuGal .gal-h .btn { padding:4px 10px; font-size:12px; } #stuGal .gal-h { flex-wrap:wrap; } #stuGal .warnbtn { border-color:#e6a39d; color:#a3261d; }
   #stuGal .gal-list { overflow:auto; padding:6px; } #stuGal .gal-p { display:flex; width:100%; justify-content:space-between; gap:8px; padding:10px; border:0; background:none; border-radius:8px; cursor:pointer; text-align:right; font:inherit; }
-  #stuGal .gal-p:hover { background:#f3f5f7; } #stuGal .gal-p b { color:#667; font-weight:600; } #stuGal .gal-p b.full { color:#137a3a; }
+  #stuGal .gal-p:hover { background:#f3f5f7; } #stuGal .gal-p b { color:#667; font-weight:600; } #stuGal .gal-p b.full { color:#137a3a; } #stuGal .gal-q { font-style:normal; font-size:11px; color:#1f6feb; margin-inline-start:6px; }
   #stuGal .gal-grid { overflow:auto; padding:10px; display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:10px; }
   #stuGal .gal-c { display:flex; flex-direction:column; gap:4px; padding:6px; border:1px solid var(--line); border-radius:10px; background:#fff; cursor:pointer; font:inherit; text-align:right; }
   #stuGal .gal-c[disabled] { cursor:default; opacity:.7; } #stuGal .gal-c img, #stuGal .gal-c i { display:block; width:100%; aspect-ratio:4/5; object-fit:contain; background:repeating-conic-gradient(#f1f2f4 0 25%, #fff 0 50%) 0 0/16px 16px; border-radius:6px; }
@@ -6798,6 +6798,10 @@ async function catFit(src) {
 async function catIndex() { try { const r = await fetch('/api/catalog'); if (!r.ok) throw 0; return (await r.json()).items || {}; } catch { return {}; } }
 // ---- the studio tab (?studio=1): only makes catalogue photos, one after another, skipping what is already made ----
 const STUDIO = { on:false, run:false, done:0, fail:new Map(), left:0, cur:'' };
+// the studio renders only the products you put in its queue (from the gallery), in that order – kept in this browser
+const stuQ = { get() { try { return JSON.parse(localStorage.getItem('rbt-studio-queue') || '[]'); } catch { return []; } },
+  set(a) { try { localStorage.setItem('rbt-studio-queue', JSON.stringify(a)); } catch {} },
+  add(p) { const a = stuQ.get(); if (!a.includes(p)) { a.push(p); stuQ.set(a); } }, del(p) { stuQ.set(stuQ.get().filter(x => x !== p)); } };
 function studioUI() {
   let el = document.getElementById('studio');
   if (!el) {
@@ -6859,21 +6863,33 @@ async function studioGal(fetchIndex = true) {
   const all = catVariants(), prods = [...new Set(all.map(v => v.prod))];
   if (!GAL.prod) {
     const list = prods.map(p => { const vs = all.filter(v => v.prod === p), n = vs.filter(v => GAL.have[v.key]).length;
-      return `<button class="gal-p" data-p="${galEsc(p)}"><span>${galEsc(p)}</span><b class="${n === vs.length ? 'full' : ''}">${n === vs.length ? '✓ הושלם' : `${n}/${vs.length}`}</b></button>`; }).join('');
-    g.innerHTML = `<div class="gal-h"><b>גלריה</b></div><div class="gal-list">${list}</div>`;
+      const q = stuQ.get().includes(p);
+      return `<button class="gal-p" data-p="${galEsc(p)}"><span>${galEsc(p)}${q ? ' <em class="gal-q">בתור</em>' : ''}</span><b class="${n === vs.length ? 'full' : ''}">${n === vs.length ? '✓ הושלם' : `${n}/${vs.length}`}</b></button>`; }).join('');
+    g.innerHTML = `<div class="gal-h"><b>גלריה</b><button class="btn warnbtn" id="galReset" title="מוחק את כל התמונות מהגלריה ומתחיל מאפס">איפוס – להתחיל מאפס</button></div><div class="gal-list">${list}</div>`;
+    g.querySelector('#galReset').onclick = async () => {
+      const keys = Object.keys(GAL.have); if (!keys.length) { toast('הגלריה כבר ריקה'); return; }
+      if (!(await askConfirm(`למחוק את כל ${keys.length} התמונות מהגלריה ולהתחיל מאפס?`, 'למחוק הכול'))) return;
+      STUDIO.pause = true;
+      for (const k of keys) { try { await api('/api/catalog', { action:'delete', key:k }); delete GAL.have[k]; } catch (e) { toast('המחיקה נכשלה: ' + e.message); break; } }
+      stuQ.set([]); STUDIO.fail.clear(); STUDIO.pause = false; studioGal(false); toast('הגלריה אופסה');
+    };
     g.querySelectorAll('.gal-p').forEach(b => b.onclick = () => { GAL.prod = b.dataset.p; GAL.touched = true; studioGal(false); });
     return;
   }
   const vs = all.filter(v => v.prod === GAL.prod), n = vs.filter(v => GAL.have[v.key]).length;
-  g.innerHTML = `<div class="gal-h"><button class="btn" id="galBack">→ כל המוצרים</button><b>${galEsc(GAL.prod)}</b><span>${n}/${vs.length}</span><button class="btn warnbtn" id="galAll" ${n ? '' : 'disabled'} title="מוחק את כל התמונות של המוצר, והסטודיו מרנדר אותן מחדש">לרנדר הכול מחדש</button></div>
+  g.innerHTML = `<div class="gal-h"><button class="btn" id="galBack">→ כל המוצרים</button><b>${galEsc(GAL.prod)}</b><span>${n}/${vs.length}</span>${stuQ.get().includes(GAL.prod) ? '<button class="btn" id="galQ">בתור ✓ (להוציא)</button>' : `<button class="btn primary" id="galQ" ${n === vs.length ? 'disabled' : ''}>לרנדר את המוצר</button>`}<button class="btn warnbtn" id="galAll" ${n ? '' : 'disabled'} title="מוחק את כל התמונות של המוצר, והסטודיו מרנדר אותן מחדש">לרנדר הכול מחדש</button></div>
     <div class="gal-grid">${vs.map(v => { const st = galState(v), x = GAL.have[v.key], lbl = v.key.slice(v.prod.length).replace(/^\s*–\s*/, '') || v.prod;
       return `<button class="gal-c st-${st}" data-k="${galEsc(v.key)}" ${x ? '' : 'disabled'}>${x ? `<img src="${galEsc(x.url)}" alt="" loading="lazy">` : '<i></i>'}<span class="gal-l">${galEsc(lbl)}</span><span class="gal-s">${GAL_TXT[st]}</span></button>`; }).join('')}</div>`;
   g.querySelector('#galBack').onclick = () => { GAL.prod = null; GAL.touched = true; studioGal(false); };
+  g.querySelector('#galQ').onclick = () => {
+    if (stuQ.get().includes(GAL.prod)) stuQ.del(GAL.prod); else { stuQ.add(GAL.prod); toast(`"${GAL.prod}" נכנס לתור`); if (!STUDIO.run) startStudio(); }
+    studioGal(false);
+  };
   g.querySelector('#galAll').onclick = async () => {
     const mine = vs.filter(v => GAL.have[v.key]);
     if (!(await askConfirm(`למחוק את ${mine.length} התמונות של "${GAL.prod}" ולרנדר את כולן מחדש? (זה עולה קרדיט רינדור)`, 'למחוק ולרנדר מחדש'))) return;
     for (const v of mine) { try { await api('/api/catalog', { action:'delete', key:v.key }); delete GAL.have[v.key]; } catch (e) { toast('המחיקה נכשלה: ' + e.message); break; } }
-    STUDIO.fail.clear(); studioGal(false); toast('נמחק – הסטודיו ירנדר אותן מחדש');
+    stuQ.add(GAL.prod); STUDIO.fail.clear(); studioGal(false); toast('נמחק – הסטודיו ירנדר אותן מחדש');
     if (!STUDIO.run) startStudio();
   };
   g.querySelectorAll('.gal-c:not([disabled])').forEach(b => b.onclick = () => galOpen(b.dataset.k));
@@ -6923,16 +6939,19 @@ async function startStudio() {
   const all = catVariants(), total = all.length;
   while (STUDIO.run) {
     if (STUDIO.stop) { STUDIO.cur = 'עצור – לחצו "המשך"'; break; }
+    if (STUDIO.pause) { await new Promise(r => setTimeout(r, 1000)); continue; }
     if (studioToday() >= studioLimit()) { STUDIO.cur = `הגעתם למגבלה היומית (${studioLimit()}) – אפשר להעלות אותה, או להמשיך מחר`; break; }
     const have = await catIndex();
     // first everything that has no photo yet; then the ones you marked "do again" (with your notes); nothing else is ever rendered twice
     const ok = (v) => (STUDIO.fail.get(v.key) || 0) < 3;
-    let todo = all.filter(v => !have[v.key] && ok(v));
+    const Q = stuQ.get();
+    let todo = all.filter(v => Q.includes(v.prod) && !have[v.key] && ok(v)).sort((a, b) => Q.indexOf(a.prod) - Q.indexOf(b.prod));
     if (!todo.length) todo = all.filter(v => have[v.key] && have[v.key].review === 'redo' && ok(v)).map(v => ({ ...v, fix:have[v.key].note || '' }));
     STUDIO.left = all.filter(v => !have[v.key]).length; studioShow(total);
     if (!todo.length) {                              // all done: wait for new "do again" marks, without spending anything
-      STUDIO.cur = STUDIO.left ? `הסתיים – ${STUDIO.left} נכשלו 3 פעמים (ברשימה למטה)` : '✓ כל התמונות קיימות – ממתין לסימוני "לעשות שוב"'; studioShow(total);
-      await new Promise(r => setTimeout(r, 20000)); continue;
+      Q.forEach(p => { if (all.filter(v => v.prod === p).every(v => have[v.key])) stuQ.del(p); });     // finished products leave the queue
+      STUDIO.cur = 'ממתין – בחרו מוצר בגלריה ולחצו "לרנדר את המוצר"'; studioShow(total); studioGal(false);
+      await new Promise(r => setTimeout(r, 3000)); continue;
     }
     // product by product: all the variants of the first unfinished product, in order; one that failed is tried again at the end of its product
     const prod = todo[0].prod, mine = todo.filter(v => v.prod === prod);
