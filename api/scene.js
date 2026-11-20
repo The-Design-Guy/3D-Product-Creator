@@ -29,7 +29,7 @@ Product types (type key – Hebrew name – footprint width x depth in cm with r
 - lock – "לוקר 6 דלתות" – staff locker 90 x 45 x 195, light grey body, 6 blue lockable doors (3 columns x 2 rows), shelf + hanging rod in each compartment. Doors: op doors with door = 1–6 (1 = top-left, 2 = top-middle, 3 = top-right, 4 = bottom-left, 5 = bottom-middle, 6 = bottom-right) or door null = all. Names: "לוקר", "לוקרים", "ארון לוקרים", "ארון הלבשה", "ארון עובדים".
 - wb – "שולחן עבודה מאסיבי" – heavy-duty workbench 150 x 75, green anti-static top at 84 cm; wb_variant 1 = hanging 2-drawer unit, 2 = 2 drawers + blue perforated back with 2 shelves (170 high), 3 = 4-drawer floor cabinet + the back; wb_tools true = tools hanging on the back; wb_top green (anti-static, default) or white. Names: "שולחן עבודה", "שולחן עבודה טכני", "שולחן מאסיבי", "שולחן אנטי סטטי". (furn bench is only a generic prop.)
 - shelf – "מידוף לעומס בינוני" / "מדפים" / "מדף מחסן" (MEDIKUP medium-duty shelving): blue perforated uprights, orange beams, galvanised decks; bays 120 / 150 / 180 / 210 / 240 cm clear (a run of bays shares frames), depth 50 / 60 / 80, height 200 / 250, 4 levels by default; back_to_back = double-depth block. THE product for cartons, boxed goods, long items and general warehouse storage.
-- furn – generic furniture / props (not catalogue products): furn_kind station ("עמדת מחשב": desk + pedestal + monitor + chair, 160 x 128), desk ("שולחן"), chair ("כיסא"), bench ("שולחן עבודה", industrial workbench with a pegboard), plant ("עציץ", "צמח"); furn_w_cm = width (desk / station 120 or 160, bench 150 or 200).
+- furn – generic furniture / props (not catalogue products): furn_kind station ("עמדת מחשב": desk + pedestal + monitor + chair, 160 x 128), desk ("שולחן"), chair ("כיסא"), plant ("עציץ", "צמח"); furn_w_cm = width (desk 120 / 150 / 160 / 200, station 120 or 160). "שולחן עבודה" / workbench = wb (the real product), never furn.
 comp = how many tilt-bin units of each model, e.g. [{model:4,count:9}] (model = number of bins in the unit: 2,3,4,5,6,9; bigger ones at the bottom automatically). For "add one more level of #5" give the FULL new comp.
 The context room.obstacles lists columns, pipes and gypsum walls as boxes (cm from the left / back wall, from_floor_cm..to_cm). Never place or move a product into one (the app also refuses it); place products next to them instead. Obstacles are set by the user in the scene settings, not by ops.
 
@@ -93,7 +93,7 @@ export default async function handler(req, res) {
       door_acc:nul({ type:'string', enum:['tools', 'bins', 'both', 'none'], description:'tech (variants 3 / 4): what hangs inside the doors – tools = hand tools (screwdrivers, spanners), bins = ארקליות 4, both (default), none' }),
       door_bins:nul({ type:'object', additionalProperties:false, required:['left', 'right'], description:'tech (variants 3 / 4): ארקלית 4 hanging on each door', properties:{ left:{ type:'integer' }, right:{ type:'integer' } } }),
       align:nul({ type:'string', enum:['back', 'front'] }),
-      furn_kind:nul({ type:'string', enum:['station', 'desk', 'chair', 'bench', 'plant'] }),
+      furn_kind:nul({ type:'string', enum:['station', 'desk', 'chair', 'plant'] }),
       furn_w_cm:nul({ type:'integer', enum:[120, 150, 160, 200] }),
       wb_variant:nul({ type:'integer', enum:[1, 2, 3] }),
       wb_tools:nul({ type:'boolean' }),

@@ -30,13 +30,13 @@ PRODUCTS (type – Hebrew name – footprint W x D cm, height – what it is goo
 - lock – "לוקר 6 דלתות" – staff locker 90 x 45 x 195, 6 lockable doors – changing rooms, staff areas of plants / clinics / warehouses (wall_storage along a wall, usually 2–6 side by side).
 - arc – "ארקליות" – single open pick bins (not a floor product – leave them for cabinets).
 - unit – a single tilt-bin unit (not a floor product).
-- furn – generic furniture / props: furn_kind station (computer workstation: desk + pedestal + monitor + office chair, desk 160 or 120 wide, 128 deep with the chair), desk, chair, bench (industrial workbench with a pegboard, 150 / 200 wide, 75 deep), plant.
+- furn – generic furniture / props: furn_kind station (computer workstation: desk + pedestal + monitor + office chair, desk 160 or 120 wide, 128 deep with the chair), desk (120 / 150 / 160 / 200 wide), chair (a normal office chair), plant. For a workbench use wb (the real product), never furn.
 
 TYPICAL SPACES (pick products that fit; the user's words always win):
 - electronics / assembly hall: workstations (furn station) in rows divided by part (cols 3 or 4) with comp of small bins (#4, #5, #6, #9), excl carts next to the stations, tech cabinets (variant 4 or 2) and mdoor / mtamb with pick bins along a wall, a few wb workbenches (variant 2 or 3), lockers for the staff.
 - spare-parts store / warehouse: tena / smart rows in the middle (back to back or single rows with aisles), stands and wall racks on the walls, a desk station near the door.
 - warehouse / stock room for cartons and boxed goods: shelf runs along the walls (wall_storage) and back-to-back shelf rows in the middle (island) with aisles, a desk station near the door; small parts in tilt bins next to them.
-- workshop / maintenance: benches along walls, tech cabinets, wall racks, a quad.
+- workshop / maintenance: wb workbenches along walls, tech cabinets, wall racks, a quad.
 - clinic / pharmacy / lab: tamb cabinets, wall racks, mdoor, a desk station, quad or excl carts.
 - shop / showroom: quad towers and stands in the middle, wall racks on the walls, a plant or two.
 
@@ -66,8 +66,8 @@ export function planSchema() {
       bin_layout:nul({ type:'string', enum:['mixed', 'full'], description:'mtamb / mdoor with pick bins on the shelves' }),
       tech_variant:nul({ type:'integer', enum:[1, 2, 3, 4] }),
       door_acc:nul({ type:'string', enum:['tools', 'bins', 'both', 'none'] }),
-      furn_kind:nul({ type:'string', enum:['station', 'desk', 'chair', 'bench', 'plant'] }),
-      width_cm:nul({ type:'integer', enum:[120, 150, 160, 200], description:'furn: desk / station 120 or 160, bench 150 or 200' }),
+      furn_kind:nul({ type:'string', enum:['station', 'desk', 'chair', 'plant'] }),
+      width_cm:nul({ type:'integer', enum:[120, 150, 160, 200], description:'furn: desk 120 / 150 / 160 / 200, station 120 or 160' }),
       wb_variant:nul({ type:'integer', enum:[1, 2, 3] }),
       wb_tools:nul({ type:'boolean' }),
       wb_top:nul({ type:'string', enum:['green', 'white'], description:'wb: the work top – green anti-static (default) or white' }),
@@ -85,7 +85,7 @@ export function planSchema() {
       id:{ type:'string', description:'short stable id, e.g. "z1"; keep the ids of zones that already exist' },
       name:{ type:'string', description:'Hebrew name of the zone, e.g. "עמדות הרכבה"' },
       kind:{ type:'string', enum:['workstations', 'workstation_island', 'wall_storage', 'island', 'benches', 'carts', 'decor'],
-        description:'workstations: a row of desks along a wall with partitions between them · workstation_island: two rows of desks back to back in the middle, partitions across · wall_storage: cabinets / racks / gondolas side by side along a wall · island: products in rows in the free middle of the room with aisles · benches: workbenches along a wall (product wb, or furn bench) · carts: mobile carts / stands next to another zone (near) · decor: plants in free corners' },
+        description:'workstations: a row of desks along a wall with partitions between them · workstation_island: two rows of desks back to back in the middle, partitions across · wall_storage: cabinets / racks / gondolas side by side along a wall · island: products in rows in the free middle of the room with aisles · benches: massive workbenches (wb) along a wall · carts: mobile carts / stands next to another zone (near) · decor: plants in free corners' },
       wall:nul({ type:'string', enum:['back', 'left', 'right', 'front', 'gypsum'], description:'workstations / wall_storage / benches: the wall (as seen from the front of the room: back = facing the viewer); gypsum = against the gypsum wall(s) in room.obstacles (both faces); null = the app picks (gypsum walls first)' }),
       align:nul({ type:'string', enum:['start', 'center', 'end'], description:'where along the wall: start = the left end (back / front wall) or the back end (side walls); null = center' }),
       offset_cm:nul({ type:'number', description:'where the run starts along its wall, in cm from the start end (left end of back / front, back end of the side walls) – for recreating a real space exactly; null = by align' }),
