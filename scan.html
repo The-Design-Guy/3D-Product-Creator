@@ -49,6 +49,10 @@
   .side button.go.off { background:#fff3; opacity:.75; }
   .side button.go.ready { animation:pulse 1.2s ease-in-out infinite; }
   @keyframes pulse { 50% { box-shadow:0 0 0 8px #0088ff44; } }
+  .tip { display:inline-block; margin-top:8px; font-size:13px; font-weight:600; background:#f5b400; color:#111; border-radius:999px; padding:5px 12px; }
+  .kn select, .kn input { font:inherit; font-size:16px; border:1px solid #e3e6e8; border-radius:10px; padding:11px; background:#fff; color:#111; width:100%; }
+  .kn .row2 { display:grid; grid-template-columns:1.5fr 1fr; gap:8px; margin:0 0 14px; text-align:start; }
+  .kn .skip { display:block; width:100%; border:0; background:none; color:#6b7378; font:inherit; font-size:15px; padding:12px; margin-top:4px; }
   #confetti { position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:9; }
   .row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .shutter { width:74px; height:74px; border-radius:50%; border:5px solid #fff; background:#fff3; flex:none; cursor:pointer; }
@@ -95,6 +99,7 @@
     <li><b>1</b><span>עמדו בערך באמצע החדר, מול הקיר שיהיה <strong>הקיר האחורי</strong> של הסצנה.</span></li>
     <li><b>2</b><span>החזיקו את הטלפון זקוף, בגובה החזה, והסתובבו לאט <strong>ימינה</strong> במקום.</span></li>
     <li><b>3</b><span>הטלפון מצלם לבד כל 45°. אפשר גם ללחוץ על כפתור הצילום.</span></li>
+    <li><b>4</b><span>למדידה מדויקת: <strong>הדליקו את כל האורות</strong>, ודאגו שבכל תמונה רואים את <strong>הפינה בין הקיר לרצפה</strong> – ודלת, אם יש.</span></li>
   </ol>
   <button class="btn" id="startBtn">התחלה</button>
   <div class="err" id="startErr"></div>
@@ -104,7 +109,7 @@
 <section class="screen" id="cam" hidden>
   <video id="vid" playsinline muted autoplay></video>
   <div class="flash" id="flash"></div>
-  <div class="top"><div class="msg" id="camMsg">כוונו לקיר האחורי</div><div class="sub" id="camSub">תמונה 1 מתוך 8</div></div>
+  <div class="top"><div class="msg" id="camMsg">כוונו לקיר האחורי</div><div class="sub" id="camSub">תמונה 1 מתוך 8</div><div class="tip" id="camTip" hidden></div></div>
   <div class="ring" id="ring" hidden><svg viewBox="0 0 150 150">
     <circle cx="75" cy="75" r="62" fill="none" stroke="#ffffff55" stroke-width="3"/>
     <g id="ticks"></g>
@@ -153,6 +158,14 @@
   <canvas id="confetti"></canvas>
 </section>
 
+<div class="xp kn" id="knBox" hidden><div class="xc">
+  <h2>יודעים מידה אחת של החדר?</h2>
+  <p>מהתמונות לבד אפשר רק להעריך. מידה אחת אמיתית – והשאר יחושב לפיה.</p>
+  <div class="row2"><select id="knWhat"><option value="back">אורך הקיר האחורי</option><option value="side">אורך הקיר בצד</option><option value="height">גובה התקרה</option></select>
+  <input id="knM" type="number" inputmode="decimal" step="0.1" min="1" max="200" placeholder="מטרים"></div>
+  <button class="btn" id="knGo">המשך לניתוח</button>
+  <button class="skip" id="knSkip">לא יודעים – להעריך מהתמונות</button>
+</div></div>
 <div class="xp" id="xpBox" hidden><div class="xc">
   <h2>הקישור פג תוקף</h2>
   <p id="xpTxt">הקישור תקף לשעה. אפשר לבקש הארכה – ומה שכבר צילמתם נשמר.</p>
@@ -271,6 +284,9 @@ async function capture() {
   $('flash').classList.add('on'); setTimeout(() => $('flash').classList.remove('on'), 60);
   navigator.vibrate && navigator.vibrate(40);
   if (k === 0 && heading !== null) h0 = heading;
+  { const t = document.createElement('canvas'); t.width = 32; t.height = 24; const x = t.getContext('2d'); x.drawImage(c, 0, 0, 32, 24);
+    const d = x.getImageData(0, 0, 32, 24).data; let L = 0; for (let i = 0; i < d.length; i += 4) L += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+    L /= d.length / 4; $('camTip').hidden = L > 60; $('camTip').textContent = 'חשוך כאן – הדליקו אור, כדי שהמידות ייצאו מדויקות'; }
   const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.82));
   shots[k] = { url:URL.createObjectURL(blob), up:'busy', blob };
   next = shots.findIndex(x => !x); if (next < 0) next = N;
@@ -312,14 +328,29 @@ $('nextBtn').onclick = async () => {
   }
   if (cnt() < 4) { show('cam'); requestAnimationFrame(loop); alert(`צריך לפחות 4 תמונות שעלו בהצלחה – כרגע עלו ${cnt()}.` + (lastErr ? `\nהשגיאה: ${lastErr}` : '')); return; }
   if (cnt() < N && !confirm(`עלו ${cnt()} מתוך ${N} תמונות. לשלוח בכל זאת?`)) return;
+  const known = await askKnown();
+  if (known === undefined) return;
   show('sWait'); $('waitTxt').textContent = 'מנתח את החדר… (עד דקה)';
   try {
-    const r = await api('analyze'); result = r.result;
+    const r = await api('analyze', known ? { known } : {}); result = r.result;
     if (!result.ok) { alert(result.problem || 'לא הצלחנו להבין את החדר מהתמונות. נסו לצלם שוב באור טוב יותר.'); show('cam'); requestAnimationFrame(loop); return; }
     stream && stream.getTracks().forEach(t => t.stop());
     review();
   } catch (e) { alert(e.message); show('cam'); requestAnimationFrame(loop); }
 };
+// one measurement the person knows (optional) → the AI scales the room by it
+function askKnown() {
+  return new Promise((res) => {
+    $('knBox').hidden = false; $('knM').value = '';
+    const done = (v) => { $('knBox').hidden = true; res(v); };
+    $('knSkip').onclick = () => done(null);
+    $('knGo').onclick = () => { const m = parseFloat(String($('knM').value).replace(',', '.'));
+      if (!$('knM').value) return done(null);
+      if (!(m > 1 && m < 200)) { $('knM').focus(); return; }
+      done({ what:$('knWhat').value, m }); };
+    $('knBox').onclick = (e) => { if (e.target === $('knBox')) done(undefined); };
+  });
+}
 function review() {
   const r = result;
   $('rvStyle').textContent = [r.style, r.floor, r.wall_color].filter(Boolean).join(' · ');

@@ -4,7 +4,7 @@
 //   POST ?a=new                      (admin)  → { id }                        a new session, 30 minutes
 //   GET  ?a=status&id=…              (admin)  → the session                   the computer polls this
 //   POST ?a=photo&id=…&n=0..7        (phone)  raw JPEG/WebP body → { url }    one photo
-//   POST ?a=analyze&id=…             (phone)  → { result }                    the AI reads the room
+//   POST ?a=analyze&id=…             (phone)  JSON { known:{ what:'back'|'side'|'height', m } }? → { result }   the AI reads the room
 //   POST ?a=confirm&id=…             (phone)  JSON { result } → { ok }        the (corrected) room goes to the computer
 //   POST ?a=cancel&id=…              (either)
 //   POST ?a=new&share=1              (admin)  → { id, exp }                   a link to send to someone else: works for an hour
@@ -131,7 +131,12 @@ export default async function handler(req, res) {
       if (urls.length < 4) return res.status(400).json({ error:'צריך לפחות 4 תמונות' });
       if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error:'OPENAI_API_KEY is not set' });
       s.status = 'analyzing'; await save(id, s);
-      const content = [{ type:'text', text:`The photos, in order (${s.photos.map((u, k) => u ? 'photo ' + (k + 1) : '').filter(Boolean).join(', ')}):` }];
+      // one measurement the person knows anchors the scale (photos alone give no real size)
+      const kb = await jsonBody(req), KN = { back:'the BACK wall (photo 1) is', side:'each SIDE wall (photos 3 and 7) is', height:'the ceiling height is' };
+      const known = kb && KN[kb.known?.what] && +kb.known.m > 0.5 && +kb.known.m < 200 ? { what:kb.known.what, m:+kb.known.m } : null;
+      const content = [];
+      if (known) content.push({ type:'text', text:`MEASURED BY THE PERSON (exact – use it as the scale for everything else, and keep the proportions you see): ${KN[known.what]} ${known.m} m.` });
+      content.push({ type:'text', text:`The photos, in order (${s.photos.map((u, k) => u ? 'photo ' + (k + 1) : '').filter(Boolean).join(', ')}):` });
       s.photos.forEach((u, k) => { if (u) content.push({ type:'text', text:`Photo ${k + 1}:` }, { type:'image_url', image_url:{ url:u, detail:'high' } }); });
       const r = await fetch('https://api.openai.com/v1/chat/completions', {
         method:'POST', headers:{ Authorization:`Bearer ${process.env.OPENAI_API_KEY}`, 'content-type':'application/json' },
@@ -141,6 +146,10 @@ export default async function handler(req, res) {
       const j = await r.json();
       if (!r.ok) { s.status = 'capturing'; s.error = j.error?.message || `OpenAI ${r.status}`; await save(id, s); return res.status(502).json({ error:s.error }); }
       const out = JSON.parse(j.choices?.[0]?.message?.content || '{}');
+      if (known && out.ok) {                                              // the measured one is exact
+        if (known.what === 'back') out.width_m = known.m; else if (known.what === 'side') out.depth_m = known.m; else out.height_m = known.m;
+        out.known = known;
+      }
       s.result = out; s.status = out.ok ? 'review' : 'capturing'; s.error = out.ok ? '' : out.problem;
       await save(id, s);
       return res.status(200).json({ result:out });

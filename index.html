@@ -987,6 +987,12 @@
   .wallsq [data-v=front] { left:26px; right:26px; bottom:0; height:24px; } .wallsq [data-v=front]::after { left:0; right:0; top:0; height:5px; }
   .wallsq [data-v=left]  { left:0; top:24px; bottom:24px; width:26px; writing-mode:vertical-rl; transform:rotate(180deg); } .wallsq [data-v=left]::after { top:0; bottom:0; left:0; width:5px; }
   .wallsq [data-v=right] { right:0; top:24px; bottom:24px; width:26px; writing-mode:vertical-rl; } .wallsq [data-v=right]::after { top:0; bottom:0; left:0; width:5px; }
+  .wtagbtn { display:block; margin:10px auto 0; padding:6px 14px; font-size:13px; } .wtagbtn.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .wallsq.tags [data-v=back]::after { background:#0088FF !important; } .wallsq.tags [data-v=back] { color:#0088FF; }
+  .wallsq.tags [data-v=right]::after { background:#ff8a00 !important; } .wallsq.tags [data-v=right] { color:#ff8a00; }
+  .wallsq.tags [data-v=front]::after { background:#1aa66b !important; } .wallsq.tags [data-v=front] { color:#1aa66b; }
+  .wallsq.tags [data-v=left]::after { background:#8a5cff !important; } .wallsq.tags [data-v=left] { color:#8a5cff; }
+  .wallsq.tags button:not(.on) { opacity:.4; }
   .wsq-floor { position:absolute; left:31px; right:31px; top:29px; bottom:29px; border:0; background:#f6f8f9; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--muted); }
 </style>
 <!-- design grid overlay (SHOWGRID) – off by default, never shown unless turned on -->
@@ -1024,7 +1030,8 @@
         <div><div class="lbl">חדר (מטרים)</div>
           <div class="pair tight"><input class="num" type="number" id="scnW" min="2" max="100" step="0.5" aria-label="רוחב החדר במטרים"><input class="num" type="number" id="scnD" min="2" max="100" step="0.5" aria-label="עומק החדר במטרים"></div></div>
         <div><div class="lbl">קירות</div>
-          <div class="wallsq" id="scnWall" role="group" aria-label="קירות"><button data-v="back" title="קיר אחורי">אחורי</button><button data-v="left" title="קיר שמאלי">שמאל</button><button data-v="right" title="קיר ימני">ימין</button><button data-v="front" title="קיר קדמי">קדמי</button><span class="wsq-floor">רצפה</span></div></div>
+          <div class="wallsq" id="scnWall" role="group" aria-label="קירות"><button data-v="back" title="קיר אחורי">אחורי</button><button data-v="left" title="קיר שמאלי">שמאל</button><button data-v="right" title="קיר ימני">ימין</button><button data-v="front" title="קיר קדמי">קדמי</button><span class="wsq-floor">רצפה</span></div>
+          <button class="btn wtagbtn" id="scnWallTags" aria-pressed="false">🎨 שמות הקירות</button></div>
       </div>
       <div class="pair" style="margin-top:10px">
         <button class="btn primary" id="scnAdd">+ הוסף מוצר</button>
@@ -2436,13 +2443,13 @@ function setSpread(on) {
 // ---------- selected wing: outline + name tag in 3D ----------
 const selMat = new THREE.LineBasicMaterial({ color:0x1f6feb, depthTest:false, transparent:true, opacity:0.95 });
 let selHelper = null;
-function makeTag(text) {
+function makeTag(text, color = '#1f6feb') {
   // width follows the text, so long product names fit
   const m = document.createElement('canvas').getContext('2d'); m.font = '700 56px Heebo, Arial, sans-serif';
   const w = Math.max(512, Math.ceil(m.measureText(text).width) + 96);
   const c = document.createElement('canvas'); c.width = w; c.height = 128;
   const x = c.getContext('2d');
-  x.fillStyle = '#1f6feb'; x.beginPath(); x.roundRect(8, 16, w - 16, 96, 48); x.fill();
+  x.fillStyle = color; x.beginPath(); x.roundRect(8, 16, w - 16, 96, 48); x.fill();
   x.fillStyle = '#fff'; x.font = '700 56px Heebo, Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = LANG === 'en' ? 'ltr' : 'rtl';
   x.fillText(text, w/2, 66);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
@@ -2630,7 +2637,7 @@ function clampWings(moved) {
 // Thin frame (30 mm wide, 8 mm deep side rails with a slot, top/bottom bands with rounded inner corners).
 const rackMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#eceeee'), roughness:0.42, metalness:0.15, clearcoat:0.2 });
 const slotMat = new THREE.MeshStandardMaterial({ color:0x9aa1a7, roughness:0.6, metalness:0.3 });
-const wallMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#f2f0ec'), roughness:0.95 });
+const wallMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#f2f0ec'), roughness:0.95, side:THREE.DoubleSide });   // seen from outside too (only the wall facing the camera hides)
 const WALL = { W:600, T:8, RAIL:30, BAND:55, START:5 };
 const wall = { height:1200, showWall:false, elevBy:{ 600:1000, 1200:500, 2000:0 } };   // elevBy: bottom of the rack above the floor (mm), per height
 const wallElev = () => (wall.showWall || SCENE_BUILD) ? (wall.elevBy[wall.height] || 0) : 0;
@@ -3213,7 +3220,15 @@ function buildRoomWall(world, key, L, pos, ry) {
     }
   }
   panel(cur, L/2, 0, H);
+  if (WALL_TAGS) {                                                    // "שמות הקירות": a coloured veil + the wall's name
+    const c = WALL_COL[key], v = new THREE.Mesh(new THREE.PlaneGeometry(L, H), new THREE.MeshBasicMaterial({ color:c, transparent:true, opacity:0.16, depthWrite:false, side:THREE.DoubleSide }));
+    v.position.set(0, H/2, 0.012); v.userData.wallTag = true; g.add(v);
+    const v2 = v.clone(); v2.position.z = -0.012; g.add(v2);                 // the outside face too
+    const t = makeTag(tr('קיר ' + WALL_HE[key]), c); t.scale.multiplyScalar(2.6); t.position.set(0, H * 0.62, 0.06); t.userData.wallTag = true; g.add(t);
+  }
 }
+let WALL_TAGS = false;
+const WALL_COL = { back:'#0088FF', right:'#ff8a00', front:'#1aa66b', left:'#8a5cff' };
 // ---------- build ----------
 const ITEM_GROUPS = new Map();
 function buildScene() {
@@ -3302,6 +3317,7 @@ function renderScene() {
   const R = SCN.room;
   $('scnW').value = R.W/1000; $('scnD').value = R.D/1000;
   ['back', 'left', 'right', 'front'].forEach(k => $('scnWall').querySelector(`[data-v="${k}"]`).classList.toggle('on', !!R[k]));
+  $('scnWall').classList.toggle('tags', WALL_TAGS); $('scnWallTags').classList.toggle('on', WALL_TAGS); $('scnWallTags').setAttribute('aria-pressed', WALL_TAGS);
   const box = $('scnList'); box.innerHTML = '';
   if (!SCN.items.length) box.innerHTML = '<div class="use">הסצנה ריקה. הוסף מוצר או בחר תבנית.</div>';
   SCN.items.forEach(it => {
@@ -3433,6 +3449,7 @@ function initScenePanel() {
   document.querySelectorAll('[data-draft]').forEach(b => b.onclick = () => draftDone(b.dataset.draft === 'ok'));
   $('scnW').onchange = (e) => { SCN.room.W = Math.max(2000, Math.min(100000, Math.round(+e.target.value * 1000) || 6000)); SCN.items.forEach(snapItem); rebuild(); };
   $('scnD').onchange = (e) => { SCN.room.D = Math.max(2000, Math.min(100000, Math.round(+e.target.value * 1000) || 5000)); SCN.items.forEach(snapItem); rebuild(); };
+  $('scnWallTags').onclick = () => { WALL_TAGS = !WALL_TAGS; rebuild(true); };
   $('scnWall').querySelectorAll('button').forEach(b => b.onclick = () => { SCN.room[b.dataset.v] = !SCN.room[b.dataset.v]; SCN.items.forEach(snapItem); rebuild(true); });
   $('scnRot').querySelectorAll('button').forEach(b => b.onclick = () => moveSel(it => { it.rot = (it.rot + +b.dataset.r + 360) % 360; }));
   $('scnX').onchange = (e) => moveSel(it => { it.x = +e.target.value/100 - SCN.room.W/2000; });
@@ -5712,7 +5729,7 @@ function captureCanvas(maxSide = 2400) {
   const oldPr = renderer.getPixelRatio();
   // editing helpers (selection outline, name tags, pink guides) must never reach the image sent to the AI
   const helpers = [];
-  scene.traverse(o => { if (o.visible && (o.isSprite || ((o.isLine || o.isLineSegments) && (o.material === selMat || o.material === guideMat)))) { helpers.push(o); o.visible = false; } });
+  scene.traverse(o => { if (o.visible && (o.isSprite || o.userData.wallTag || ((o.isLine || o.isLineSegments) && (o.material === selMat || o.material === guideMat)))) { helpers.push(o); o.visible = false; } });
   renderer.setPixelRatio(pr); renderer.setSize(w, h, false);
   renderer.render(scene, camera);
   helpers.forEach(o => o.visible = true);
