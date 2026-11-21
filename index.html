@@ -988,15 +988,15 @@
   .wallsq [data-v=left]  { left:0; top:24px; bottom:24px; width:26px; writing-mode:vertical-rl; transform:rotate(180deg); } .wallsq [data-v=left]::after { top:0; bottom:0; left:0; width:5px; }
   .wallsq [data-v=right] { right:0; top:24px; bottom:24px; width:26px; writing-mode:vertical-rl; } .wallsq [data-v=right]::after { top:0; bottom:0; left:0; width:5px; }
   /* the room elements wheel: doors, windows and obstacles on a drum */
-  .elwheel { position:relative; height:232px; margin:2px 0 10px; perspective:700px; overflow:hidden; border-radius:14px; background:linear-gradient(#f4f6f8, #fff 30%, #fff 70%, #f4f6f8); border:1px solid var(--line); outline:none; touch-action:none; user-select:none; cursor:grab; }
+  .elwheel { position:relative; height:214px; margin:2px 0 10px; perspective:700px; overflow:hidden; border-radius:14px; background:linear-gradient(#f4f6f8, #fff 30%, #fff 70%, #f4f6f8); border:1px solid var(--line); outline:none; touch-action:none; user-select:none; cursor:grab; }
   .elwheel:focus-visible { box-shadow:0 0 0 2px var(--acc); }
-  .elw-band { position:absolute; left:10px; right:10px; top:50%; height:48px; margin-top:-24px; border-radius:12px; background:#fff; border:1.5px solid var(--ink); box-shadow:0 4px 14px rgba(0,0,0,.08); pointer-events:none; }
+  .elw-band { position:absolute; left:10px; right:10px; top:50%; height:64px; margin-top:-32px; border-radius:12px; background:#fff; border:1.5px solid var(--ink); box-shadow:0 4px 14px rgba(0,0,0,.08); pointer-events:none; }
   .elw-track { position:absolute; inset:0; transform-style:preserve-3d; }
-  .elw-it { position:absolute; left:18px; right:18px; top:50%; height:44px; margin-top:-22px; display:flex; align-items:center; gap:12px; padding:0 10px; font-size:14px; color:#4a535b; backface-visibility:hidden; cursor:pointer; }
-  .elw-it svg { flex:none; width:28px; height:28px; color:#6b747c; }
+  .elw-it { position:absolute; left:18px; right:18px; top:50%; height:60px; margin-top:-30px; display:flex; align-items:center; gap:14px; padding:0 12px; font-size:15px; color:#4a535b; backface-visibility:hidden; cursor:pointer; }
+  .elw-it svg { flex:none; width:36px; height:36px; color:#6b747c; }
   .elw-it span { flex:1; } .elw-it small { font-size:11px; color:var(--muted); }
   .elw-it em { font-style:normal; font-size:12px; font-weight:700; color:#fff; background:var(--acc); border-radius:999px; padding:4px 10px; opacity:0; transition:opacity .15s; }
-  .elw-it.c { color:var(--ink); font-weight:800; font-size:15px; } .elw-it.c svg { color:#0088FF; } .elw-it.c em { opacity:1; }
+  .elw-it.c { color:var(--ink); font-weight:800; font-size:17px; } .elw-it.c svg { color:#0088FF; } .elw-it.c em { opacity:1; }
   .elw-hint { position:absolute; bottom:0; left:0; right:0; padding:10px 0 5px; text-align:center; font-size:11px; color:var(--muted); pointer-events:none; background:linear-gradient(rgba(244,246,248,0), #f4f6f8 55%); }
   .elrow { display:flex; align-items:center; gap:10px; padding:7px 10px; border:1px solid var(--line); border-radius:10px; background:#fff; cursor:pointer; margin-bottom:6px; }
   .elrow:hover { border-color:var(--ink); } .elrow svg { flex:none; width:22px; height:22px; color:#5b646c; }
@@ -1016,6 +1016,7 @@
   .elpop .eacts { display:flex; gap:8px; margin-top:14px; } .elpop .eacts .btn { flex:1; height:40px; }
   .elpop .eacts .danger { flex:none; }
   @media (max-width:640px) { .elpop { left:8px; right:8px; width:auto; top:auto; bottom:calc(var(--fh) + 8px); max-height:60vh; } }
+  .ssrename { font:inherit; font-size:15px; font-weight:800; width:180px; padding:4px 8px; border:1.5px solid var(--acc); border-radius:8px; }
   .wtagbtn { display:block; margin:10px auto 0; padding:6px 14px; font-size:13px; } .wtagbtn.on { background:var(--ink); color:#fff; border-color:var(--ink); }
   .wallsq.tags [data-v=back]::after { background:#0088FF !important; } .wallsq.tags [data-v=back] { color:#0088FF; }
   .wallsq.tags [data-v=right]::after { background:#ff8a00 !important; } .wallsq.tags [data-v=right] { color:#ff8a00; }
@@ -3208,7 +3209,7 @@ function updateWallCut(cam = camera) {
   for (const w of ROOM_WALLS) w.g.visible = w !== cut;
 }
 function buildRoomWall(world, key, L, pos, ry) {
-  const g = new THREE.Group(); g.position.copy(pos); g.rotation.y = ry; world.add(g); ROOM_WALLS.push({ key, g });
+  const g = new THREE.Group(); g.position.copy(pos); g.rotation.y = ry; world.add(g); ROOM_WALLS.push({ key, g, L, pos:pos.clone(), ry });
   const sign = key === 'left' || key === 'front' ? -1 : 1;           // local x along the wall
   const list = (SCN.room.openings || []).filter(o => o.wall === key).map(o => { const p = openPlace(o); const lx = sign * p.c; return { o, a:lx - p.w/2, b:lx + p.w/2, ...p }; }).sort((u, v) => u.a - v.a);
   const H = WALL_H / 1000;
@@ -3281,6 +3282,7 @@ function buildScene() {
   buildObstacles(world); buildLogoSign(world);
   updateWallCut();
   SCENE_BUILD = true;
+  setTimeout(roomSelDraw, 0);
   { const bays = SCN.items.filter(i => i.type === 'shelf' && !i.hidden).reduce((a, i) => { const c = (i.cfg && i.cfg.sh) || SH0; return a + (c.bays || []).length * (c.b2b ? 2 : 1) + (c.corner ? (c.cbays || []).length : 0); }, 0);
     SH_AUTO = bays > 16 ? 'low' : 'std'; }
   for (const it of SCN.items) {
@@ -3434,6 +3436,7 @@ function dupItem(it) {
   SCN.items.push(c); rebuild(true); selectItem(c.id);
 }
 function selectItem(id, noRebuild) {
+  if (id != null && typeof RSEL !== 'undefined' && RSEL.o) rdeselect(true);
   const prev = SCN.items.find(i => i.id === SCN.sel);
   if (prev) prev.cfg = capCfg(prev.type);
   if (prev && prev.draft && prev.id !== id) { prev.draft = false; toast(`${prev.name} נוסף לסצנה`); setTimeout(() => rebuild(true), 0); }
@@ -6785,6 +6788,7 @@ const CAT_SETS = [
   { id:'med', he:'רפואי', txt:'medical consumables: packed syringes, gauze pads and bandage rolls, alcohol prep pads, blue nitrile gloves, blood-test tubes' },
   { id:'ind', he:'תעשייתי', txt:'industrial fasteners: zinc-plated screws and bolts, hex nuts, washers, wall plugs, brass inserts' },
   { id:'tech', he:'הייטקי', txt:'electronics: small circuit boards, connectors, coiled USB cables, batteries, SMD component reels' },
+  { id:'empty', he:'ריק', txt:'', empty:true },                       // added later: new keys only, the photos made so far keep theirs
 ];
 function catHasCells(t, c) {
   if ((c.md && c.md.shut) || (c.mt && c.mt.shut) || (c.tb && c.tb.shut)) return false;            // closed: nothing to see inside
@@ -6832,7 +6836,7 @@ async function catShoot(v, onStep = () => {}) {
   let image = cv.toDataURL('image/webp', 0.95); if (!image.startsWith('data:image/webp')) image = cv.toDataURL('image/png');
   const body = { image, background:'transparent', description:describe(), structure:[structureSummary(), profileNotes()].filter(Boolean).join('\n'),
     size:`${CAT_SIZE.w}x${CAT_SIZE.h}`, lighting:lightingText(),
-    contents:v.set ? v.set.txt : '', backdrop:'', extra:'Catalogue product photo: the product alone, centred, nothing around it.' + (v.fix ? ' CORRECTIONS from the review of the previous attempt (apply them): ' + v.fix : ''), contentRefs:[], roomRefs:[] };
+    contents:v.set ? v.set.txt : '', backdrop:'', extra:'Catalogue product photo: the product alone, centred, nothing around it.' + (v.set && v.set.empty ? ' Every bin, cell, drawer and shelf is completely EMPTY: nothing at all inside, no contents, no labels with text.' : '') + (v.fix ? ' CORRECTIONS from the review of the previous attempt (apply them): ' + v.fix : ''), contentRefs:[], roomRefs:[] };
   let r = null;
   for (let a = 1; a <= 3; a++) {                                          // a result whose count does not match the model is rendered again
     onStep(a > 1 ? `מרנדר שוב (${a}/3)` : 'מרנדר');
@@ -7112,6 +7116,174 @@ function adTabClick() {
 }
 // ---- doors & windows: the list in the scene settings ----
 
+
+// ---- a door / window / obstacle picked in the scene, like a product: outline + name, a small bar, its settings in the bottom strip ----
+const RSEL = { o:null, move:false, help:null, drag:null, raf:0 };
+const isOpenEl = (o) => o && (o.kind === 'door' || o.kind === 'window');
+function roomParts(o) {
+  const out = [];
+  if (isOpenEl(o)) { for (const w of ROOM_WALLS) w.g.traverse(m => { if (m.userData.open === o) out.push(m); }); }
+  else for (const m of OBST_PARTS) if (m.userData.obst === o) out.push(m);
+  return out;
+}
+function roomSelDraw() {
+  if (RSEL.help) { RSEL.help.parent && RSEL.help.parent.remove(RSEL.help); RSEL.help.traverse(m => { m.geometry && m.geometry.dispose(); m.material && m.material.map && m.material.map.dispose(); }); RSEL.help = null; }
+  const o = RSEL.o; if (!o || mode !== 'scene') return;
+  if (!(isOpenEl(o) ? roomOpenings() : roomObst()).includes(o)) { RSEL.o = null; return; }
+  const parts = roomParts(o); if (!parts.length) return;
+  const box = new THREE.Box3(); parts.forEach(m => box.expandByObject(m)); box.expandByScalar(0.03);
+  const g = new THREE.Group(), h = new THREE.Box3Helper(box); h.material = selMat; g.add(h);
+  const t = makeTag(elName(o)); t.scale.multiplyScalar(1.7); t.position.set((box.min.x + box.max.x)/2, box.max.y + 0.16, (box.min.z + box.max.z)/2); g.add(t);
+  scene.add(g); RSEL.help = g; RSEL.box = box;
+}
+function rselect(o) {
+  if (SCN.sel != null) selectItem(null);
+  if (EL.o && EL.o !== o) elClose(true);
+  RSEL.o = o; RSEL.move = false; roomSelDraw(); sceneChrome();
+}
+function rdeselect(quiet) { RSEL.o = null; RSEL.move = false; RSEL.drag = null; roomSelDraw(); if (!quiet) sceneChrome(); }
+// only the walls are rebuilt while an opening is dragged (fast); the whole scene once it is let go
+function rebuildWalls() {
+  const old = ROOM_WALLS.splice(0);
+  old.forEach(w => { world.remove(w.g); w.g.traverse(m => { m.geometry && m.geometry.dispose(); }); });
+  old.forEach(w => buildRoomWall(world, w.key, w.L, w.pos, w.ry));
+  updateWallCut(); roomSelDraw(); renderScene();
+}
+// the bar that floats above it: edit (the card), move, duplicate, delete, ✕
+function initRoomBar() {
+  if ($('roomBar')) return;
+  const rb = $('itemBar').cloneNode(true); rb.id = 'roomBar'; rb.hidden = true;
+  rb.querySelectorAll('[data-ia="arrange"], [data-ia="photo"]').forEach(b => b.remove());
+  rb.querySelector('.ibsep').remove();
+  rb.querySelectorAll('[data-ia]').forEach(b => { b.dataset.ra = b.dataset.ia; b.removeAttribute('data-ia'); });
+  rb.querySelector('[data-ra="edit"]').title = 'עריכה – כל הפרטים'; rb.querySelector('[data-ra="move"]').title = 'הזזה – גררו לאורך הקיר';
+  $('itemBar').after(rb);
+  rb.querySelectorAll('[data-ra]').forEach(b => b.onclick = () => {
+    const o = RSEL.o; if (!o) return; const a = b.dataset.ra;
+    if (a === 'unsel') { rdeselect(); return; }
+    if (a === 'edit') { RSEL.move = false; sceneChrome(); elEdit(o); return; }
+    if (a === 'move') { RSEL.move = !RSEL.move; sceneChrome(); if (RSEL.move) toast(isOpenEl(o) ? 'גררו את הפריט לאורך הקיר – גם לקיר אחר' : 'גררו את הפריט על הרצפה'); return; }
+    if (a === 'dup') {
+      pushRoomUndo(); const c = deep(o); c.id = Date.now() + Math.random(); if (c.name) c.name += ' 2';
+      if (isOpenEl(c)) { c.off = (o.off || 0) + o.w + 200; if (c.off + c.w > wallLen(c.wall)) c.off = Math.max(0, o.off - o.w - 200); openFix(c); roomOpenings().push(c); }
+      else { c.x += 500; obstFix(c); roomObst().push(c); }
+      rebuild(true); renderOpenings(); renderObstacles(); rselect(c); toast('שוכפל'); return;
+    }
+    if (a === 'del') { pushRoomUndo(); if (EL.o === o) { EL.o = null; $('elPop').hidden = true; WALL_TAGS = EL.tags; } elRemove(o); rdeselect(); rebuild(true); renderOpenings(); renderObstacles(); toast('נמחק'); }
+  });
+}
+function placeRoomBar() {
+  const bar = $('roomBar'); if (!bar || bar.hidden || !RSEL.box) return;
+  const b = RSEL.box; _iv.set((b.min.x + b.max.x)/2, b.max.y, (b.min.z + b.max.z)/2).project(camera);
+  const r = canvas.getBoundingClientRect();
+  if (_iv.z > 1) { bar.style.visibility = 'hidden'; return; }
+  bar.style.visibility = '';
+  bar.style.left = Math.max(90, Math.min(r.width - 90, (_iv.x + 1)/2 * r.width)) + r.left + 'px';
+  bar.style.top = Math.max(r.top + 56, (1 - _iv.y)/2 * r.height + r.top - 74) + 'px';
+}
+// the bottom strip: name (tap to rename), type, wall, sizes
+function renderRoomStrip() {
+  const o = RSEL.o, st = $('selStrip'); if (!o) return;
+  st.hidden = false; document.body.classList.add('has-strip'); st.dataset.k = 'room';
+  $('ssName').textContent = elName(o) + ' ✎'; $('ssName').title = 'לחיצה – שינוי שם'; $('ssName').style.cursor = 'pointer';
+  $('ssName').onclick = () => renameInline($('ssName'), o.name || '', elType(o), (v) => { o.name = v || undefined; roomSelDraw(); renderOpenings(); renderObstacles(); sceneChrome(); });
+  $('ssMode').textContent = RSEL.move ? 'מצב הזזה' : 'מצב עריכה';
+  const cm = (v) => Math.round((v || 0) / 10), body = $('ssBody');
+  const fld = (f, l, v) => `<label class="ssf"><span>${l} <i>ס"מ</i></span><input type="number" data-f="${f}" value="${cm(v)}" step="1"></label>`;
+  let h = '';
+  if (isOpenEl(o)) {
+    h += Object.entries(OPEN_TYPES[o.kind]).map(([k, t]) => `<button class="wchip${o.type === k ? ' on' : ''}" data-type="${k}">${t.he}</button>`).join('') + '<span class="sssep"></span>';
+    h += ['back', 'right', 'front', 'left'].map(k => `<button class="wchip${o.wall === k ? ' on' : ''}" data-wall="${k}"><i style="background:${WALL_COL[k]}"></i>${WALL_HE[k]}</button>`).join('') + '<span class="sssep"></span>';
+    h += fld('w', 'רוחב', o.w) + fld('h', 'גובה', o.h) + fld('off', o.wall === 'left' || o.wall === 'right' ? 'מהקיר האחורי' : 'מהקיר השמאלי', o.off) + (o.kind === 'window' ? fld('sill', 'מהרצפה', o.sill) : '');
+  } else {
+    h += fld('x', 'מהקיר השמאלי', o.x) + fld('z', 'מהקיר האחורי', o.z) + '<span class="sssep"></span>';
+    h += o.kind === 'column' ? fld('w', o.round ? 'קוטר' : 'רוחב', o.w) + (o.round ? '' : fld('d', 'עומק', o.d))
+      : o.kind === 'tap' ? fld('y', 'גובה', o.y)
+      : o.kind === 'step' ? fld('w', 'רוחב', o.w) + fld('d', 'עומק', o.d) + fld('h', 'גובה', o.h)
+      : o.kind === 'pipe' ? fld('dia', 'קוטר', o.dia) + (o.axis === 'y' ? '' : fld('len', 'אורך', o.len) + fld('y', 'גובה', o.y))
+      : fld('len', 'אורך', o.len) + fld('t', 'עובי', o.t) + fld('h', 'גובה', o.h || WALL_H);
+  }
+  if (RSEL.move) h = `<span class="sshint">${isOpenEl(o) ? 'גררו את הפריט לאורך הקיר – גם מעבר לפינה, לקיר הסמוך' : 'גררו את הפריט על הרצפה'}</span><span class="sssep"></span>` + h;
+  body.innerHTML = h;
+  const after = () => { if (isOpenEl(o)) openFix(o); else obstFix(o); rebuild(true); renderOpenings(); renderObstacles(); roomSelDraw(); renderRoomStrip(); };
+  body.querySelectorAll('[data-type]').forEach(b => b.onclick = () => { pushRoomUndo(); const T = OPEN_TYPES[o.kind][b.dataset.type]; o.type = b.dataset.type; o.w = T.w; o.h = T.h; o.sill = T.sill || 0; after(); });
+  body.querySelectorAll('[data-wall]').forEach(b => b.onclick = () => { pushRoomUndo(); o.wall = b.dataset.wall; if (o.wall !== 'front') SCN.room[o.wall] = true; o.off = null; after(); });
+  body.querySelectorAll('[data-f]').forEach(el => el.onchange = () => { pushRoomUndo(); o[el.dataset.f] = (+el.value || 0) * 10; after(); });
+}
+// rename in place: the name turns into a text field (Enter / leaving it saves, Esc cancels)
+function renameInline(el, cur, ph, done) {
+  if (el.querySelector('input')) return;
+  const keep = el.textContent; el.textContent = '';
+  const inp = document.createElement('input'); inp.type = 'text'; inp.value = cur; inp.placeholder = ph; inp.className = 'ssrename'; inp.maxLength = 40;
+  el.appendChild(inp); inp.focus(); inp.select();
+  let fin = false;
+  const end = (save) => { if (fin) return; fin = true; const v = inp.value.trim(); el.textContent = keep; if (save) done(v); };
+  inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') end(true); if (e.key === 'Escape') end(false); };
+  inp.onblur = () => end(true);
+  inp.onclick = (e) => e.stopPropagation();
+}
+// click (no drag) on a door / window / obstacle selects it; in move mode, dragging it moves it
+const _rdn = { x:0, y:0 };
+function roomHit(e) {
+  dragRay.setFromCamera(pointerNDC(e), camera);
+  const parts = [...OBST_PARTS]; for (const w of ROOM_WALLS) if (w.g.visible) w.g.traverse(m => { if (m.userData.open && m.isMesh) parts.push(m); });
+  const h = dragRay.intersectObjects(parts, true)[0]; if (!h) return null;
+  const items = dragRay.intersectObjects([...ITEM_GROUPS.values()].filter(g => g.visible), true)[0];
+  if (items && items.distance < h.distance) return null;                 // a product in front of it wins
+  let m = h.object; while (m && !m.userData.obst && !m.userData.open) m = m.parent;
+  return m ? (m.userData.obst || m.userData.open) : null;
+}
+// where the pointer meets a wall: { key, along (m, from the wall's start), y }
+function wallAt(e) {
+  dragRay.setFromCamera(pointerNDC(e), camera);
+  const R = SCN.room, W2 = R.W/2000, D2 = R.D/2000, H = WALL_H/1000, ray = dragRay.ray;
+  let best = null;
+  for (const w of ROOM_WALLS) {
+    if (!w.g.visible) continue;
+    const n = { back:[0, 0, 1, D2], front:[0, 0, -1, D2], left:[1, 0, 0, W2], right:[-1, 0, 0, W2] }[w.key];
+    const pl = new THREE.Plane(new THREE.Vector3(n[0], n[1], n[2]), n[3]), p = new THREE.Vector3();
+    if (!ray.intersectPlane(pl, p) || p.y < -0.2 || p.y > H + 0.4) continue;
+    const along = w.key === 'back' || w.key === 'front' ? p.x + W2 : p.z + D2, L = w.key === 'back' || w.key === 'front' ? R.W/1000 : R.D/1000;
+    if (along < -0.3 || along > L + 0.3) continue;
+    const t = p.distanceTo(ray.origin);
+    if (!best || t < best.t) best = { key:w.key, along:Math.max(0, Math.min(L, along)), t };
+  }
+  return best;
+}
+addEventListener('pointerdown', (e) => {
+  if (e.target !== canvas || mode !== 'scene' || e.button !== 0) return;
+  _rdn.x = e.clientX; _rdn.y = e.clientY;
+  const o = RSEL.o; if (!o || !RSEL.move || e.ctrlKey || e.metaKey) return;
+  if (roomHit(e) !== o) return;
+  e.stopImmediatePropagation(); e.preventDefault(); controls.enabled = false;
+  if (!isOpenEl(o)) {                                             // an obstacle: the floor drag that already exists
+    dragRay.setFromCamera(pointerNDC(e), camera);
+    if (!dragRay.ray.intersectPlane(floorPlane, fHit)) { controls.enabled = true; return; }
+    const R = SCN.room; odrag = { o, dx:o.x - (fHit.x + R.W/2000) * 1000, dz:o.z - (fHit.z + R.D/2000) * 1000, sx:e.clientX, sy:e.clientY, moved:false };
+    return;
+  }
+  const w = wallAt(e); if (!w) { controls.enabled = true; return; }
+  RSEL.drag = { key:w.key, grab:(o.off + o.w/2) / 1000 - w.along, moved:false, sx:e.clientX, sy:e.clientY };
+}, true);
+addEventListener('pointermove', (e) => {
+  const D = RSEL.drag, o = RSEL.o; if (!D || !o) return;
+  if (!D.moved && Math.hypot(e.clientX - D.sx, e.clientY - D.sy) < 4) return;
+  if (!D.moved) { pushRoomUndo(); D.moved = true; canvas.style.cursor = 'grabbing'; }
+  const w = wallAt(e); if (!w) return;
+  if (w.key !== o.wall) { o.wall = w.key; D.grab = 0; if (w.key !== 'front') SCN.room[w.key] = true; }
+  o.off = (w.along + D.grab) * 1000 - o.w/2; openFix(o);
+  if (!RSEL.raf) RSEL.raf = requestAnimationFrame(() => { RSEL.raf = 0; rebuildWalls(); });
+});
+addEventListener('pointerup', (e) => {
+  const D = RSEL.drag;
+  if (D) { RSEL.drag = null; controls.enabled = true; canvas.style.cursor = ''; if (D.moved) { rebuild(true); renderOpenings(); roomSelDraw(); renderRoomStrip(); } return; }
+  if (e.target !== canvas || mode !== 'scene' || e.button !== 0 || e.ctrlKey || e.metaKey) return;
+  if (Math.hypot(e.clientX - _rdn.x, e.clientY - _rdn.y) > 5) return;     // that was the camera turning
+  const o = roomHit(e);
+  if (o) { if (RSEL.o !== o) rselect(o); }
+  else if (RSEL.o && !RSEL.move) rdeselect();
+});
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && RSEL.o && !EL.o && !typing() && $('dlg').hidden) rdeselect(); });
 // ---- room elements: a wheel (doors, windows, obstacles) → a floating card on the left with the sizes → add / edit ----
 const ICO = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const EL_ICONS = {
@@ -7136,7 +7308,9 @@ const EL_ITEMS = [
   { k:'obst.tap', he:'ברז / נקודת מים', add:'הוסף ברז' }, { k:'obst.step', he:'מדרגה / במה', add:'הוסף מדרגה' },
 ];
 const elKey = (o) => o.kind === 'door' || o.kind === 'window' ? o.kind + '.' + o.type : 'obst.' + o.kind;
-const elName = (o) => (EL_ITEMS.find(x => x.k === elKey(o)) || {}).he || '';
+const escH = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const elType = (o) => (EL_ITEMS.find(x => x.k === elKey(o)) || {}).he || '';
+const elName = (o) => o.name || elType(o);
 const WHEEL = { pos:0, target:0, raf:0, drag:null, acc:0 };
 function wheelDraw() {
   const tr = $('elwTrack'); if (!tr) return;
@@ -7146,9 +7320,9 @@ function wheelDraw() {
   }
   [...tr.children].forEach((el, i) => {
     const d = ((i - WHEEL.pos) % N + N + N / 2) % N - N / 2, a = Math.abs(d);
-    el.style.transform = `translateY(${d * 46}px) rotateX(${-d * 19}deg)`;
-    el.style.opacity = a > 2.6 ? 0 : Math.max(0, 1 - a * 0.3);
-    el.style.visibility = a > 2.8 ? 'hidden' : 'visible';
+    el.style.transform = `translateY(${d * 68}px) rotateX(${-d * 30}deg)`;
+    el.style.opacity = a > 1.6 ? 0 : Math.max(0, 1 - a * 0.55);
+    el.style.visibility = a > 1.8 ? 'hidden' : 'visible';
     el.classList.toggle('c', a < 0.5); el.setAttribute('aria-selected', a < 0.5);
   });
 }
@@ -7173,7 +7347,7 @@ function initWheel() {
     const D = WHEEL.drag; if (!D) return; const dy = e.clientY - D.y;
     if (!D.moved && Math.abs(dy) < 5) return;
     if (!D.moved) { D.moved = true; w.setPointerCapture(D.id); w.style.cursor = 'grabbing'; }
-    cancelAnimationFrame(WHEEL.raf); WHEEL.pos = WHEEL.target = D.p - dy / 46; wheelDraw();
+    cancelAnimationFrame(WHEEL.raf); WHEEL.pos = WHEEL.target = D.p - dy / 68; wheelDraw();
   });
   const up = (e) => {
     const D = WHEEL.drag; WHEEL.drag = null; w.style.cursor = ''; if (!D) return;
@@ -7224,12 +7398,14 @@ function elDraw() {
     body = (head ? `<div class="efs">${head}</div>` : '') + `<div class="elbl">מיקום (ס"מ, מרכז)</div><div class="efs">${num('x', o.x, 'מהקיר השמאלי')}${num('z', o.z, 'מהקיר האחורי')}</div>
       <div class="elbl">מידות (ס"מ)</div><div class="efs">${f}</div>`;
   }
-  P.innerHTML = `<div class="eph">${EL_ICONS[it.k]}<h3>${elName(o)}</h3><button class="xb" data-x aria-label="סגירה">✕</button></div>${body}
+  P.innerHTML = `<div class="eph">${EL_ICONS[it.k]}<h3>${escH(elName(o))}</h3><button class="xb" data-x aria-label="סגירה">✕</button></div>
+    <div class="efs" style="grid-template-columns:1fr"><label>שם (לא חובה)<input type="text" data-name value="${escH(o.name || '')}" placeholder="${escH(elType(o))}"></label></div>${body}
     <div class="eacts">${EL.draft ? `<button class="btn primary" data-ok>${it.add}</button><button class="btn" data-x>ביטול</button>`
       : `<button class="btn primary" data-ok>סיום</button><button class="btn danger" data-del>מחיקה</button>`}</div>`;
   P.querySelectorAll('[data-x]').forEach(b => b.onclick = () => elClose(false));
   P.querySelector('[data-ok]').onclick = () => elClose(true);
   const del = P.querySelector('[data-del]'); if (del) del.onclick = () => { elRemove(o); EL.o = null; elClose(true); toast('נמחק'); };
+  P.querySelector('[data-name]').onchange = (e) => { o.name = e.target.value.trim().slice(0, 40) || undefined; P.querySelector('.eph h3').textContent = elName(o); renderOpenings(); renderObstacles(); sceneChrome(); };
   P.querySelectorAll('[data-wall]').forEach(b => b.onclick = () => { o.wall = b.dataset.wall; if (o.wall !== 'front') SCN.room[o.wall] = true; o.off = null; openFix(o); rebuild(true); elDraw(); });
   P.querySelectorAll('[data-f]').forEach(el => {
     const apply = () => { const f = el.dataset.f;
@@ -7255,14 +7431,14 @@ canvas.addEventListener('dblclick', (e) => {
   const parts = [...OBST_PARTS]; for (const w of ROOM_WALLS) if (w.g.visible) w.g.traverse(m => { if (m.userData.open) parts.push(m); });
   const h = dragRay.intersectObjects(parts, true)[0]; if (!h) return;
   let m = h.object; while (m && !m.userData.obst && !m.userData.open) m = m.parent;
-  if (m) elEdit(m.userData.obst || m.userData.open);
+  if (m) { rselect(m.userData.obst || m.userData.open); elEdit(m.userData.obst || m.userData.open); }
 });
 function renderOpenings() {
   const box = $('scnOpen'); if (!box) return;
   initWheel();
   const list = roomOpenings().filter(o => o !== EL.o || !EL.draft);
   const cm = (v) => Math.round(v / 10);
-  box.innerHTML = list.map(o => `<div class="elrow" data-id="${o.id}">${EL_ICONS[elKey(o)] || ''}<span><b>${elName(o)}</b><small><i style="background:${WALL_COL[o.wall]}"></i>קיר ${WALL_HE[o.wall]} · ${cm(o.w)}×${cm(o.h)} ס"מ</small></span><button class="opdel" title="הסרה" aria-label="הסרה">✕</button></div>`).join('');
+  box.innerHTML = list.map(o => `<div class="elrow" data-id="${o.id}">${EL_ICONS[elKey(o)] || ''}<span><b>${escH(elName(o))}</b><small><i style="background:${WALL_COL[o.wall]}"></i>קיר ${WALL_HE[o.wall]} · ${cm(o.w)}×${cm(o.h)} ס"מ</small></span><button class="opdel" title="הסרה" aria-label="הסרה">✕</button></div>`).join('');
   box.querySelectorAll('.elrow').forEach(row => {
     const o = list.find(x => String(x.id) === row.dataset.id); if (!o) return;
     row.onclick = (e) => { if (e.target.closest('.opdel')) return; elEdit(o); };
@@ -7275,7 +7451,7 @@ function renderObstacles() {
   const list = roomObst().filter(o => o !== EL.o || !EL.draft);
   const cm = (v) => Math.round(v / 10);
   const sz = (o) => o.kind === 'column' ? (o.round ? `⌀${cm(o.w)}` : `${cm(o.w)}×${cm(o.d)}`) : o.kind === 'pipe' ? `⌀${cm(o.dia)} · ${PIPE_HE[o.axis]}` : o.kind === 'gypsum' ? `${cm(o.len)} ס"מ · ${GYP_HE[o.status]}` : o.kind === 'step' ? `${cm(o.w)}×${cm(o.d)}×${cm(o.h)}` : `גובה ${cm(o.y)}`;
-  box.innerHTML = list.map(o => `<div class="elrow" data-id="${o.id}">${EL_ICONS['obst.' + o.kind] || ''}<span><b>${OBST_HE[o.kind]}</b><small>${sz(o)}</small></span><button class="opdel" title="הסרה" aria-label="הסרה">✕</button></div>`).join('');
+  box.innerHTML = list.map(o => `<div class="elrow" data-id="${o.id}">${EL_ICONS['obst.' + o.kind] || ''}<span><b>${escH(o.name || OBST_HE[o.kind])}</b><small>${sz(o)}</small></span><button class="opdel" title="הסרה" aria-label="הסרה">✕</button></div>`).join('');
   box.querySelectorAll('.elrow').forEach(row => {
     const o = list.find(x => String(x.id) === row.dataset.id); if (!o) return;
     row.onclick = (e) => { if (e.target.closest('.opdel')) return; elEdit(o); };
@@ -8027,7 +8203,8 @@ function renderStrip(it, md) {
   const st = $('selStrip'), on = mode === 'scene' && !!it;
   st.hidden = !on; document.body.classList.toggle('has-strip', on);
   if (!on) return;
-  $('ssName').textContent = it.name;
+  $('ssName').textContent = it.name + ' ✎'; $('ssName').title = 'לחיצה – שינוי שם'; $('ssName').style.cursor = 'pointer';
+  $('ssName').onclick = () => renameInline($('ssName'), it.name, TYPE_NAME[it.type], (v) => { if (v) it.name = v; st.dataset.k = ''; sceneChrome(); showItemSelection(); renderScene(); if (typeof renderSceneList === 'function') renderSceneList(); });
   $('ssMode').textContent = 'מצב ' + MODE_NAME[md];
   if (st.dataset.k === it.id + md) { syncStripPos(it); syncHeads();
     const b = $('ssBody'); if (md === 'edit' && !OPTS && b._hs && headList(it).length !== b._hs.length) buildHeads(it, b);   // e.g. alignment comes / goes with the bin mix
@@ -8483,6 +8660,11 @@ function sceneChrome() {
   const md = SCN.mode || 'edit';
   ['edit', 'move', 'arrange'].forEach(m => $('itemBar').querySelector(`[data-ia="${m}"]`).classList.toggle('on', !!it && md === m));
   renderStrip(it, md);
+  initRoomBar();
+  const ro = mode === 'scene' && !it && RSEL.o;
+  $('roomBar').hidden = !ro;
+  if (ro) { $('roomBar').querySelector('[data-ra="move"]').classList.toggle('on', RSEL.move); $('roomBar').querySelector('[data-ra="edit"]').classList.toggle('on', !RSEL.move); renderRoomStrip(); }
+  else if (!it) { $('ssName').onclick = null; $('ssName').style.cursor = ''; }
   if (!$('vMic').hidden && !$('vMic').style.left) placeMic();
 }
 // the item bar floats just above the selected product
@@ -8680,7 +8862,7 @@ function scenePayload(text) {
   });
   const models = Object.fromEntries(Object.entries(lib.models).map(([t, ms]) => [t, Object.keys(ms)]));
   const lightNow = { type:LIGHT.type, clock:Math.round(((180 - LIGHT.az) / 30 % 12 + 12) % 12) || 12, elevation_deg:LIGHT.el, power_pct:Math.round(LIGHT.power * 100), soft_level:LIGHT.soft ?? (LIGHT_TYPES[LIGHT.type] || LIGHT_TYPES.studio).soft };
-  const openings = (R.openings || []).map((o, k) => ({ index:k + 1, kind:o.kind, type:o.type, wall:o.wall, width_cm:Math.round(o.w/10), height_cm:Math.round(o.h/10), offset_cm:Math.round(o.off/10), sill_cm:Math.round(o.sill/10) }));
+  const openings = (R.openings || []).map((o, k) => ({ index:k + 1, name:o.name || undefined, kind:o.kind, type:o.type, wall:o.wall, width_cm:Math.round(o.w/10), height_cm:Math.round(o.h/10), offset_cm:Math.round(o.off/10), sill_cm:Math.round(o.sill/10) }));
   const obstacles = obstAI(R);
   return { text, room:{ width_cm:R.W/10, depth_cm:R.D/10, walls:{ back:R.back, left:R.left, right:R.right, front:!!R.front }, openings, obstacles }, selected:SCN.sel, items, models, light:lightNow };
 }
@@ -9403,7 +9585,7 @@ function designSummary(plan, lay, room) {
 // the obstacles as the AI sees them (cm; x / z = the centre from the left / back wall)
 function obstAI(R) {
   return (R.obstacles || []).map((o, k) => { const b = obstBox(o), cm = (v) => Math.round(v/10);
-    return { index:k + 1, kind:o.kind, centre_x_cm:cm(o.x), centre_z_cm:cm(o.z), ...(o.kind === 'gypsum' ? { status:o.status, removable:o.status === 'removable', to_build:o.status === 'new' } : {}), ...(o.kind === 'pipe' ? { axis:o.axis } : {}), ...(o.kind === 'tap' ? { water_point:true } : {}), ...(o.kind === 'step' ? { display_step:true, products_may_stand_on_top:true } : {}),
+    return { index:k + 1, name:o.name || undefined, kind:o.kind, centre_x_cm:cm(o.x), centre_z_cm:cm(o.z), ...(o.kind === 'gypsum' ? { status:o.status, removable:o.status === 'removable', to_build:o.status === 'new' } : {}), ...(o.kind === 'pipe' ? { axis:o.axis } : {}), ...(o.kind === 'tap' ? { water_point:true } : {}), ...(o.kind === 'step' ? { display_step:true, products_may_stand_on_top:true } : {}),
       x0_cm:cm(b.x0), x1_cm:cm(b.x1), z0_cm:cm(b.z0), z1_cm:cm(b.z1), from_floor_cm:cm(b.y0), to_cm:cm(b.y1) }; });
 }
 // the AI adds / changes / removes an obstacle (cm in, mm stored)
@@ -10877,7 +11059,7 @@ renderer.setAnimationLoop(() => {
   drawers.forEach(d => { const u = d.userData; u.angle += (u.target - u.angle) * kd; setDrw(d, u.angle); });
   stepFree(dt); stepCamKeys(dt);
   if (!FREE.on) controls.update();
-  placeItemBar();
+  placeItemBar(); placeRoomBar();
   updateWallCut();
   renderer.render(scene, camera);
   drawLightView();
