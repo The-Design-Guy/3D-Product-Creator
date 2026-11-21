@@ -6831,7 +6831,21 @@ function catVariants() {
 }
 // one catalogue photo: the variant alone in the scene → product photo → realistic render (transparent, 4:5) → Blob + index
 const CAT_SIZE = { w:1024, h:1280 };
-const nextFrames = (n = 3) => new Promise(r => { const f = () => (n-- > 0 ? requestAnimationFrame(f) : r()); f(); });
+// a window that is covered or minimised gets no animation frames and slow timers: the studio then draws the frames itself,
+// and waits with a timer that runs in a worker (Chrome does not slow those down)
+const BG = { w:null, n:0, cb:new Map() };
+function bgSleep(ms) {
+  if (!BG.w) { try {
+    BG.w = new Worker(URL.createObjectURL(new Blob(['onmessage=(e)=>setTimeout(()=>postMessage(e.data.id),e.data.ms)'], { type:'text/javascript' })));
+    BG.w.onmessage = (e) => { const f = BG.cb.get(e.data); BG.cb.delete(e.data); f && f(); };
+  } catch { BG.w = false; } }
+  if (!BG.w) return new Promise(r => setTimeout(r, ms));
+  return new Promise(r => { const id = ++BG.n; BG.cb.set(id, r); BG.w.postMessage({ id, ms }); });
+}
+const nextFrames = async (n = 3) => {
+  if (!document.hidden) return new Promise(r => { const f = () => (n-- > 0 ? requestAnimationFrame(f) : r()); f(); });
+  for (let i = 0; i < n; i++) { tickFrame(); await bgSleep(20); }
+};
 async function catShoot(v, onStep = () => {}) {
   if (PHOTO.on) exitPhoto();
   if (mode !== 'scene') throw new Error('הסטודיו עובד רק במסך הסצנה');
@@ -6934,7 +6948,7 @@ const GAL_TXT = { wait:'ממתין', now:'מרנדר עכשיו…', done:'מר�
 async function studioGal(fetchIndex = true) {
   let g = document.getElementById('stuGal');
   if (!g) { g = document.createElement('aside'); g.id = 'stuGal'; document.body.appendChild(g); }
-  if (fetchIndex) GAL.have = await catIndex();
+  if (fetchIndex) { const r0 = GAL.rev || 0, h = await catIndex(); if ((GAL.rev || 0) === r0) GAL.have = h; }   // a review saved meanwhile wins over an older read
   studioStats();                                   // always: the counts follow every change (a reset, a review…)
   const all = catVariants(), prods = [...new Set(all.map(v => v.prod))];
   if (!GAL.prod) {
@@ -6984,7 +6998,8 @@ function galOpen(key) {
     const save = async (review) => {
       const note = card.querySelector('#grNote').value.trim();
       if (review === 'redo' && !note && !(await askConfirm('לעשות שוב בלי הערה? כדאי לכתוב מה לתקן.', 'בכל זאת'))) return;
-      try { await api('/api/catalog', { action:'review', key, review, note }); GAL.have[key] = { ...x, review, note }; studioGal(false); }
+      GAL.rev = (GAL.rev || 0) + 1;
+      try { await api('/api/catalog', { action:'review', key, review, note }); GAL.have[key] = { ...x, review, note }; GAL.rev++; studioStats(); studioGal(false); }
       catch (e) { toast('השמירה נכשלה: ' + e.message); return; }
       if (i < vs.length - 1) galOpen(vs[i + 1].key); else close();       // straight on to the next one
     };
@@ -7059,9 +7074,10 @@ async function startStudio() {
   const all = catVariants(), total = all.length;
   while (STUDIO.run) {
     if (STUDIO.stop) { STUDIO.cur = 'עצור – לחצו "המשך"'; break; }
-    if (STUDIO.pause) { await new Promise(r => setTimeout(r, 1000)); continue; }
+    if (STUDIO.pause) { await bgSleep(1000); continue; }
     if (studioToday() >= studioLimit()) { STUDIO.cur = `הגעתם למגבלה היומית (${studioLimit()}) – אפשר להעלות אותה, או להמשיך מחר`; break; }
-    const have = await catIndex();
+    const r0 = GAL.rev || 0, have = await catIndex();
+    if ((GAL.rev || 0) === r0) { GAL.have = have; studioStats(); }            // the strip on top follows the index all the time
     // first everything that has no photo yet; then the ones you marked "do again" (with your notes); nothing else is ever rendered twice
     const ok = (v) => (STUDIO.fail.get(v.key) || 0) < 3;
     const Q = stuQ.get();
@@ -7071,7 +7087,7 @@ async function startStudio() {
     if (!todo.length) {                              // all done: wait for new "do again" marks, without spending anything
       Q.forEach(p => { if (all.filter(v => v.prod === p).every(v => have[v.key])) stuQ.del(p); });     // finished products leave the queue
       STUDIO.cur = 'ממתין – בחרו מוצר בגלריה ולחצו "לרנדר את המוצר"'; studioShow(total); studioGal(false);
-      await new Promise(r => setTimeout(r, 3000)); continue;
+      await bgSleep(3000); continue;
     }
     // product by product: all the variants of the first unfinished product, in order; one that failed is tried again at the end of its product
     const prod = todo[0].prod, mine = todo.filter(v => v.prod === prod);
@@ -7084,7 +7100,7 @@ async function startStudio() {
       STUDIO.fail.set(v.key, (STUDIO.fail.get(v.key) || 0) + 1);
       studioLog(`✗ ${v.key}: ${e.message} (ניסיון ${STUDIO.fail.get(v.key)}/3)`, true);
       if (PHOTO.on) exitPhoto();
-      await new Promise(r => setTimeout(r, 5000));
+      await bgSleep(5000);
     }
   }
   STUDIO.run = false; { const have = await catIndex(), all = catVariants(); STUDIO.left = all.filter(v => !have[v.key]).length; studioShow(all.length); }
@@ -11092,7 +11108,7 @@ navTo('new');                                         // the app opens on a new 
 openAddDrawer();                                      // with the products drawer open
 $('langBtn').onclick = () => setLang(LANG === 'en' ? 'he' : 'en', true);
 document.querySelectorAll('.hlang [data-lang]').forEach(b => { b.disabled = b.dataset.lang === LANG; b.classList.toggle('on', b.dataset.lang === LANG); b.onclick = () => { if (b.dataset.lang !== LANG) setLang(b.dataset.lang, true); }; });
-renderer.setAnimationLoop(() => {
+function tickFrame() {
   const dt = Math.min(0.1, clock.getDelta());               // time-based, same speed on any screen
   stepRods(1 - Math.exp(-dt*6.5));
   stepWings(1 - Math.exp(-dt*5), dt);
@@ -11106,7 +11122,8 @@ renderer.setAnimationLoop(() => {
   updateWallCut();
   renderer.render(scene, camera);
   drawLightView();
-});
+}
+renderer.setAnimationLoop(tickFrame);
 window.__ready = true;
 </script>
 </body>
