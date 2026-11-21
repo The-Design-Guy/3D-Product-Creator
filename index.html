@@ -119,6 +119,14 @@
   #stuGal .gal-l { font-size:11px; line-height:1.35; color:#333; } #stuGal .gal-s { font-size:11px; font-weight:600; color:#889; }
   #stuGal .st-now { border-color:#1f6feb; } #stuGal .st-now .gal-s { color:#1f6feb; } #stuGal .st-ok { border-color:#2da44e; } #stuGal .st-ok .gal-s { color:#137a3a; } #stuGal .st-redo { border-color:#d1242f; } #stuGal .st-redo .gal-s { color:#b42318; } #stuGal .st-done .gal-s { color:#555; }
   .gal-rev .gal-rh { display:flex; align-items:center; gap:10px; margin-bottom:10px; } .gal-rev .gal-rh h3 { flex:1; margin:0; font-size:15px; text-align:center; }
+  .gal-rev .gal-n { font-size:12px; color:var(--muted); }
+  .gal-rev .gal-cur { position:relative; }
+  .gal-zoom { position:relative; overflow:hidden; border-radius:10px; cursor:zoom-in; touch-action:none; background:repeating-conic-gradient(#f3f4f6 0 25%, #fff 0 50%) 50% / 20px 20px; }
+  .gal-zoom.z { cursor:grab; } .gal-zoom img { display:block; width:100%; transform-origin:50% 50%; transition:transform .06s linear; user-select:none; -webkit-user-drag:none; }
+  .gal-nav { position:absolute; top:42%; margin-top:-22px; width:44px; height:44px; border-radius:50%; border:1px solid var(--line); background:rgba(255,255,255,.94); box-shadow:0 4px 14px rgba(0,0,0,.14); display:grid; place-items:center; padding:0; color:var(--ink); cursor:pointer; z-index:2; }
+  .gal-nav.nx { right:-14px; } .gal-nav.pv { left:-14px; } .gal-nav:disabled { opacity:.25; cursor:default; }
+  .gal-nav:not(:disabled):hover { background:var(--ink); color:#fff; }
+  .gal-zh { display:block; font-size:11px; color:var(--muted); margin-top:4px; }
   .gal-rev .gal-imgs { display:flex; gap:12px; justify-content:center; margin-bottom:10px; } .gal-rev figure { margin:0; flex:1; max-width:420px; text-align:center; }
   .gal-rev figure img { width:100%; aspect-ratio:4/5; object-fit:contain; border-radius:10px; cursor:zoom-in; background:repeating-conic-gradient(#f1f2f4 0 25%, #fff 0 50%) 0 0/18px 18px; }
   .gal-rev figcaption { font-size:12px; color:#667; margin-top:4px; } .gal-rev .fld { display:block; } .gal-rev textarea { display:block; width:100%; box-sizing:border-box; margin-top:4px; font:inherit; }
@@ -6967,8 +6975,8 @@ function galOpen(key) {
   const x = GAL.have[key]; if (!x) return;
   const vs = catVariants().filter(v => v.prod === GAL.prod && GAL.have[v.key]), i = vs.findIndex(v => v.key === key);
   openDialog(`<div class="gal-rev">
-      <div class="gal-rh"><button class="btn" id="grPrev" ${i > 0 ? '' : 'disabled'} aria-label="הקודמת">›</button><h3>${galEsc(key)}</h3><button class="btn" id="grNext" ${i < vs.length - 1 ? '' : 'disabled'} aria-label="הבאה">‹</button></div>
-      <div class="gal-imgs">${x.prev ? `<figure><img src="${galEsc(x.prev)}" alt=""><figcaption>הגרסה הקודמת${x.prevNote ? ' – ' + galEsc(x.prevNote) : ''}</figcaption></figure>` : ''}<figure><img src="${galEsc(x.url)}" alt="" id="grImg"><figcaption>${x.prev ? 'החדשה' : ''}</figcaption></figure></div>
+      <div class="gal-rh"><h3>${galEsc(key)}</h3><span class="gal-n">${i + 1}/${vs.length}</span></div>
+      <div class="gal-imgs">${x.prev ? `<figure><img src="${galEsc(x.prev)}" alt=""><figcaption>הגרסה הקודמת${x.prevNote ? ' – ' + galEsc(x.prevNote) : ''}</figcaption></figure>` : ''}<figure class="gal-cur"><div class="gal-zoom" id="grZoom"><img src="${galEsc(x.url)}" alt="" id="grImg" draggable="false"></div><button class="gal-nav nx" id="grNext" ${i < vs.length - 1 ? '' : 'disabled'} aria-label="הבאה" title="הבאה (→)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button><button class="gal-nav pv" id="grPrev" ${i > 0 ? '' : 'disabled'} aria-label="הקודמת" title="הקודמת (←)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><span class="gal-zh">גלגלת / צביטה – זום · גרירה – הזזה · דאבל־קליק – איפוס</span><figcaption>${x.prev ? 'החדשה' : ''}</figcaption></figure></div>
       <label class="fld">הערות (מה לתקן)<textarea id="grNote" rows="2" placeholder="למשל: התכולה גדולה מדי, חסר תא בטור השמאלי">${galEsc(x.note || '')}</textarea></label>
       <div class="dlg-actions"><button class="btn primary" id="grOk">טוב ✓</button><button class="btn warnbtn" id="grRedo">לעשות שוב</button><button class="btn" id="grDl">הורדה</button><button class="btn" data-close>סגירה</button></div>
     </div>`, (card, close) => {
@@ -6983,10 +6991,45 @@ function galOpen(key) {
     card.querySelector('#grOk').onclick = () => save('ok');
     card.querySelector('#grRedo').onclick = () => save('redo');
     card.querySelector('#grDl').onclick = async () => saveFile(await (await fetch(x.url)).blob(), key.replace(/[\\/:*?"<>|]/g, '-').replace(/\s*–\s*/g, '_').replace(/\s*·\s*/g, '_') + '.png');
-    card.querySelector('#grImg').onclick = () => openLightbox(x.url);
-    card.querySelector('#grPrev').onclick = () => galOpen(vs[i - 1].key);
-    card.querySelector('#grNext').onclick = () => galOpen(vs[i + 1].key);
+    zoomable(card.querySelector('#grZoom'));
+    const go = (d) => { const j = i + d; if (j >= 0 && j < vs.length) galOpen(vs[j].key); };
+    card.querySelector('#grPrev').onclick = () => go(-1);
+    card.querySelector('#grNext').onclick = () => go(1);
+    card.tabIndex = -1; card.addEventListener('keydown', (e) => { if (e.target.closest('textarea, input')) return; if (e.key === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); go(1); } if (e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); go(-1); } });
+    card.focus({ preventScroll:true });
   });
+}
+// zoom into a picture: wheel / pinch zooms at the pointer, drag pans, a click zooms in 2.5×, double-click resets
+function zoomable(box) {
+  const img = box.querySelector('img'); let k = 1, x = 0, y = 0;
+  const P = new Map(); let pan = null, pinch = null, moved = false, lastTap = 0;
+  const clamp = () => { const r = box.getBoundingClientRect(), mx = r.width * (k - 1) / 2, my = r.height * (k - 1) / 2; x = Math.max(-mx, Math.min(mx, x)); y = Math.max(-my, Math.min(my, y)); };
+  const draw = () => { if (k <= 1.001) { k = 1; x = y = 0; } clamp(); img.style.transform = `translate(${x}px, ${y}px) scale(${k})`; box.classList.toggle('z', k > 1); };
+  const at = (cx, cy, nk) => {                          // keep the point under the pointer still
+    const r = box.getBoundingClientRect(), px = cx - r.left - r.width / 2, py = cy - r.top - r.height / 2;
+    nk = Math.max(1, Math.min(6, nk)); x = px - (px - x) * nk / k; y = py - (py - y) * nk / k; k = nk; draw();
+  };
+  box.addEventListener('wheel', (e) => { e.preventDefault(); at(e.clientX, e.clientY, k * Math.exp(-e.deltaY * 0.0022)); }, { passive:false });
+  box.addEventListener('pointerdown', (e) => {
+    box.setPointerCapture(e.pointerId); P.set(e.pointerId, { x:e.clientX, y:e.clientY }); moved = false;
+    if (P.size === 2) { const [a, b] = [...P.values()]; pinch = { d:Math.hypot(a.x - b.x, a.y - b.y), k }; pan = null; }
+    else pan = { sx:e.clientX, sy:e.clientY, x, y };
+  });
+  box.addEventListener('pointermove', (e) => {
+    if (!P.has(e.pointerId)) return; P.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if (pinch && P.size === 2) { const [a, b] = [...P.values()]; moved = true; at((a.x + b.x) / 2, (a.y + b.y) / 2, pinch.k * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d); return; }
+    if (pan) { const dx = e.clientX - pan.sx, dy = e.clientY - pan.sy; if (Math.hypot(dx, dy) > 4) moved = true; if (k > 1) { x = pan.x + dx; y = pan.y + dy; draw(); } }
+  });
+  const up = (e) => {
+    P.delete(e.pointerId); if (P.size < 2) pinch = null;
+    if (!pan || P.size) { pan = null; return; } pan = null;
+    if (moved) return;
+    const now = Date.now();
+    if (now - lastTap < 300) { k = 1; draw(); lastTap = 0; return; }        // double-click / double-tap: back to the whole picture
+    lastTap = now; if (k === 1) at(e.clientX, e.clientY, 2.5);
+  };
+  box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+  box.addEventListener('dblclick', (e) => e.preventDefault());
 }
 // the strip on top: today / approved / waiting for review / to render again – and the made-of-total in the panel, from the index
 function studioStats() {
