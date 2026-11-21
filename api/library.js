@@ -1,6 +1,6 @@
 // Product models ("The Balloon Wall Stand" …) and saved scenes, shared by everyone; changes are admin only.
 // GET  → { models: { <type>: { <name>: { cfg, updated } } }, scenes: { <name>: { kind:'base'|'ready', scene, brief?, light?, camera, updated } } }
-// POST → { action: 'save-model' | 'delete-model' | 'rename-model' | 'save-scene' | 'delete-scene', type?, name, newName?, data? }
+// POST → { action: 'save-model' | 'delete-model' | 'rename-model' | 'save-scene' | 'delete-scene' | 'rename-scene', type?, name, newName?, data? }
 import { redis } from './_redis.js';
 import { isAdmin } from './_auth.js';
 
@@ -44,6 +44,10 @@ export default async function handler(req, res) {
       await dropImages(doc.scenes[n], [data.base?.url, data.final?.url]);
       doc.scenes[n] = { ...data, updated: new Date().toISOString() };
     } else if (action === 'delete-scene') { await dropImages(doc.scenes[n]); delete doc.scenes[n]; }
+    else if (action === 'rename-scene') {            // a new name, the same scene and pictures (nothing is deleted from Blob)
+      const nn = clean(newName); if (!nn || !doc.scenes[n]) return res.status(400).json({ error: 'שם לא תקין' });
+      if (nn !== n) { if (doc.scenes[nn]) await dropImages(doc.scenes[nn], [doc.scenes[n].base?.url, doc.scenes[n].final?.url]); doc.scenes[nn] = doc.scenes[n]; delete doc.scenes[n]; }
+    }
     else return res.status(400).json({ error: 'unknown action' });
     const out = JSON.stringify(doc);
     if (out.length > 900_000) return res.status(413).json({ error: 'הספרייה גדולה מדי – מחקו דגמים או סצנות ישנים' });

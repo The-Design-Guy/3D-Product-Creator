@@ -900,6 +900,11 @@
   .arch-new { display:grid; place-items:center; font-size:26px; font-weight:300; color:#0088FF; border:1.5px dashed #9ec9ff; box-sizing:border-box; }
   .setnew { margin:2px 0 12px; } .setnew .btn { width:100%; height:42px; font-weight:700; }
   .archacts { display:flex; gap:8px; margin-top:10px; } .archacts .btn { flex:1; height:42px; } .archacts .danger { flex:none; }
+  .adch { display:inline-flex; align-items:center; gap:2px; } .adch.hid > button:first-child { opacity:.4; text-decoration:line-through; }
+  .adoc .adpen { min-width:0; width:26px; height:26px; padding:0; border:0; background:none; font-size:13px; cursor:pointer; color:var(--muted); }
+  .adoc .adpen:hover, .adol .adpen:hover, .adname .adpen:hover { color:var(--ink); } .adpen.del:hover { color:#b42318; }
+  .adol .adpen, .adname .adpen { border:0; background:none; cursor:pointer; font-size:13px; color:var(--muted); }
+  .adadm { display:flex; gap:8px; margin:18px 0 6px; padding-top:12px; border-top:1px dashed var(--line); } .adadm .btn { flex:1; }
   .adswipe { display:block; text-align:center; font-size:11px; color:var(--muted); margin-top:4px; }
   .adol { font-size:12px; font-weight:800; color:var(--muted); margin-bottom:6px; }
   .adoc { display:flex; flex-wrap:wrap; gap:6px; }
@@ -5672,7 +5677,7 @@ function sceneWheel(host, owner, start = 0, quiet = false, withNew = true) {
   const newScene = () => { const R = deep(ARCH.snap ? ARCH.snap.scene.room : SCN.room);
     return { room:{ ...R, W:12000, D:12000, back:true, left:false, right:false, front:false, openings:[], obstacles:[] }, items:[], zones:[], shots:[], brief:null, next:1 }; };
   host.innerHTML = `<div class="archpic" id="archPic"></div><div class="adwh"></div>
-    <div class="archacts"><button class="btn primary" id="archGo">פתיחה</button>${isAdmin() ? '<button class="btn danger" id="archDel" title="מחיקה" hidden>מחיקה</button>' : ''}</div>`;
+    <div class="archacts"><button class="btn primary" id="archGo">פתיחה</button>${isAdmin() ? '<button class="btn" id="archRen" title="שינוי שם" hidden>✎ שם</button><button class="btn danger" id="archDel" title="מחיקה" hidden>מחיקה</button>' : ''}</div>`;
   let ci = 0;
   if (mode === 'scene' && !ARCH.snap) ARCH.snap = { scene:sceneSnap(), cam:shotNow('') };      // what was on screen: comes back if nothing is opened
   ARCH.owner = owner;
@@ -5697,12 +5702,17 @@ function sceneWheel(host, owner, start = 0, quiet = false, withNew = true) {
       ci = i; const n = keys[i];
       $('archPic').innerHTML = n === NEW ? '<span>סצנה חדשה – חדר ריק 12×12 מ׳</span><b>סצנה חדשה</b>' : pic(n);
       $('archGo').textContent = n === NEW ? 'התחלת סצנה חדשה' : 'פתיחת הסצנה';
-      if ($('archDel')) $('archDel').hidden = n === NEW;
+      if ($('archDel')) $('archDel').hidden = n === NEW; if ($('archRen')) $('archRen').hidden = n === NEW;
       if (first) { first = false; return; }                          // the scene on screen stays until the wheel is turned
       clearTimeout(ARCH.t); ARCH.t = setTimeout(() => n === NEW ? archPreviewNew() : archPreview(n), 280);
     }).focus({ preventScroll:true });
   function archPreviewNew() { if (mode !== 'scene' || !ARCH.snap || ARCH.cur === NEW) return; ARCH.cur = NEW; archApply(newScene(), null); }
   $('archGo').onclick = () => open(ci);
+  if ($('archRen')) $('archRen').onclick = async () => { const n = keys[ci]; if (n === NEW) return;
+    const nn = (prompt('שם חדש לסצנה:', n) || '').trim(); if (!nn || nn === n) return;
+    if (lib.scenes[nn] && !(await askConfirm(`כבר יש סצנה בשם "${nn}". להחליף אותה?`, 'להחליף', true))) return;
+    try { await persistLib('rename-scene', { name:n, newName:nn }); if ($('scnLib').value === n) { renderLibUI(); $('scnLib').value = nn; } else renderLibUI(); toast('השם עודכן');
+      const keep = ARCH.snap; owner === 'arch' ? openArchDrawer(true) : sceneWheel(host, owner, start, true, withNew); if (keep) ARCH.snap = keep; } catch (e) { toast(e.message); } };
   if ($('archDel')) $('archDel').onclick = async () => { const n = keys[ci]; if (n === NEW) return;
     if (!(await askConfirm(`למחוק את הסצנה "${n}"?`, 'מחיקה', true))) return;
     try { await persistLib('delete-scene', { name:n }); renderLibUI(); showSceneInfo(null); owner === 'arch' ? openArchDrawer(true) : sceneWheel(host, owner, start, true, withNew); } catch (e) { toast(e.message); } };
@@ -6409,6 +6419,7 @@ async function persistLib(action, payload) {
   if (action === 'rename-model' && lib.models[type] && lib.models[type][name]) { lib.models[type][newName] = lib.models[type][name]; delete lib.models[type][name]; }
   if (action === 'save-scene') lib.scenes[name] = { ...data, updated:new Date().toISOString() };
   if (action === 'delete-scene') delete lib.scenes[name];
+  if (action === 'rename-scene' && lib.scenes[name] && newName && newName !== name) { lib.scenes[newName] = lib.scenes[name]; delete lib.scenes[name]; }
   LS.set('rbt-library', lib);
 }
 const curModel = {};                                // type → name of the model last chosen in its panel
@@ -6827,14 +6838,14 @@ function adList() {
   $('adFoot').hidden = true;
   const q = ($('adQ').value || '').trim().toLowerCase();
   if (!q) return adWheel();                          // the cards are only for search results; browsing is on the wheels
-  const words = q.split(/\s+/), hit = (f) => { const t = (f.name + ' ' + f.vars.map(v => v.name + ' ' + (v.kw || '')).join(' ')).toLowerCase(); return words.every(w => t.includes(w)); };
+  const words = q.split(/\s+/), hit = (f) => { const t = (f.name + ' ' + pName(f) + ' ' + Object.values((OV.names.opt || {})[f.name] || {}).join(' ') + ' ' + f.vars.map(v => v.name + ' ' + (v.kw || '')).join(' ')).toLowerCase(); return words.every(w => t.includes(w)); };
   const found = AD.groups.filter(hit);
   if (!found.length) { list.innerHTML = `<div class="adempty">לא נמצא מוצר ל"${adEsc(q)}"</div>`; return; }
   list.innerHTML = '<div class="adcards"></div>';
   const grid = list.firstChild;
   found.forEach(f => {
     const card = document.createElement('div'); card.className = 'adcard'; card.draggable = true; card.tabIndex = 0;
-    card.innerHTML = `<span class="adimgs"></span><span class="adname">${adEsc(f.name)}</span>`;
+    card.innerHTML = `<span class="adimgs"></span><span class="adname">${adEsc(pName(f))}</span>`;
     card._f = f; card._i = 0; card._src = null;
     grid.appendChild(card);
   });
@@ -6914,7 +6925,7 @@ function adWheel() {
   if (fam.groups.length === 1) { AD.from = 'fam'; adPage(fam.groups[0]); return; }      // one product: straight to its page
   list.innerHTML = `<button class="adback" id="adBack">→ כל המשפחות</button><div class="adwh"></div>`;
   $('adBack').onclick = () => { AD.fam = null; adWheel(); };
-  mountWheel(list.querySelector('.adwh'), fam.groups.map(g => ({ label:g.name, sub:g.vars.length > 1 ? g.vars.length + ' גרסאות' : '', icon:adIcon(g) })),
+  mountWheel(list.querySelector('.adwh'), fam.groups.map(g => ({ label:pName(g), sub:g.vars.length > 1 ? g.vars.length + ' גרסאות' : '', icon:adIcon(g) })),
     (i) => { AD.sub = i; AD.from = 'sub'; adPage(fam.groups[i]); }, AD.sub || 0).focus({ preventScroll:true });
 }
 // the studio's photo of exactly this setup, when there is one (not one marked "do again")
@@ -6936,13 +6947,51 @@ function adCycle(dir) {
   else { const k = o.ch.findIndex(x => x[0] === P.pick[o.l]); P.pick[o.l] = o.ch[(k + dir + o.ch.length) % o.ch.length][0]; }
   adPageRender();
 }
+
+// ---- the admin's names and photos, on top of the code (kept on the server: /api/overrides) ----
+let OV = { names:{ prod:{}, opt:{} }, photos:{} };
+const pName = (f) => (OV.names.prod || {})[f.name] || f.name;
+const oName = (prod, t) => ((OV.names.opt || {})[prod] || {})[t] || t;
+const ovPh = (prod) => (OV.photos || {})[prod] || { hide:[], extra:[] };
+async function loadOV() { if (!server) return; try { const r = await fetch('/api/overrides'); if (r.ok) OV = await r.json(); } catch {} if (ADD_OPEN) { if (AD.page) adPageRender(); else adList(); } }
+async function saveOV() {
+  try { OV = await api('/api/overrides', { data:OV }); } catch (e) { toast('השמירה נכשלה: ' + e.message); return false; }
+  return true;
+}
+// rename: an empty name brings the original back
+async function ovRename(kind, prod, t) {
+  const cur = kind === 'prod' ? pName({ name:prod }) : oName(prod, t);
+  const v = prompt(`שם חדש ל"${cur}" (ריק – חזרה לשם המקורי "${kind === 'prod' ? prod : t}"):`, cur); if (v === null) return;
+  const nv = v.trim();
+  if (kind === 'prod') { if (nv && nv !== prod) OV.names.prod[prod] = nv; else delete OV.names.prod[prod]; }
+  else { const m = (OV.names.opt[prod] = OV.names.opt[prod] || {}); if (nv && nv !== t) m[t] = nv; else delete m[t]; }
+  if (await saveOV()) { toast('השם עודכן'); AD.fams = null; adPageRender(); }
+}
+// a photo from a file → Blob (webp, up to 1600 px) → a new choice of the product
+async function ovAddPhoto(prod) {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = async () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    const name = (prompt('שם לתמונה (למשל: תכולה רפואית):', f.name.replace(/\.[^.]+$/, '')) || '').trim(); if (!name) return;
+    toast('מעלה את התמונה…');
+    try {
+      const bmp = await createImageBitmap(f), k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height)), cv = document.createElement('canvas');
+      cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k); cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+      let d = cv.toDataURL('image/webp', 0.9); if (!d.startsWith('data:image/webp')) d = cv.toDataURL('image/png');
+      const url = await uploadImage(d, 'catalog'); if (!url) throw new Error('ההעלאה לא הצליחה');
+      const ph = (OV.photos[prod] = OV.photos[prod] || { hide:[], extra:[] }); ph.extra.push({ id:Date.now().toString(36), name, url });
+      if (await saveOV()) { toast(`"${name}" נוספה`); AD.page.xp = ph.extra[ph.extra.length - 1].id; adPageRender(); }
+    } catch (e) { toast('ההעלאה נכשלה: ' + e.message); }
+  };
+  inp.click();
+}
 // level 2: one product – a big picture, its main choices, and "add to the scene"
 function adPage(f) {
   const opts = PRODUCT_OPTS[f.name] || [];
   AD.page = { f, vi:0, pick:{} };
   // start from the first variation; the choices it implies are marked
   opts.forEach(o => { if (o.def) AD.page.pick[o.l] = o.def(f.vars[0].cfg); });
-  $('adTitle').textContent = f.name;
+  $('adTitle').textContent = pName(f);
   $('adFoot').hidden = false;
   adPageRender();
   $('adList').scrollTop = 0;
@@ -7297,19 +7346,26 @@ function adPageV() {
   return { t:v.t, cfg:c, name:v.name };
 }
 function adPageRender() {
-  const P = AD.page, f = P.f, opts = PRODUCT_OPTS[f.name] || [], v = adPageV();
-  let url = adCatPhoto(f, v, P) || photoFor(f, v.cfg);
+  const P = AD.page, f = P.f, opts = PRODUCT_OPTS[f.name] || [], v = adPageV(), ph = ovPh(f.name), xp = P.xp && ph.extra.find(e => e.id === P.xp);
+  const look = opts.find(o => o.l === 'תצוגה' && o.ch);
+  if (look && !P.xp && ph.hide.includes(P.pick['תצוגה'])) { const vis = look.ch.find(x => !ph.hide.includes(x[0])); if (vis) P.pick['תצוגה'] = vis[0]; else if (ph.extra[0]) P.xp = ph.extra[0].id; }
+  let url = (xp && xp.url) || adCatPhoto(f, v, P) || photoFor(f, v.cfg);
   if (!url) { try { url = productThumb(v.t, v.cfg); } catch (e) { url = ''; } }
+  const E = AD.edit && isAdmin();
+  $('adTitle').textContent = pName(f);
   const rows = opts.map(o => {
     let ch;
     if (o.vars) ch = f.vars.map((x, i) => ({ t:o.vars(x), on:i === P.vi, vi:i }));
-    else { if (o.if && !o.if(v.cfg)) return ''; ch = o.ch.map(x => ({ t:x[0], on:x[0] === P.pick[o.l] })); }
+    else { if (o.if && !o.if(v.cfg)) return ''; ch = o.ch.filter(x => E || o !== look || !ph.hide.includes(x[0])).map(x => ({ t:x[0], on:!(o === look && P.xp) && x[0] === P.pick[o.l], hid:o === look && ph.hide.includes(x[0]) })); }
+    if (o === look) ph.extra.forEach(e => ch.push({ t:e.name, on:P.xp === e.id, xp:e.id }));
     if (o.vars) ch.sort((a, b) => (parseFloat(a.t) || 0) - (parseFloat(b.t) || 0));
-    return `<div class="adopt"><div class="adol">${o.l}</div><div class="adoc">${ch.map(x => `<button class="${x.on ? 'on' : ''}" data-l="${adEsc(o.l)}" ${x.vi !== undefined ? `data-vi="${x.vi}"` : `data-t="${adEsc(x.t)}"`}>${adEsc(x.t)}</button>`).join('')}</div></div>`;
+    return `<div class="adopt"><div class="adol">${adEsc(oName(f.name, o.l))}${E ? ` <button class="adpen" data-ren="${adEsc(o.l)}" title="שינוי שם">✎</button>` : ''}</div><div class="adoc">${ch.map(x => `<span class="adch${x.hid ? ' hid' : ''}"><button class="${x.on ? 'on' : ''}" data-l="${adEsc(o.l)}" ${x.xp ? `data-xp="${x.xp}"` : x.vi !== undefined ? `data-vi="${x.vi}"` : `data-t="${adEsc(x.t)}"`}>${adEsc(x.xp ? x.t : oName(f.name, x.t))}</button>${E ? (x.xp ? `<button class="adpen" data-xren="${x.xp}" title="שינוי שם">✎</button><button class="adpen del" data-xdel="${x.xp}" title="מחיקת התמונה">🗑</button>` : `<button class="adpen" data-ren="${adEsc(x.t)}" title="שינוי שם">✎</button>${o === look ? `<button class="adpen" data-hide="${adEsc(x.t)}" title="${x.hid ? 'להחזיר' : 'להסתיר'}">${x.hid ? '↺' : '🙈'}</button>` : ''}`) : ''}</span>`).join('')}</div></div>`;
   }).join('');
   const o0 = opts[0], many = o0 ? (o0.vars ? f.vars.length > 1 : o0.ch && o0.ch.length > 1) : f.vars.length > 1;
   const back = AD.from === 'sub' ? '→ ' + adFams()[AD.fam].name : AD.from === 'fam' ? '→ כל המשפחות' : AD.from === 'q' ? '→ תוצאות החיפוש' : '';
-  $('adList').innerHTML = `${back ? `<button class="adback" id="adBack">${adEsc(back)}</button>` : ''}<div class="adcard big" draggable="true" title="גררו לסצנה"><span class="adimgs"><img class="on" src="${url}" alt="" draggable="false"></span><span class="adname">${adEsc(f.name)}</span></div>${many ? `<span class="adswipe">גלילה / החלקה על התמונה – ${adEsc(o0 ? o0.l : 'גרסה')} הבא</span>` : ''}${rows}`;
+  const extraRow = !look && (ph.extra.length || E) ? `<div class="adopt"><div class="adol">תמונה</div><div class="adoc"><span class="adch"><button class="${P.xp ? '' : 'on'}" data-xp="">רגילה</button></span>${ph.extra.map(e => `<span class="adch"><button class="${P.xp === e.id ? 'on' : ''}" data-xp="${e.id}">${adEsc(e.name)}</button>${E ? `<button class="adpen" data-xren="${e.id}" title="שינוי שם">✎</button><button class="adpen del" data-xdel="${e.id}" title="מחיקת התמונה">🗑</button>` : ''}</span>`).join('')}</div></div>` : '';
+  const admin = isAdmin() ? `<div class="adadm">${E ? `<button class="btn" id="adPhotoAdd">＋ הוספת תמונה מקובץ</button><button class="btn primary" id="adEditDone">סיום עריכה</button>` : `<button class="btn" id="adEdit">✎ עריכת שמות ותמונות</button>`}</div>` : '';
+  $('adList').innerHTML = `${back ? `<button class="adback" id="adBack">${adEsc(back)}</button>` : ''}<div class="adcard big" draggable="true" title="גררו לסצנה"><span class="adimgs"><img class="on" src="${url}" alt="" draggable="false"></span><span class="adname">${adEsc(pName(f))}${E ? ` <button class="adpen" id="adRenP" title="שינוי שם המוצר">✎</button>` : ''}</span></div>${many ? `<span class="adswipe">גלילה / החלקה על התמונה – ${adEsc(o0 ? oName(f.name, o0.l) : 'גרסה')} הבא</span>` : ''}${rows}${extraRow}${admin}`;
   const big = $('adList').querySelector('.adcard.big'); big._f = f;
   if ($('adBack')) $('adBack').onclick = () => { if (AD.from === 'fam') AD.fam = null; AD.page = null; if (AD.from === 'q') adList(); else adWheel(); };
   if (many) {
@@ -7317,10 +7373,24 @@ function adPageRender() {
     let sx = null; big.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') sx = e.clientX; });
     big.addEventListener('pointerup', (e) => { if (sx == null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 40) adCycle(dx < 0 ? 1 : -1); });
   }
-  $('adList').querySelectorAll('.adoc button').forEach(b => b.onclick = () => {
-    if (b.dataset.vi !== undefined) P.vi = +b.dataset.vi; else P.pick[b.dataset.l] = b.dataset.t;
+  $('adList').querySelectorAll('.adoc button:not(.adpen)').forEach(b => b.onclick = () => {
+    if (b.dataset.xp !== undefined) P.xp = b.dataset.xp || null;
+    else if (b.dataset.vi !== undefined) P.vi = +b.dataset.vi; else { P.pick[b.dataset.l] = b.dataset.t; if (b.dataset.l === 'תצוגה') P.xp = null; }
     adPageRender();
   });
+  const L = $('adList');
+  if ($('adEdit')) $('adEdit').onclick = () => { AD.edit = true; adPageRender(); };
+  if ($('adEditDone')) $('adEditDone').onclick = () => { AD.edit = false; adPageRender(); };
+  if ($('adPhotoAdd')) $('adPhotoAdd').onclick = () => ovAddPhoto(f.name);
+  if ($('adRenP')) $('adRenP').onclick = (e) => { e.stopPropagation(); ovRename('prod', f.name); };
+  L.querySelectorAll('[data-ren]').forEach(b => b.onclick = () => ovRename('opt', f.name, b.dataset.ren));
+  L.querySelectorAll('[data-hide]').forEach(b => b.onclick = async () => { const t = b.dataset.hide, x = (OV.photos[f.name] = OV.photos[f.name] || { hide:[], extra:[] });
+    x.hide = x.hide.includes(t) ? x.hide.filter(h => h !== t) : [...x.hide, t]; if (await saveOV()) adPageRender(); });
+  L.querySelectorAll('[data-xren]').forEach(b => b.onclick = async () => { const e = ph.extra.find(x => x.id === b.dataset.xren); if (!e) return;
+    const v = (prompt('שם חדש לתמונה:', e.name) || '').trim(); if (!v) return; e.name = v; OV.photos[f.name] = ph; if (await saveOV()) adPageRender(); });
+  L.querySelectorAll('[data-xdel]').forEach(b => b.onclick = async () => { const e = ph.extra.find(x => x.id === b.dataset.xdel); if (!e) return;
+    if (!(await askConfirm(`למחוק את התמונה "${e.name}"?`, 'מחיקה', true))) return;
+    ph.extra = ph.extra.filter(x => x !== e); OV.photos[f.name] = ph; if (P.xp === e.id) P.xp = null; if (await saveOV()) adPageRender(); });
 }
 // a product dropped on the scene: it lands where it was dropped (on the floor), and is selected
 let AD_DRAG = null;
@@ -10549,7 +10619,7 @@ async function withDpi(blob, dpi) {
   await loadLib(); renderLibUI();
   renderPresetPicker();
   if (store.active && store.presets[store.active]) selectPreset(store.active);
-  extendFromUrl(); watchAsks();
+  extendFromUrl(); watchAsks(); loadOV();
 })();
 
 // =====================================================================
