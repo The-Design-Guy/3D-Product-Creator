@@ -126,6 +126,8 @@
   .gal-nav { position:absolute; top:42%; margin-top:-22px; width:44px; height:44px; border-radius:50%; border:1px solid var(--line); background:rgba(255,255,255,.94); box-shadow:0 4px 14px rgba(0,0,0,.14); display:grid; place-items:center; padding:0; color:var(--ink); cursor:pointer; z-index:2; }
   .gal-nav.nx { right:-14px; } .gal-nav.pv { left:-14px; } .gal-nav:disabled { opacity:.25; cursor:default; }
   .gal-nav:not(:disabled):hover { background:var(--ink); color:#fff; }
+  #grHold.on { background:var(--ink); color:#fff; } #grHold { touch-action:none; user-select:none; -webkit-user-select:none; }
+  .gal-none { grid-column:1/-1; text-align:center; color:var(--muted); padding:30px 0; }
   .gal-zh { display:block; font-size:11px; color:var(--muted); margin-top:4px; }
   .gal-rev .gal-imgs { display:flex; gap:12px; justify-content:center; margin-bottom:10px; } .gal-rev figure { margin:0; flex:1; max-width:420px; text-align:center; }
   .gal-rev figure img { width:100%; aspect-ratio:4/5; object-fit:contain; border-radius:10px; cursor:zoom-in; background:repeating-conic-gradient(#f1f2f4 0 25%, #fff 0 50%) 0 0/18px 18px; }
@@ -896,6 +898,7 @@
   .adempty { text-align:center; color:var(--muted); font-size:14px; padding:40px 10px; }
   .adcard.big .adimgs { touch-action:pan-y; }
   .arch-new { display:grid; place-items:center; font-size:26px; font-weight:300; color:#0088FF; border:1.5px dashed #9ec9ff; box-sizing:border-box; }
+  .setnew { margin:2px 0 12px; } .setnew .btn { width:100%; height:42px; font-weight:700; }
   .archacts { display:flex; gap:8px; margin-top:10px; } .archacts .btn { flex:1; height:42px; } .archacts .danger { flex:none; }
   .adswipe { display:block; text-align:center; font-size:11px; color:var(--muted); margin-top:4px; }
   .adol { font-size:12px; font-weight:800; color:var(--muted); margin-bottom:6px; }
@@ -1520,8 +1523,9 @@
 </div>
 <div class="elpop" id="elPop" hidden role="dialog" aria-label="פרטי הפריט"></div>
 <div class="scnfab" id="scnFab" hidden>
+  <button class="tb" id="fabSet" title="סצנה חדשה: החדר, הקירות, דלתות וחלונות, המוצרים בסצנה"><svg class="ico" viewBox="0 0 28 28" width="20" height="20" fill="currentColor" stroke="currentColor" stroke-width=".6" aria-hidden="true"><g> <path d="M25.67,8.57h-15.28c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h15.28c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M8.03,8.57H2.33c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h5.71c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M25.67,14.46h-5.99c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h5.99c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M18.04,14.46H2.33c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h15.71c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M25.67,20.35H9.66c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h16.01c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M8.03,20.35H2.33c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h5.71c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> </g> <path d="M8.03,11.19c-.18,0-.33-.15-.33-.33v-5.78c0-.18.15-.33.33-.33s.33.15.33.33v5.78c0,.18-.15.33-.33.33Z"/> <path d="M8.03,23.25c-.18,0-.33-.15-.33-.33v-5.78c0-.18.15-.33.33-.33s.33.15.33.33v5.78c0,.18-.15.33-.33.33Z"/> <path d="M19.68,17.05c-.18,0-.33-.15-.33-.33v-5.86c0-.18.15-.33.33-.33s.33.15.33.33v5.86c0,.18-.15.33-.33.33Z"/></svg><span>סצנה חדשה</span></button>
+  <button class="tb" id="fabLib" title="סצנות שמורות: גלגלו – הסצנה מוצגת במודל"><svg class="ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></svg><span>סצנות שמורות</span></button>
   <button class="tb big" id="fabAdd" title="הוספת מוצר לסצנה"><span class="plus">＋</span><svg class="ico bin" xmlns="http://www.w3.org/2000/svg" viewBox="84 54 230 244" width="22" height="22" aria-hidden="true"><defs><clipPath id="tb-clip"><rect x="89.76" y="59.58" width="218.7" height="232.83" fill="none"/></clipPath></defs><g fill="currentColor" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><polygon points="308.46 123.3 308.46 244.17 222.57 292.41 222.07 292.14 114.1 232.07 114.28 157.97 114.28 155.61 114.45 85.84 116.49 85.84 116.49 87.64 116.32 156.79 116.31 159.15 116.14 230.87 221.55 289.52 222.56 290.08 223.6 289.49 305.34 243.59 306.42 242.98 306.42 124.46 199.77 61.14 200.79 59.63 308.46 123.3"/><polygon points="224.04 147.37 223.53 148.25 223.02 149.14 222.51 148.84 116.49 87.64 115.9 87.3 116.49 86.28 116.92 85.53 224.04 147.37"/><polygon points="224.55 148.26 224.22 196.91 224.21 199.23 223.6 289.49 223.59 291.25 221.54 291.24 221.55 289.52 222.17 198.12 222.19 195.79 222.51 148.84 222.51 148.24 223.53 148.25 224.55 148.26"/><path clip-path="url(#tb-clip)" d="M91.97,143.38l23.78,86.56,81.79-46.49.43-27.5-83.38-47.25-22.63,34.69ZM219.75,290.49l-21.57-84.86,22.57-36.78-20.75-11.76-.43,27.55-.51.29-84.58,48.08-24.72-89.970,24.18-37.06,84.08,47.64,1.82-91.97c-50.55,1.310-83.54,25.08-83.87,25.56l-1.7-1.140c.34-.5,34.39-25.81,86.59-26.49l1.03.7-1.86,94.48,23.56,13.35-23.23,37.85,21.36,84.02-1.98.51Z"/><polygon points="199.08 204.82 198.05 206.58 116.31 159.15 114.28 157.97 90.36 144.09 91.38 142.32 114.28 155.61 116.32 156.79 199.08 204.82"/><path clip-path="url(#tb-clip)" d="M224.37,148.42l-1.69-1.15c.33-.49,33.45-23.74,84.74-24.41l.02,2.04c-50.21.66-82.76,23.040-83.08,23.52"/><polygon points="307.93 242.68 306.95 244.47 305.34 243.59 224.21 199.23 222.17 198.12 198.07 184.94 199.05 183.14 222.19 195.79 224.22 196.91 306.42 241.85 307.93 242.68"/></g></svg><span>הוסף</span></button>
-  <button class="tb" id="fabSet" title="הגדרות הסצנה: חדר, קירות, סצנות שמורות, מצלמה"><svg class="ico" viewBox="0 0 28 28" width="20" height="20" fill="currentColor" stroke="currentColor" stroke-width=".6" aria-hidden="true"><g> <path d="M25.67,8.57h-15.28c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h15.28c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M8.03,8.57H2.33c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h5.71c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M25.67,14.46h-5.99c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h5.99c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M18.04,14.46H2.33c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h15.71c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M25.67,20.35H9.66c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h16.01c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M8.03,20.35H2.33c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h5.71c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> </g> <path d="M8.03,11.19c-.18,0-.33-.15-.33-.33v-5.78c0-.18.15-.33.33-.33s.33.15.33.33v5.78c0,.18-.15.33-.33.33Z"/> <path d="M8.03,23.25c-.18,0-.33-.15-.33-.33v-5.78c0-.18.15-.33.33-.33s.33.15.33.33v5.78c0,.18-.15.33-.33.33Z"/> <path d="M19.68,17.05c-.18,0-.33-.15-.33-.33v-5.86c0-.18.15-.33.33-.33s.33.15.33.33v5.86c0,.18-.15.33-.33.33Z"/></svg><span>הגדרות הסצנה</span></button>
   <button class="tb" id="fabCam" title="מצלמה: סיבוב או תנועה חופשית, עדשה, גובה, צילומים שמורים"><svg class="ico" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span>הגדרות מצלמה</span></button>
 </div>
 <aside class="adrawer" id="addDrawer" hidden aria-label="הוספת מוצרים">
@@ -5549,6 +5553,11 @@ function renderPresetPicker() {
   sel.value = activeName || '';
   document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
   { const l = document.getElementById('studioLink'); if (l && new URLSearchParams(location.search).get('studio')) l.hidden = true; }
+  // the studio always opens in a window of its own (not a tab); a second click brings that same window to the front
+  { const l = document.getElementById('studioLink'); if (l) l.onclick = (e) => { e.preventDefault();
+    const w = Math.min(1500, screen.availWidth - 40), h = Math.min(1000, screen.availHeight - 60);
+    const win = window.open(l.href, 'rbtStudio', `popup=yes,width=${w},height=${h},left=${Math.max(0, (screen.availWidth - w) / 2)},top=${Math.max(0, (screen.availHeight - h) / 2)}`);
+    if (win) win.focus(); else toast('הדפדפן חסם חלון חדש – אשרו חלונות קופצים לאתר'); }; }
   $('lockBtn').hidden = !server;
   $('lockBtn').classList.toggle('on', server && !!adminKey());
   // signed in: an open padlock with a check mark and the word "מנהל", in brand blue – so it is obvious at a glance
@@ -5653,13 +5662,13 @@ function archRestore() {
   if (S && mode === 'scene') archApply(S.scene, S.cam);
 }
 // the saved scenes on a wheel (a new 12 × 12 m scene first): the centred one shows in the 3D view; used by the restore drawer and the scene settings
-function sceneWheel(host, owner, start = 0, quiet = false) {
+function sceneWheel(host, owner, start = 0, quiet = false, withNew = true) {
   const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const names = Object.keys(lib.scenes).sort((a, b) => (lib.scenes[b].updated || '').localeCompare(lib.scenes[a].updated || ''));
   const img = (n) => { const sc = lib.scenes[n]; return sc && (sc.final?.url || sc.base?.url) || ''; };
   const pic = (n) => { const u = img(n); return (u ? `<img src="${esc(u)}" alt="">` : '<span>לסצנה הזו אין עדיין תמונה</span>') + `<b>${esc(n)}</b>`; };
   // first on the wheel, and where it starts: a new, empty 12 × 12 m scene
-  const NEW = '__new__', keys = [NEW, ...names];
+  const NEW = '__new__', keys = withNew ? [NEW, ...names] : names;
   const newScene = () => { const R = deep(ARCH.snap ? ARCH.snap.scene.room : SCN.room);
     return { room:{ ...R, W:12000, D:12000, back:true, left:false, right:false, front:false, openings:[], obstacles:[] }, items:[], zones:[], shots:[], brief:null, next:1 }; };
   host.innerHTML = `<div class="archpic" id="archPic"></div><div class="adwh"></div>
@@ -5670,13 +5679,13 @@ function sceneWheel(host, owner, start = 0, quiet = false) {
   const open = async (i) => {
     const n = keys[i];
     if (n === NEW) {
-      const had = ARCH.snap && ARCH.snap.scene.items.length;
-      if (had && !(await askConfirm('להתחיל סצנה חדשה של 12×12 מ׳? המוצרים שבסצנה הנוכחית יוסרו (סצנה שמורה לא נפגעת).', 'סצנה חדשה', true))) return;
+      if (!(await guardUnsaved())) return;
       ARCH.snap = null; ARCH.cur = null; clearTimeout(ARCH.t);
       if (mode !== 'scene') goPanel('scene');
       archApply(newScene(), null); sceneUndo.length = 0; RENDER_STATE.base = RENDER_STATE.final = null; $('scnLib').value = ''; showSceneInfo(null);
-      NAV = 'new'; syncNav(); toast('סצנה חדשה – 12×12 מ׳'); return;
+      NAV = 'new'; syncNav(); markClean(); toast('סצנה חדשה – 12×12 מ׳'); return;
     }
+    if (n !== $('scnLib').value || ARCH.snap) { if (!(await guardUnsaved())) return; }
     ARCH.snap = null; ARCH.cur = null; clearTimeout(ARCH.t); loadScene(n); $('scnLib').value = n; NAV = 'restore'; syncNav();
   };
   let first = !!quiet;
@@ -5696,7 +5705,7 @@ function sceneWheel(host, owner, start = 0, quiet = false) {
   $('archGo').onclick = () => open(ci);
   if ($('archDel')) $('archDel').onclick = async () => { const n = keys[ci]; if (n === NEW) return;
     if (!(await askConfirm(`למחוק את הסצנה "${n}"?`, 'מחיקה', true))) return;
-    try { await persistLib('delete-scene', { name:n }); renderLibUI(); showSceneInfo(null); owner === 'arch' ? openArchDrawer(true) : sceneWheel(host, owner, start, true); } catch (e) { toast(e.message); } };
+    try { await persistLib('delete-scene', { name:n }); renderLibUI(); showSceneInfo(null); owner === 'arch' ? openArchDrawer(true) : sceneWheel(host, owner, start, true, withNew); } catch (e) { toast(e.message); } };
 }
 // restore: the side drawer – the saved scenes by name; hovering one shows its picture at the top
 function openArchDrawer(refresh) {
@@ -5706,11 +5715,18 @@ function openArchDrawer(refresh) {
   setBack();
   ADD_OPEN = false; clearInterval(AD_TICK); AD.page = null; $('fabAdd').classList.remove('on');
   const d = $('addDrawer'), list = $('adList'), esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-  $('adTitle').textContent = 'שחזור סצנה'; $('adFoot').hidden = true;
+  $('adTitle').textContent = 'סצנות שמורות'; $('adFoot').hidden = true;
   const names = Object.keys(lib.scenes).sort((a, b) => (lib.scenes[b].updated || '').localeCompare(lib.scenes[a].updated || ''));
   const img = (n) => { const sc = lib.scenes[n]; return sc && (sc.final?.url || sc.base?.url) || ''; };
   const pic = (n) => { const u = img(n); return (u ? `<img src="${esc(u)}" alt="">` : '<span>לסצנה הזו אין עדיין תמונה</span>') + `<b>${esc(n)}</b>`; };
-  sceneWheel(list, 'arch');
+  if (!names.length) list.innerHTML = '<div class="use" style="padding:14px 4px">עדיין אין סצנות שמורות. שומרים סצנה מ"הארכיון" שבפס העליון.</div>';
+  else {
+    const top = document.createElement('div'); list.innerHTML = ''; list.appendChild(top);
+    sceneWheel(top, 'arch', Math.max(0, names.indexOf($('scnLib').value)), false, false);
+    // under the wheel: the products of the scene on screen (the list follows the wheel)
+    const c = document.createElement('section'); c.className = 'setcard'; c.innerHTML = '<h4>מוצרים בסצנה</h4>'; list.appendChild(c);
+    const n = $('scnList'), home = document.createComment('lent'); n.parentNode.insertBefore(home, n); c.appendChild(n); SET_LENT.push({ el:n, home });
+  }
   SET_OPEN = 'arch'; LAST_DRAWER = 'arch'; adTab();
   d.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => d.classList.add('in')));
 }
@@ -6535,11 +6551,11 @@ async function navTo(n) {
     syncNav(); return;
   }
   if (n === 'new') {
-    if (mode === 'scene' && SCN.items.length && !(await askConfirm('להתחיל סצנה חדשה? המוצרים שבסצנה הנוכחית יוסרו (סצנה שמורה לא נפגעת).', 'סצנה חדשה', true))) return;
+    if (mode === 'scene' && !(await guardUnsaved())) return;
     if (mode !== 'scene') goPanel('scene');
     releaseBody(); SCN.sel = null; SCN.editType = null; SCN.items = []; SCN.shots = []; sceneUndo.length = 0;
     RENDER_STATE.base = RENDER_STATE.final = null; $('scnLib').value = ''; showSceneInfo(null);
-    rebuild(); renderScene(); renderShots && renderShots();
+    rebuild(); renderScene(); renderShots && renderShots(); markClean();
     NAV = 'new'; syncNav(); showWelcome(); return;
   }
   if (n === 'restore') { if (mode === 'scene') openArchDrawer(true); else openScenePicker(); }   // in the scene: the archive drawer
@@ -7092,12 +7108,25 @@ async function studioGal(fetchIndex = true) {
   if (!g) { g = document.createElement('aside'); g.id = 'stuGal'; document.body.appendChild(g); }
   if (fetchIndex) { const r0 = GAL.rev || 0, h = await catIndex(); if ((GAL.rev || 0) === r0) GAL.have = h; }   // a review saved meanwhile wins over an older read
   studioStats();                                   // always: the counts follow every change (a reset, a review…)
+  const view = GAL.wait ? '~wait' : GAL.prod || '', sc = g.querySelector('.gal-grid, .gal-list'), keep = sc && g.dataset.view === view ? sc.scrollTop : 0;
+  g.dataset.view = view;
+  const back = () => { const el = g.querySelector('.gal-grid, .gal-list'); if (el && keep) el.scrollTop = keep; };   // the same view: stay where you scrolled
   const all = catVariants(), prods = [...new Set(all.map(v => v.prod))];
+  const waiting = all.filter(v => GAL.have[v.key] && !GAL.have[v.key].review);
+  if (GAL.wait) {                                  // every photo still waiting for a review, from all the products
+    g.innerHTML = `<div class="gal-h"><button class="btn" id="galBack">→ כל המוצרים</button><b>ממתינות לאישור</b><span>${waiting.length}</span></div>
+      <div class="gal-grid">${waiting.length ? waiting.map(v => { const x = GAL.have[v.key];
+        return `<button class="gal-c st-done" data-k="${galEsc(v.key)}"><img src="${galEsc(x.url)}" alt="" loading="lazy"><span class="gal-l">${galEsc(v.key)}</span><span class="gal-s">${GAL_TXT.done}</span></button>`; }).join('')
+        : '<p class="gal-none">אין תמונות שממתינות לאישור ✓</p>'}</div>`;
+    g.querySelector('#galBack').onclick = () => { GAL.wait = false; GAL.prod = null; GAL.touched = true; studioGal(false); };
+    g.querySelectorAll('.gal-c').forEach(b => b.onclick = () => galOpen(b.dataset.k));
+    back(); return;
+  }
   if (!GAL.prod) {
     const list = prods.map(p => { const vs = all.filter(v => v.prod === p), n = vs.filter(v => GAL.have[v.key]).length;
       const q = stuQ.get().includes(p);
       return `<button class="gal-p" data-p="${galEsc(p)}"><span>${galEsc(p)}${q ? ' <em class="gal-q">בתור</em>' : ''}</span><b class="${n === vs.length ? 'full' : ''}">${n === vs.length ? '✓ הושלם' : `${n}/${vs.length}`}</b></button>`; }).join('');
-    g.innerHTML = `<div class="gal-h"><b>גלריה</b><button class="btn warnbtn" id="galReset" title="מוחק את כל התמונות מהגלריה ומתחיל מאפס">איפוס – להתחיל מאפס</button></div><div class="gal-list">${list}</div>`;
+    g.innerHTML = `<div class="gal-h"><b>גלריה</b><button class="btn primary" id="galWait" ${waiting.length ? '' : 'disabled'}>ממתינות לאישור (${waiting.length})</button><button class="btn warnbtn" id="galReset" title="מוחק את כל התמונות מהגלריה ומתחיל מאפס">איפוס</button></div><div class="gal-list">${list}</div>`;
     g.querySelector('#galReset').onclick = async () => {
       const keys = Object.keys(GAL.have); if (!keys.length) { toast('הגלריה כבר ריקה'); return; }
       if (!(await askConfirm(`למחוק את כל ${keys.length} התמונות מהגלריה ולהתחיל מאפס?`, 'למחוק הכול'))) return;
@@ -7106,7 +7135,8 @@ async function studioGal(fetchIndex = true) {
       stuQ.set([]); STUDIO.fail.clear(); STUDIO.pause = false; studioGal(false); toast('הגלריה אופסה');
     };
     g.querySelectorAll('.gal-p').forEach(b => b.onclick = () => { GAL.prod = b.dataset.p; GAL.touched = true; studioGal(false); });
-    return;
+    g.querySelector('#galWait').onclick = () => { GAL.wait = true; GAL.touched = true; studioGal(false); };
+    back(); return;
   }
   const vs = all.filter(v => v.prod === GAL.prod), n = vs.filter(v => GAL.have[v.key]).length;
   g.innerHTML = `<div class="gal-h"><button class="btn" id="galBack">→ כל המוצרים</button><b>${galEsc(GAL.prod)}</b><span>${n}/${vs.length}</span>${stuQ.get().includes(GAL.prod) ? '<button class="btn" id="galQ">בתור ✓ (להוציא)</button>' : `<button class="btn primary" id="galQ" ${n === vs.length ? 'disabled' : ''}>לרנדר את המוצר</button>`}<button class="btn warnbtn" id="galAll" ${n ? '' : 'disabled'} title="מוחק את כל התמונות של המוצר, והסטודיו מרנדר אותן מחדש">לרנדר הכול מחדש</button></div>
@@ -7125,16 +7155,18 @@ async function studioGal(fetchIndex = true) {
     if (!STUDIO.run) startStudio();
   };
   g.querySelectorAll('.gal-c:not([disabled])').forEach(b => b.onclick = () => galOpen(b.dataset.k));
+  back();
 }
 // the review pop-up: the photo big, good / do again + notes, download, the one before it (after a redo) and ‹ › within the product
 function galOpen(key) {
   const x = GAL.have[key]; if (!x) return;
-  const vs = catVariants().filter(v => v.prod === GAL.prod && GAL.have[v.key]), i = vs.findIndex(v => v.key === key);
+  const all = catVariants(), vs = GAL.wait ? all.filter(v => GAL.have[v.key] && (!GAL.have[v.key].review || v.key === key)) : all.filter(v => v.prod === GAL.prod && GAL.have[v.key]), i = vs.findIndex(v => v.key === key);
+  const me = all.find(v => v.key === key);
   openDialog(`<div class="gal-rev">
       <div class="gal-rh"><h3>${galEsc(key)}</h3><span class="gal-n">${i + 1}/${vs.length}</span></div>
       <div class="gal-imgs">${x.prev ? `<figure><img src="${galEsc(x.prev)}" alt=""><figcaption>הגרסה הקודמת${x.prevNote ? ' – ' + galEsc(x.prevNote) : ''}</figcaption></figure>` : ''}<figure class="gal-cur"><div class="gal-zoom" id="grZoom"><img src="${galEsc(x.url)}" alt="" id="grImg" draggable="false"></div><button class="gal-nav nx" id="grNext" ${i < vs.length - 1 ? '' : 'disabled'} aria-label="הבאה" title="הבאה (→)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button><button class="gal-nav pv" id="grPrev" ${i > 0 ? '' : 'disabled'} aria-label="הקודמת" title="הקודמת (←)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><span class="gal-zh">גלגלת / צביטה – זום · גרירה – הזזה · דאבל־קליק – איפוס</span><figcaption>${x.prev ? 'החדשה' : ''}</figcaption></figure></div>
       <label class="fld">הערות (מה לתקן)<textarea id="grNote" rows="2" placeholder="למשל: התכולה גדולה מדי, חסר תא בטור השמאלי">${galEsc(x.note || '')}</textarea></label>
-      <div class="dlg-actions"><button class="btn primary" id="grOk">טוב ✓</button><button class="btn warnbtn" id="grRedo">לעשות שוב</button><button class="btn" id="grDl">הורדה</button><button class="btn" data-close>סגירה</button></div>
+      <div class="dlg-actions"><button class="btn" id="grHold" title="לוחצים ומחזיקים – רואים את המקור במקום התמונה; עוזבים – חוזרים">${x.prev ? 'החזיקו – הגרסה הקודמת' : 'החזיקו – המודל (המקור)'}</button><button class="btn primary" id="grOk">טוב ✓</button><button class="btn warnbtn" id="grRedo">לעשות שוב</button><button class="btn" id="grDl">הורדה</button><button class="btn" data-close>סגירה</button></div>
     </div>`, (card, close) => {
     card.classList.add('wide');
     const save = async (review) => {
@@ -7149,6 +7181,13 @@ function galOpen(key) {
     card.querySelector('#grRedo').onclick = () => save('redo');
     card.querySelector('#grDl').onclick = async () => saveFile(await (await fetch(x.url)).blob(), key.replace(/[\\/:*?"<>|]/g, '-').replace(/\s*–\s*/g, '_').replace(/\s*·\s*/g, '_') + '.png');
     zoomable(card.querySelector('#grZoom'));
+    // press and hold: the source in place of the photo – the render before this one, or (when there is none) the 3D model it was made from
+    { const im = card.querySelector('#grImg'), hb = card.querySelector('#grHold'); let alt = x.prev || null;
+      const on = (e) => { e.preventDefault(); if (!alt && me) { try { alt = productThumb(me.t, me.cfg); } catch (er) { alt = null; } } if (!alt) return; im.src = alt; hb.classList.add('on'); };
+      const off = () => { if (im.src !== x.url) im.src = x.url; hb.classList.remove('on'); };
+      hb.addEventListener('pointerdown', on); ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => hb.addEventListener(t, off));
+      hb.addEventListener('keydown', (e) => { if (e.key === ' ' && !e.repeat) on(e); }); hb.addEventListener('keyup', (e) => { if (e.key === ' ') off(); });
+      hb.addEventListener('contextmenu', (e) => e.preventDefault()); }
     const go = (d) => { const j = i + d; if (j >= 0 && j < vs.length) galOpen(vs[j].key); };
     card.querySelector('#grPrev').onclick = () => go(-1);
     card.querySelector('#grNext').onclick = () => go(1);
@@ -7194,6 +7233,7 @@ function studioStats() {
   if (!st) { st = document.createElement('div'); st.id = 'stuStats'; document.body.appendChild(st); }
   const xs = Object.values(GAL.have), ok = xs.filter(x => x.review === 'ok').length, redo = xs.filter(x => x.review === 'redo').length;
   st.innerHTML = `<span>היום: <b>${studioToday()}</b></span><span class="s-ok">אושרו: <b>${ok}</b></span><span class="s-wait">ממתינות לאישור: <b>${xs.length - ok - redo}</b></span><span class="s-redo">לרנדר שוב: <b>${redo}</b></span><span>בגלריה: <b>${xs.length}</b> / ${catVariants().length}</span>`;
+  const sw = st.querySelector('.s-wait'); if (sw) { sw.style.cursor = 'pointer'; sw.title = 'להציג את כל התמונות שממתינות לאישור'; sw.onclick = () => { GAL.wait = true; GAL.touched = true; studioGal(false); }; }
   const all = catVariants(); STUDIO.left = all.filter(v => !GAL.have[v.key]).length;
   const c = document.getElementById('stuCount'); if (c) { c.textContent = `${all.length - STUDIO.left}/${all.length}`; document.getElementById('stuBar').style.width = ((all.length - STUDIO.left) / all.length * 100) + '%'; }
 }
@@ -7313,6 +7353,7 @@ function closeAddDrawer() {
 // the little tab on the drawer's edge: ⋮ – closes it, and opens it again (on what was last shown)
 let LAST_DRAWER = 'add';
 function adTab() {
+  { const l = $('fabLib'); if (l) l.classList.toggle('on', SET_OPEN === 'arch' && !$('addDrawer').hidden); }
   if (ARCH.snap && (SET_OPEN !== ARCH.owner || ADD_OPEN)) archRestore();
   $('addDrawer').classList.toggle('adding', ADD_OPEN);                  // the search field belongs to adding products only
   const t = $('adTab'); if (!t) return;
@@ -7680,7 +7721,7 @@ function openSetDrawer(kind = 'set') {
   setBack();
   ADD_OPEN = false; clearInterval(AD_TICK); AD.page = null; $('fabAdd').classList.remove('on');
   const d = $('addDrawer'), list = $('adList'), P = $('pScene');
-  $('adTitle').textContent = kind === 'cam' ? 'הגדרות מצלמה' : 'הגדרות הסצנה'; $('adFoot').hidden = true;
+  $('adTitle').textContent = kind === 'cam' ? 'הגדרות מצלמה' : 'סצנה חדשה'; $('adFoot').hidden = true;
   list.innerHTML = ''; list.scrollTop = 0;
   const card = (title, nodes) => {
     nodes = nodes.filter(Boolean); if (!nodes.length) return;
@@ -7693,12 +7734,14 @@ function openSetDrawer(kind = 'set') {
   const lbl = (t) => kids.find(k => k.classList.contains('lbl') && k.textContent.trim() === t);
   if (kind === 'cam') card('', [...$('camMode').closest('.camsec').children].filter(k => !(k.classList.contains('lbl') && k.textContent.trim() === 'מצלמה')));
   else {
+  { const c = document.createElement('div'); c.className = 'setnew'; c.innerHTML = '<button class="btn" id="setFresh">＋ התחלה מחדש – חדר ריק 12×12 מ׳</button>'; list.appendChild(c);
+    c.querySelector('#setFresh').onclick = async () => {
+      if (!(await guardUnsaved())) return;
+      archApply({ room:{ ...deep(SCN.room), W:12000, D:12000, back:true, left:false, right:false, front:false, openings:[], obstacles:[] }, items:[], zones:[], shots:[], brief:null, next:1 }, null);
+      sceneUndo.length = 0; RENDER_STATE.base = RENDER_STATE.final = null; $('scnLib').value = ''; showSceneInfo(null); NAV = 'new'; syncNav(); renderOpenings(); renderObstacles(); markClean(); toast('סצנה חדשה – 12×12 מ׳'); }; }
   card('החדר', [kids.find(k => k.classList.contains('pair') && k.querySelector('#scnW')), $('roomScan')]);
   card('דלתות, חלונות ומכשולים', [$('elWheel'), $('scnOpen'), $('scnObst')]); renderOpenings(); renderObstacles();
   card('מוצרים בסצנה', [$('scnList')]);
-  { const c = document.createElement('section'); c.className = 'setcard'; c.innerHTML = '<h4>סצנות שמורות</h4><div class="scnwheel"></div><p class="use" style="margin:8px 2px 0">שמירה – מ"הארכיון" שבפס העליון.</p>'; list.appendChild(c);
-    const nm = Object.keys(lib.scenes).sort((a, b) => (lib.scenes[b].updated || '').localeCompare(lib.scenes[a].updated || ''));
-    sceneWheel(c.querySelector('.scnwheel'), kind, Math.max(0, nm.indexOf($('scnLib').value) + 1), true); }
   }
   SET_OPEN = kind; LAST_DRAWER = kind; adTab(); $('fabSet').classList.toggle('on', kind === 'set'); $('fabCam').classList.toggle('on', kind === 'cam');
   d.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => d.classList.add('in')));
@@ -8895,6 +8938,7 @@ function placeItemBar() {
 }
 function initSceneChrome() {
   $('fabAdd').onclick = () => openAddDrawer();
+  $('fabLib').onclick = () => openArchDrawer();
   $('addX').onclick = () => AD.page ? adList() : closeAddDrawer();   // settings: back to the scene   // from a product's page: back to all the products
   $('adAdd').onclick = () => { if (AD.page) addFromDrawer(adPageV()); };
   $('cpX').onclick = () => WF.on ? wfClose() : closeOpts();
@@ -10264,7 +10308,33 @@ async function saveScene(kind, name, imgs = { base:RENDER_STATE.base, final:REND
     await persistLib('save-scene', { name, data });
     toast(warn ? `הסצנה נשמרה בלי התמונות: ${warn}` : `הסצנה המוכנה "${name}" נשמרה${data.base || data.final ? ' עם התמונות' : ''}`);
   } else { await persistLib('save-scene', { name, data }); toast(`סצנת הבסיס "${name}" נשמרה`); }
-  renderLibUI(); $('scnLib').value = name; showSceneInfo(name);
+  renderLibUI(); $('scnLib').value = name; showSceneInfo(name); markClean();
+}
+// ---- "save what you were editing?": asked before another scene replaces this one, only when something was changed ----
+let SCN_CLEAN = null;
+const sceneKey = (sn) => JSON.stringify({ room:sn.room, items:sn.items.map(({ id, ...r }) => r), zones:sn.zones },
+  (k, v) => v === false || v === null || v === '' || (Array.isArray(v) && !v.length) ? undefined : v);      // an empty list / false = not there (the panels add them)
+function markClean() { SCN_CLEAN = sceneKey(sceneSnap()); }
+function sceneDirty(sn = sceneSnap()) { return SCN_CLEAN !== null && sceneKey(sn) !== SCN_CLEAN; }
+// → true: go on (saved, or not wanted); false: stay
+async function guardUnsaved() {
+  const sn = ARCH.snap ? ARCH.snap.scene : sceneSnap();
+  if (!sceneDirty(sn)) return true;
+  const cur = $('scnLib').value, kind = (cur && lib.scenes[cur] && lib.scenes[cur].kind) || 'base';
+  const ans = await new Promise((res) => openDialog(`<h3>לשמור את הסצנה שבעריכה?</h3>
+    <p class="dlg-sub">${cur ? `שיניתם את "${galEsc(cur)}" מאז שנפתחה.` : 'בסצנה הנוכחית יש שינויים שלא נשמרו.'}</p>
+    ${isAdmin() ? `<label class="fld">שם הסצנה<input id="gsName" value="${galEsc(cur)}" placeholder="למשל: מחסן חלקי חילוף"></label>` : '<p class="dlg-sub">שמירת סצנות זמינה במצב ניהול.</p>'}
+    <div class="dlg-actions">${isAdmin() ? '<button class="btn primary" id="gsSave">שמירה והמשך</button>' : ''}<button class="btn" id="gsNo">בלי לשמור</button><button class="btn" data-close>ביטול</button></div>`, (card, close) => {
+      let done = false; const fin = (v) => { if (done) return; done = true; close(); res(v); };
+      const sv = card.querySelector('#gsSave'); if (sv) sv.onclick = () => { const n = card.querySelector('#gsName').value.trim(); if (!n) { card.querySelector('#gsName').focus(); return; } fin({ save:n }); };
+      card.querySelector('#gsNo').onclick = () => fin('no');
+      $('dlg')._onClose = () => { if (!done) { done = true; res('cancel'); } };      // ✕ / click outside / "ביטול"
+    }));
+  if (ans === 'cancel') return false;
+  if (ans === 'no') return true;
+  if (lib.scenes[ans.save] && ans.save !== cur && !(await askConfirm(`כבר יש סצנה בשם "${ans.save}". להחליף אותה?`, 'להחליף'))) return false;
+  if (ARCH.snap) archRestore();                      // the wheel shows another scene: save the one that was being edited
+  try { await saveScene(kind, ans.save); return true; } catch (e) { toast(e.message); return false; }
 }
 function loadScene(name) {
   const sc = lib.scenes[name]; if (!sc) return;
@@ -10282,7 +10352,7 @@ function loadScene(name) {
     if (sc.base?.url) RENDER_STATE.base = { ...sc.base, image:sc.base.url };
     if (sc.final?.url) RENDER_STATE.final = sc.final.url;
   }
-  showSceneInfo(name);
+  showSceneInfo(name); setTimeout(markClean, 0);
   toast(sc.kind === 'ready' ? `נפתחה הסצנה המוכנה "${name}"${RENDER_STATE.base ? ' – הבסיס המאושר מחכה בחלון ה־Render' : ''}` : `נפתחה סצנת הבסיס "${name}"`);
 }
 function showSceneInfo(name) {
@@ -11260,7 +11330,7 @@ const clock = new THREE.Clock();
 rebuild();
 if (LANG === 'en') setLang('en');
 navTo('new');                                         // the app opens on a new scene
-openAddDrawer();                                      // with the products drawer open
+setTimeout(markClean, 0);
 $('langBtn').onclick = () => setLang(LANG === 'en' ? 'he' : 'en', true);
 document.querySelectorAll('.hlang [data-lang]').forEach(b => { b.disabled = b.dataset.lang === LANG; b.classList.toggle('on', b.dataset.lang === LANG); b.onclick = () => { if (b.dataset.lang !== LANG) setLang(b.dataset.lang, true); }; });
 function tickFrame() {
