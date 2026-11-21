@@ -885,6 +885,18 @@
   .adcard.big { margin:12px 0 6px; cursor:grab; }
   .adcard.big .adname { font-size:15px; padding:10px; }
   .adopt { margin-top:14px; }
+  .adsearch { flex:none; padding:10px 16px 4px; } .adrawer:not(.adding) .adsearch { display:none; } .adsearch input { width:100%; box-sizing:border-box; font:inherit; font-size:14px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:#f7f8f9; }
+  .adsearch input:focus { outline:none; border-color:var(--ink); background:#fff; }
+  .adwh { padding:8px 2px 4px; } .adwh .elwheel { height:290px; }
+  .adwh .elw-it span { display:flex; flex-direction:column; gap:1px; }
+  .elw-img { width:50px; height:50px; object-fit:contain; flex:none; border-radius:8px; background:#fff; }
+  .adback { display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:13px; font-weight:700; color:var(--ink); background:#f2f4f6; border:0; border-radius:999px; padding:7px 14px; cursor:pointer; margin:6px 0 4px; }
+  .adback:hover { background:#e6e9ec; }
+  .adwh-t { font-size:12px; color:var(--muted); margin:4px 2px 0; }
+  .adempty { text-align:center; color:var(--muted); font-size:14px; padding:40px 10px; }
+  .adcard.big .adimgs { touch-action:pan-y; }
+  .archacts { display:flex; gap:8px; margin-top:10px; } .archacts .btn { flex:1; height:42px; } .archacts .danger { flex:none; }
+  .adswipe { display:block; text-align:center; font-size:11px; color:var(--muted); margin-top:4px; }
   .adol { font-size:12px; font-weight:800; color:var(--muted); margin-bottom:6px; }
   .adoc { display:flex; flex-wrap:wrap; gap:6px; }
   .adoc button { font:inherit; font-size:13px; font-weight:700; min-width:44px; height:34px; padding:0 12px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink); cursor:pointer; }
@@ -1513,6 +1525,7 @@
 </div>
 <aside class="adrawer" id="addDrawer" hidden aria-label="הוספת מוצרים">
   <div class="adhead"><h3 id="adTitle">הוספת מוצרים</h3><button class="adx" id="addX" title="חזרה"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M15 16l4-4-4-4M19 12H9"/></svg><span>חזרה</span></button></div>
+  <div class="adsearch"><input type="search" id="adQ" autocomplete="off" placeholder="חיפוש מוצר…" aria-label="חיפוש מוצר"></div>
   <div class="adlist" id="adList"></div>
   <div class="adfoot" id="adFoot" hidden><button class="btn primary" id="adAdd">הוספה לסצנה</button></div>
 </aside>
@@ -5632,24 +5645,23 @@ function openArchDrawer(refresh) {
   $('adTitle').textContent = 'שחזור סצנה'; $('adFoot').hidden = true;
   const names = Object.keys(lib.scenes).sort((a, b) => (lib.scenes[b].updated || '').localeCompare(lib.scenes[a].updated || ''));
   const img = (n) => { const sc = lib.scenes[n]; return sc && (sc.final?.url || sc.base?.url) || ''; };
-  list.innerHTML = `<div class="archpic" id="archPic"><span>מעבר עם העכבר על סצנה מציג אותה כאן</span></div>
-    <div class="archlist">${names.length ? names.map(n => { const sc = lib.scenes[n];
-      return `<div class="archrow" data-n="${esc(n)}"><button class="archname"><b>${esc(n)}</b><small>${sc.kind === 'ready' ? 'סצנה מלאה' : 'שלב א׳'} · ${(sc.scene?.items || []).length} מוצרים · ${new Date(sc.updated || Date.now()).toLocaleDateString(LANG === 'en' ? 'en-GB' : 'he-IL')}</small></button>${isAdmin() ? '<button class="sb archdel" title="מחיקת הסצנה" aria-label="מחיקת הסצנה">✕</button>' : ''}</div>`; }).join('')
-      : '<div class="use" style="padding:12px 4px">עדיין אין סצנות שמורות.</div>'}</div>`;
-  const pic = $('archPic'), show = (n) => {
-    const u = n ? img(n) : '';
-    pic.innerHTML = n ? (u ? `<img src="${esc(u)}" alt="">` : '<span>לסצנה הזו אין עדיין תמונה</span>') + `<b>${esc(n)}</b>` : '<span>מעבר עם העכבר על סצנה מציג אותה כאן</span>';
-  };
-  list.querySelectorAll('.archrow').forEach(r => {
-    const n = r.dataset.n;
-    r.onmouseenter = () => show(n);
-    r.querySelector('.archname').onclick = () => { loadScene(n); $('scnLib').value = n; NAV = 'restore'; syncNav(); list.querySelectorAll('.archrow').forEach(x => x.classList.toggle('on', x === r)); };
-    const del = r.querySelector('.archdel'); if (del) del.onclick = async () => {
+  const pic = (n) => { const u = img(n); return (u ? `<img src="${esc(u)}" alt="">` : '<span>לסצנה הזו אין עדיין תמונה</span>') + `<b>${esc(n)}</b>`; };
+  if (!names.length) list.innerHTML = '<div class="use" style="padding:12px 4px">עדיין אין סצנות שמורות. שומרים סצנה מ"הארכיון" שבפס העליון.</div>';
+  else {
+    const cur = Math.max(0, names.indexOf($('scnLib').value));
+    list.innerHTML = `<div class="archpic" id="archPic"></div><div class="adwh"></div>
+      <div class="archacts"><button class="btn primary" id="archGo">פתיחת הסצנה</button>${isAdmin() ? '<button class="btn danger" id="archDel" title="מחיקה">מחיקה</button>' : ''}</div>`;
+    let ci = cur;
+    const open = (i) => { const n = names[i]; loadScene(n); $('scnLib').value = n; NAV = 'restore'; syncNav(); toast(`"${n}" נפתחה`); };
+    mountWheel(list.querySelector('.adwh'), names.map(n => { const sc = lib.scenes[n], u = img(n);
+      return { label:n, sub:`${sc.kind === 'ready' ? 'סצנה מלאה' : 'שלב א׳'} · ${(sc.scene?.items || []).length} מוצרים · ${new Date(sc.updated || Date.now()).toLocaleDateString('he-IL')}`,
+        icon:u ? `<img class="elw-img" src="${esc(u)}" alt="" loading="lazy" style="object-fit:cover">` : '' }; }),
+      (i) => open(i), cur, (i) => { ci = i; $('archPic').innerHTML = pic(names[i]); }).focus({ preventScroll:true });
+    $('archGo').onclick = () => open(ci);
+    if ($('archDel')) $('archDel').onclick = async () => { const n = names[ci];
       if (!(await askConfirm(`למחוק את הסצנה "${n}"?`, 'מחיקה', true))) return;
-      try { await persistLib('delete-scene', { name:n }); renderLibUI(); showSceneInfo(null); openArchDrawer(true); } catch (e) { toast(e.message); }
-    };
-  });
-  list.querySelector('.archlist').onmouseleave = () => { const on = list.querySelector('.archrow.on'); show(on ? on.dataset.n : null); };
+      try { await persistLib('delete-scene', { name:n }); renderLibUI(); showSceneInfo(null); openArchDrawer(true); } catch (e) { toast(e.message); } };
+  }
   SET_OPEN = 'arch'; LAST_DRAWER = 'arch'; adTab();
   d.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => d.classList.add('in')));
 }
@@ -6731,7 +6743,10 @@ function openAddDrawer() {
   setBack();
   const d = $('addDrawer');
   if (!AD.groups) AD.groups = addFamilies().flatMap(c => groupVars(c.vars));
-  adList();
+  if (!AD.catT || Date.now() - AD.catT > 120000) { AD.catT = Date.now(); catIndex().then(h => { AD.cat = h; if (AD.page && ADD_OPEN) adPageRender(); }); }
+  if (!$('adQ')._on) { $('adQ')._on = 1; let t = 0; $('adQ').addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { AD.page = null; adList(); }, 150); });
+    $('adQ').addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') { $('adQ').value = ''; adList(); } }); }
+  if (AD.page) adPageRender(); else adList();
   ADD_OPEN = true; $('fabAdd').classList.add('on'); LAST_DRAWER = 'add'; adTab();
   d.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => d.classList.add('in')));
   clearInterval(AD_TICK);
@@ -6745,9 +6760,14 @@ function adList() {
   AD.page = null; const list = $('adList'); list.scrollTop = 0;
   $('adTitle').textContent = 'הוספת מוצרים';
   $('adFoot').hidden = true;
+  const q = ($('adQ').value || '').trim().toLowerCase();
+  if (!q) return adWheel();                          // the cards are only for search results; browsing is on the wheels
+  const words = q.split(/\s+/), hit = (f) => { const t = (f.name + ' ' + f.vars.map(v => v.name + ' ' + (v.kw || '')).join(' ')).toLowerCase(); return words.every(w => t.includes(w)); };
+  const found = AD.groups.filter(hit);
+  if (!found.length) { list.innerHTML = `<div class="adempty">לא נמצא מוצר ל"${adEsc(q)}"</div>`; return; }
   list.innerHTML = '<div class="adcards"></div>';
   const grid = list.firstChild;
-  AD.groups.forEach(f => {
+  found.forEach(f => {
     const card = document.createElement('div'); card.className = 'adcard'; card.draggable = true; card.tabIndex = 0;
     card.innerHTML = `<span class="adimgs"></span><span class="adname">${adEsc(f.name)}</span>`;
     card._f = f; card._i = 0; card._src = null;
@@ -6767,7 +6787,7 @@ function adWire(list) {
   list._wired = true;
   list.addEventListener('mouseover', (e) => { const c = e.target.closest('.adcard'); AD_HOVER = c && !c.classList.contains('big') ? c : null; });
   list.addEventListener('mouseleave', () => { AD_HOVER = null; });
-  list.addEventListener('click', (e) => { const c = e.target.closest('.adcard'); if (c && !c.classList.contains('big')) adPage(c._f); });
+  list.addEventListener('click', (e) => { const c = e.target.closest('.adcard'); if (c && !c.classList.contains('big')) { AD.from = 'q'; adPage(c._f); } });
   list.addEventListener('dblclick', (e) => { const c = e.target.closest('.adcard'); if (c && !c.classList.contains('big')) addFromDrawer(c._f.vars[0]); });
   list.addEventListener('dragstart', (e) => {
     const c = e.target.closest('.adcard'); if (!c) return;
@@ -6778,6 +6798,79 @@ function adWire(list) {
   list.addEventListener('dragend', () => { AD_DRAG = null; });
 }
 function adHideBig() {}
+
+// ---- adding products on wheels: families → products → the product's page (a big picture; scrolling on it changes the main size) ----
+function mountWheel(host, items, onPick, start = 0, onCenter = null) {
+  const N = items.length, cyc = N >= 5, S = { pos:start, target:start, raf:0, drag:null, acc:0, c:-1 };
+  host.innerHTML = `<div class="elwheel" tabindex="0" role="listbox"><div class="elw-band"></div><div class="elw-track"></div><div class="elw-hint">גלגלו או ⇅ · לחיצה בוחרת</div></div>`;
+  const w = host.firstChild, tr = w.querySelector('.elw-track');
+  tr.innerHTML = items.map((x, i) => `<div class="elw-it" data-i="${i}" role="option">${x.icon || ''}<span>${adEsc(x.label)}${x.sub ? `<small>${adEsc(x.sub)}</small>` : ''}</span><em>בחירה ›</em></div>`).join('');
+  const off = (i) => cyc ? ((i - S.pos) % N + N + N / 2) % N - N / 2 : i - S.pos;
+  const idx = () => cyc ? ((Math.round(S.target) % N) + N) % N : Math.max(0, Math.min(N - 1, Math.round(S.target)));
+  const lim = (t) => cyc ? t : Math.max(0, Math.min(N - 1, t));
+  const draw = () => [...tr.children].forEach((el, i) => { const d = off(i), a = Math.abs(d);
+    el.style.transform = `translateY(${d * 68}px) rotateX(${-d * 26}deg)`; el.style.opacity = a > 2.1 ? 0 : Math.max(0, 1 - a * 0.42);
+    el.style.visibility = a > 2.3 ? 'hidden' : 'visible'; el.classList.toggle('c', a < 0.5); if (a < 0.5 && S.c !== i) { S.c = i; onCenter && onCenter(i); } });
+  const anim = () => { cancelAnimationFrame(S.raf); const st = () => { S.pos += (S.target - S.pos) * 0.22; if (Math.abs(S.target - S.pos) < 0.002) S.pos = S.target; draw(); if (S.pos !== S.target) S.raf = requestAnimationFrame(st); }; S.raf = requestAnimationFrame(st); };
+  const pick = (i) => onPick(i, S);
+  w.addEventListener('wheel', (e) => { e.preventDefault(); S.acc += e.deltaY; if (Math.abs(S.acc) >= 40) { S.target = lim(Math.round(S.target) + Math.sign(S.acc)); S.acc = 0; anim(); } }, { passive:false });
+  w.addEventListener('mouseenter', () => { if (!typing()) w.focus({ preventScroll:true }); });
+  w.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); S.target = lim(Math.round(S.target) + (e.key === 'ArrowDown' ? 1 : -1)); anim(); }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); pick(idx()); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') e.stopPropagation();
+  });
+  w.addEventListener('pointerdown', (e) => { S.drag = { y:e.clientY, p:S.pos, moved:false, id:e.pointerId }; });
+  w.addEventListener('pointermove', (e) => { const D = S.drag; if (!D) return; const dy = e.clientY - D.y;
+    if (!D.moved && Math.abs(dy) < 5) return; if (!D.moved) { D.moved = true; w.setPointerCapture(D.id); }
+    cancelAnimationFrame(S.raf); S.pos = S.target = cyc ? D.p - dy / 68 : Math.max(-0.4, Math.min(N - 0.6, D.p - dy / 68)); draw(); });
+  w.addEventListener('pointerup', (e) => { const D = S.drag; S.drag = null; if (!D) return;
+    if (D.moved) { S.target = lim(Math.round(S.pos)); anim(); return; }
+    const it = e.target.closest && e.target.closest('.elw-it'); if (!it) return;
+    const i = +it.dataset.i; S.target = lim(Math.round(S.pos + off(i))); anim(); pick(i); });
+  w.addEventListener('pointercancel', () => { S.drag = null; });
+  draw();
+  return w;
+}
+const adFams = () => AD.fams || (AD.fams = addFamilies().map(c => ({ id:c.id, name:c.name, groups:groupVars(c.vars) })));
+const adIcon = (f) => { let u = ''; try { u = productImgs(f)[0] || ''; } catch (e) {} return u ? `<img class="elw-img" src="${u}" alt="" draggable="false" loading="lazy">` : ''; };
+function adWheel() {
+  const list = $('adList'), F = adFams();
+  $('adFoot').hidden = true;
+  if (AD.fam == null) {
+    $('adTitle').textContent = 'הוספת מוצרים';
+    list.innerHTML = `<div class="adwh-t">משפחות מוצרים</div><div class="adwh"></div>`;
+    mountWheel(list.querySelector('.adwh'), F.map(c => ({ label:c.name, sub:c.groups.length > 1 ? c.groups.length + ' מוצרים' : '', icon:adIcon(c.groups[0]) })),
+      (i) => { AD.fam = i; AD.sub = 0; adWheel(); }, AD.famPos || 0).focus({ preventScroll:true });
+    return;
+  }
+  const fam = F[AD.fam]; AD.famPos = AD.fam;
+  $('adTitle').textContent = fam.name;
+  if (fam.groups.length === 1) { AD.from = 'fam'; adPage(fam.groups[0]); return; }      // one product: straight to its page
+  list.innerHTML = `<button class="adback" id="adBack">→ כל המשפחות</button><div class="adwh"></div>`;
+  $('adBack').onclick = () => { AD.fam = null; adWheel(); };
+  mountWheel(list.querySelector('.adwh'), fam.groups.map(g => ({ label:g.name, sub:g.vars.length > 1 ? g.vars.length + ' גרסאות' : '', icon:adIcon(g) })),
+    (i) => { AD.sub = i; AD.from = 'sub'; adPage(fam.groups[i]); }, AD.sub || 0).focus({ preventScroll:true });
+}
+// the studio's photo of exactly this setup, when there is one (not one marked "do again")
+function adCatPhoto(f, v, P) {
+  const have = AD.cat; if (!have) return null;
+  const opts = PRODUCT_OPTS[f.name] || [], vo = opts.find(o => o.vars), c = deep(f.vars[P.vi].cfg), labels = [];
+  for (const o of opts) if (o.ch && o.l !== 'תצוגה') { if (o.if && !o.if(c)) continue; const ch = o.ch.find(x => x[0] === P.pick[o.l]) || o.ch[0]; ch[1](c); labels.push(o.l + ' ' + ch[0]); }
+  const lbl = [vo ? vo.vars(f.vars[P.vi]) : (f.vars.length > 1 ? f.vars[P.vi].name : ''), ...labels].filter(Boolean), base = f.name + (lbl.length ? ' – ' + lbl.join(' · ') : '');
+  const look = P.pick['תצוגה'], sets = !look ? ['', ' – ריק', ' – רפואי'] : look === 'ריק' ? [' – ריק', ''] : [' – רפואי', ' – תעשייתי', ' – הייטקי', ''];
+  for (const sfx of sets) { const x = have[base + sfx]; if (x && x.url && x.review !== 'redo') return x.url; }
+  return null;
+}
+// scrolling / swiping on the big picture: the product's first choice (its size, mostly) goes to the next value
+function adCycle(dir) {
+  const P = AD.page; if (!P) return; const f = P.f, o = (PRODUCT_OPTS[f.name] || [])[0];
+  if (!o) { if (f.vars.length > 1) { P.vi = (P.vi + dir + f.vars.length) % f.vars.length; adPageRender(); } return; }
+  if (o.vars) { const ord = f.vars.map((x, i) => ({ i, n:parseFloat(o.vars(x)) || 0 })).sort((a, b) => a.n - b.n).map(x => x.i), k = ord.indexOf(P.vi);
+    P.vi = ord[(k + dir + ord.length) % ord.length]; }
+  else { const k = o.ch.findIndex(x => x[0] === P.pick[o.l]); P.pick[o.l] = o.ch[(k + dir + o.ch.length) % o.ch.length][0]; }
+  adPageRender();
+}
 // level 2: one product – a big picture, its main choices, and "add to the scene"
 function adPage(f) {
   const opts = PRODUCT_OPTS[f.name] || [];
@@ -7116,7 +7209,7 @@ function adPageV() {
 }
 function adPageRender() {
   const P = AD.page, f = P.f, opts = PRODUCT_OPTS[f.name] || [], v = adPageV();
-  let url = photoFor(f, v.cfg);
+  let url = adCatPhoto(f, v, P) || photoFor(f, v.cfg);
   if (!url) { try { url = productThumb(v.t, v.cfg); } catch (e) { url = ''; } }
   const rows = opts.map(o => {
     let ch;
@@ -7125,8 +7218,16 @@ function adPageRender() {
     if (o.vars) ch.sort((a, b) => (parseFloat(a.t) || 0) - (parseFloat(b.t) || 0));
     return `<div class="adopt"><div class="adol">${o.l}</div><div class="adoc">${ch.map(x => `<button class="${x.on ? 'on' : ''}" data-l="${adEsc(o.l)}" ${x.vi !== undefined ? `data-vi="${x.vi}"` : `data-t="${adEsc(x.t)}"`}>${adEsc(x.t)}</button>`).join('')}</div></div>`;
   }).join('');
-  $('adList').innerHTML = `<div class="adcard big" draggable="true" title="גררו לסצנה"><span class="adimgs"><img class="on" src="${url}" alt="" draggable="false"></span><span class="adname">${adEsc(f.name)}</span></div>${rows}`;
-  $('adList').firstChild._f = f;
+  const o0 = opts[0], many = o0 ? (o0.vars ? f.vars.length > 1 : o0.ch && o0.ch.length > 1) : f.vars.length > 1;
+  const back = AD.from === 'sub' ? '→ ' + adFams()[AD.fam].name : AD.from === 'fam' ? '→ כל המשפחות' : AD.from === 'q' ? '→ תוצאות החיפוש' : '';
+  $('adList').innerHTML = `${back ? `<button class="adback" id="adBack">${adEsc(back)}</button>` : ''}<div class="adcard big" draggable="true" title="גררו לסצנה"><span class="adimgs"><img class="on" src="${url}" alt="" draggable="false"></span><span class="adname">${adEsc(f.name)}</span></div>${many ? `<span class="adswipe">גלילה / החלקה על התמונה – ${adEsc(o0 ? o0.l : 'גרסה')} הבא</span>` : ''}${rows}`;
+  const big = $('adList').querySelector('.adcard.big'); big._f = f;
+  if ($('adBack')) $('adBack').onclick = () => { if (AD.from === 'fam') AD.fam = null; AD.page = null; if (AD.from === 'q') adList(); else adWheel(); };
+  if (many) {
+    big.addEventListener('wheel', (e) => { e.preventDefault(); AD.wacc = (AD.wacc || 0) + e.deltaY; if (Math.abs(AD.wacc) >= 60) { const d = Math.sign(AD.wacc); AD.wacc = 0; adCycle(d); } }, { passive:false });
+    let sx = null; big.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') sx = e.clientX; });
+    big.addEventListener('pointerup', (e) => { if (sx == null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 40) adCycle(dx < 0 ? 1 : -1); });
+  }
   $('adList').querySelectorAll('.adoc button').forEach(b => b.onclick = () => {
     if (b.dataset.vi !== undefined) P.vi = +b.dataset.vi; else P.pick[b.dataset.l] = b.dataset.t;
     adPageRender();
@@ -7162,6 +7263,7 @@ function closeAddDrawer() {
 // the little tab on the drawer's edge: ⋮ – closes it, and opens it again (on what was last shown)
 let LAST_DRAWER = 'add';
 function adTab() {
+  $('addDrawer').classList.toggle('adding', ADD_OPEN);                  // the search field belongs to adding products only
   const t = $('adTab'); if (!t) return;
   const open = !$('addDrawer').hidden && $('addDrawer').classList.contains('in');
   t.hidden = mode !== 'scene' && !(PHOTO.on && SET_OPEN === 'render'); t.classList.toggle('open', open);
