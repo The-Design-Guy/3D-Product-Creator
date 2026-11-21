@@ -5652,15 +5652,9 @@ function archRestore() {
   const S = ARCH.snap; ARCH.snap = null; ARCH.cur = null; clearTimeout(ARCH.t);
   if (S && mode === 'scene') archApply(S.scene, S.cam);
 }
-// restore: the side drawer – the saved scenes by name; hovering one shows its picture at the top
-function openArchDrawer(refresh) {
-  if (renderBusyGuard()) return;
-  if (SHEET) closeSheet(true);
-  if (SET_OPEN === 'arch' && !refresh) { closeAddDrawer(); return; }
-  setBack();
-  ADD_OPEN = false; clearInterval(AD_TICK); AD.page = null; $('fabAdd').classList.remove('on');
-  const d = $('addDrawer'), list = $('adList'), esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-  $('adTitle').textContent = 'שחזור סצנה'; $('adFoot').hidden = true;
+// the saved scenes on a wheel (a new 12 × 12 m scene first): the centred one shows in the 3D view; used by the restore drawer and the scene settings
+function sceneWheel(host, owner, start = 0, quiet = false) {
+  const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const names = Object.keys(lib.scenes).sort((a, b) => (lib.scenes[b].updated || '').localeCompare(lib.scenes[a].updated || ''));
   const img = (n) => { const sc = lib.scenes[n]; return sc && (sc.final?.url || sc.base?.url) || ''; };
   const pic = (n) => { const u = img(n); return (u ? `<img src="${esc(u)}" alt="">` : '<span>לסצנה הזו אין עדיין תמונה</span>') + `<b>${esc(n)}</b>`; };
@@ -5668,10 +5662,11 @@ function openArchDrawer(refresh) {
   const NEW = '__new__', keys = [NEW, ...names];
   const newScene = () => { const R = deep(ARCH.snap ? ARCH.snap.scene.room : SCN.room);
     return { room:{ ...R, W:12000, D:12000, back:true, left:false, right:false, front:false, openings:[], obstacles:[] }, items:[], zones:[], shots:[], brief:null, next:1 }; };
-  list.innerHTML = `<div class="archpic" id="archPic"></div><div class="adwh"></div>
+  host.innerHTML = `<div class="archpic" id="archPic"></div><div class="adwh"></div>
     <div class="archacts"><button class="btn primary" id="archGo">פתיחה</button>${isAdmin() ? '<button class="btn danger" id="archDel" title="מחיקה" hidden>מחיקה</button>' : ''}</div>`;
   let ci = 0;
   if (mode === 'scene' && !ARCH.snap) ARCH.snap = { scene:sceneSnap(), cam:shotNow('') };      // what was on screen: comes back if nothing is opened
+  ARCH.owner = owner;
   const open = async (i) => {
     const n = keys[i];
     if (n === NEW) {
@@ -5684,22 +5679,38 @@ function openArchDrawer(refresh) {
     }
     ARCH.snap = null; ARCH.cur = null; clearTimeout(ARCH.t); loadScene(n); $('scnLib').value = n; NAV = 'restore'; syncNav();
   };
-  mountWheel(list.querySelector('.adwh'), keys.map(n => { if (n === NEW) return { label:'סצנה חדשה', sub:'חדר ריק 12×12 מ׳', icon:`<span class="elw-img arch-new">+</span>` };
+  let first = !!quiet;
+  mountWheel(host.querySelector('.adwh'), keys.map(n => { if (n === NEW) return { label:'סצנה חדשה', sub:'חדר ריק 12×12 מ׳', icon:`<span class="elw-img arch-new">+</span>` };
       const sc = lib.scenes[n], u = img(n);
       return { label:n, sub:`${sc.kind === 'ready' ? 'סצנה מלאה' : 'שלב א׳'} · ${(sc.scene?.items || []).length} מוצרים · ${new Date(sc.updated || Date.now()).toLocaleDateString('he-IL')}`,
         icon:u ? `<img class="elw-img" src="${esc(u)}" alt="" loading="lazy" style="object-fit:cover">` : '' }; }),
-    (i) => open(i), 0, (i) => {
+    (i) => open(i), start, (i) => {
       ci = i; const n = keys[i];
       $('archPic').innerHTML = n === NEW ? '<span>סצנה חדשה – חדר ריק 12×12 מ׳</span><b>סצנה חדשה</b>' : pic(n);
       $('archGo').textContent = n === NEW ? 'התחלת סצנה חדשה' : 'פתיחת הסצנה';
       if ($('archDel')) $('archDel').hidden = n === NEW;
+      if (first) { first = false; return; }                          // the scene on screen stays until the wheel is turned
       clearTimeout(ARCH.t); ARCH.t = setTimeout(() => n === NEW ? archPreviewNew() : archPreview(n), 280);
     }).focus({ preventScroll:true });
   function archPreviewNew() { if (mode !== 'scene' || !ARCH.snap || ARCH.cur === NEW) return; ARCH.cur = NEW; archApply(newScene(), null); }
   $('archGo').onclick = () => open(ci);
   if ($('archDel')) $('archDel').onclick = async () => { const n = keys[ci]; if (n === NEW) return;
     if (!(await askConfirm(`למחוק את הסצנה "${n}"?`, 'מחיקה', true))) return;
-    try { await persistLib('delete-scene', { name:n }); renderLibUI(); showSceneInfo(null); openArchDrawer(true); } catch (e) { toast(e.message); } };
+    try { await persistLib('delete-scene', { name:n }); renderLibUI(); showSceneInfo(null); owner === 'arch' ? openArchDrawer(true) : sceneWheel(host, owner, start, true); } catch (e) { toast(e.message); } };
+}
+// restore: the side drawer – the saved scenes by name; hovering one shows its picture at the top
+function openArchDrawer(refresh) {
+  if (renderBusyGuard()) return;
+  if (SHEET) closeSheet(true);
+  if (SET_OPEN === 'arch' && !refresh) { closeAddDrawer(); return; }
+  setBack();
+  ADD_OPEN = false; clearInterval(AD_TICK); AD.page = null; $('fabAdd').classList.remove('on');
+  const d = $('addDrawer'), list = $('adList'), esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  $('adTitle').textContent = 'שחזור סצנה'; $('adFoot').hidden = true;
+  const names = Object.keys(lib.scenes).sort((a, b) => (lib.scenes[b].updated || '').localeCompare(lib.scenes[a].updated || ''));
+  const img = (n) => { const sc = lib.scenes[n]; return sc && (sc.final?.url || sc.base?.url) || ''; };
+  const pic = (n) => { const u = img(n); return (u ? `<img src="${esc(u)}" alt="">` : '<span>לסצנה הזו אין עדיין תמונה</span>') + `<b>${esc(n)}</b>`; };
+  sceneWheel(list, 'arch');
   SET_OPEN = 'arch'; LAST_DRAWER = 'arch'; adTab();
   d.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => d.classList.add('in')));
 }
@@ -7302,7 +7313,7 @@ function closeAddDrawer() {
 // the little tab on the drawer's edge: ⋮ – closes it, and opens it again (on what was last shown)
 let LAST_DRAWER = 'add';
 function adTab() {
-  if (ARCH.snap && (SET_OPEN !== 'arch' || ADD_OPEN)) archRestore();
+  if (ARCH.snap && (SET_OPEN !== ARCH.owner || ADD_OPEN)) archRestore();
   $('addDrawer').classList.toggle('adding', ADD_OPEN);                  // the search field belongs to adding products only
   const t = $('adTab'); if (!t) return;
   const open = !$('addDrawer').hidden && $('addDrawer').classList.contains('in');
@@ -7685,7 +7696,9 @@ function openSetDrawer(kind = 'set') {
   card('החדר', [kids.find(k => k.classList.contains('pair') && k.querySelector('#scnW')), $('roomScan')]);
   card('דלתות, חלונות ומכשולים', [$('elWheel'), $('scnOpen'), $('scnObst')]); renderOpenings(); renderObstacles();
   card('מוצרים בסצנה', [$('scnList')]);
-  card('סצנות שמורות', [$('scnLib').closest('.mrow'), $('scnSaveBase') && $('scnSaveBase').closest('.pair'), $('scnLibInfo')]);
+  { const c = document.createElement('section'); c.className = 'setcard'; c.innerHTML = '<h4>סצנות שמורות</h4><div class="scnwheel"></div><p class="use" style="margin:8px 2px 0">שמירה – מ"הארכיון" שבפס העליון.</p>'; list.appendChild(c);
+    const nm = Object.keys(lib.scenes).sort((a, b) => (lib.scenes[b].updated || '').localeCompare(lib.scenes[a].updated || ''));
+    sceneWheel(c.querySelector('.scnwheel'), kind, Math.max(0, nm.indexOf($('scnLib').value) + 1), true); }
   }
   SET_OPEN = kind; LAST_DRAWER = kind; adTab(); $('fabSet').classList.toggle('on', kind === 'set'); $('fabCam').classList.toggle('on', kind === 'cam');
   d.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => d.classList.add('in')));
