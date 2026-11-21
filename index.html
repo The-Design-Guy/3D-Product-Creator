@@ -3159,9 +3159,19 @@ const opGlassMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#cfe3
 const opOutsideMat = new THREE.MeshBasicMaterial({ color:new THREE.Color('#e4edf3') });
 const opPassMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#dcd8d1'), roughness:0.95 });
 // one wall with its openings: the wall is cut into panels around them, and each opening gets its frame and door / glass
+// the room's walls: the one between the camera and the room is hidden while it is there, the others always show
+const ROOM_WALLS = [];
+function updateWallCut(cam = camera) {
+  if (!ROOM_WALLS.length || !world) return;
+  const p = world.worldToLocal(cam.position.clone()), R = SCN.room, W2 = R.W/2000, D2 = R.D/2000;
+  const out = { back:-D2 - p.z, front:p.z - D2, left:-W2 - p.x, right:p.x - W2 };     // > 0: the camera is outside that wall
+  let cut = null, best = 0;
+  for (const w of ROOM_WALLS) if (out[w.key] > best) { best = out[w.key]; cut = w; }
+  for (const w of ROOM_WALLS) w.g.visible = w !== cut;
+}
 function buildRoomWall(world, key, L, pos, ry) {
-  const g = new THREE.Group(); g.position.copy(pos); g.rotation.y = ry; world.add(g);
-  const sign = key === 'left' ? -1 : 1;                              // local x along the wall
+  const g = new THREE.Group(); g.position.copy(pos); g.rotation.y = ry; world.add(g); ROOM_WALLS.push({ key, g });
+  const sign = key === 'left' || key === 'front' ? -1 : 1;           // local x along the wall
   const list = (SCN.room.openings || []).filter(o => o.wall === key).map(o => { const p = openPlace(o); const lx = sign * p.c; return { o, a:lx - p.w/2, b:lx + p.w/2, ...p }; }).sort((u, v) => u.a - v.a);
   const H = WALL_H / 1000;
   const panel = (x0, x1, y0, y1) => { if (x1 - x0 < 0.002 || y1 - y0 < 0.002) return; const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, y1 - y0), wallMat); m.position.set((x0 + x1)/2, (y0 + y1)/2, 0); m.receiveShadow = true; g.add(m); };
@@ -3216,19 +3226,13 @@ function buildScene() {
   const R = SCN.room, W = R.W/1000, D = R.D/1000;
   const fl = new THREE.Mesh(new THREE.PlaneGeometry(W, D), floorMat); fl.rotation.x = -Math.PI/2; fl.receiveShadow = true; world.add(fl);
   (R.openings || []).forEach(openFix);
+  ROOM_WALLS.length = 0;
   if (R.back) buildRoomWall(world, 'back', W, new THREE.Vector3(0, 0, -D/2), 0);
+  if (R.front) buildRoomWall(world, 'front', W, new THREE.Vector3(0, 0, D/2), Math.PI);
   if (R.left) buildRoomWall(world, 'left', D, new THREE.Vector3(-W/2, 0, 0), Math.PI/2);
   if (R.right) buildRoomWall(world, 'right', D, new THREE.Vector3(W/2, 0, 0), -Math.PI/2);
   buildObstacles(world); buildLogoSign(world);
-  for (const o of (R.openings || []).filter(o => o.wall === 'front')) {        // the front wall is not drawn: the opening shows as a strip on the floor
-    const p = openPlace(o), m = new THREE.Mesh(new THREE.BoxGeometry(p.w, 0.006, 0.14), o.kind === 'door' ? opAlumMat : opFrameMat);
-    m.position.set(p.c, 0.003, D/2 - 0.07); world.add(m);
-  }
-  if (R.front) {                                   // between the camera and the room: a low, see-through band on screen
-    const fw = new THREE.Mesh(new THREE.PlaneGeometry(W, 0.35), new THREE.MeshStandardMaterial({ color:0xd9dde0, transparent:true, opacity:0.45, roughness:0.9, depthWrite:false, side:THREE.DoubleSide }));
-    fw.position.set(0, 0.175, D/2); world.add(fw);
-    const ln = new THREE.Mesh(new THREE.BoxGeometry(W, 0.012, 0.012), new THREE.MeshStandardMaterial({ color:0x9aa1a7 })); ln.position.set(0, 0.35, D/2); world.add(ln);
-  }
+  updateWallCut();
   SCENE_BUILD = true;
   { const bays = SCN.items.filter(i => i.type === 'shelf' && !i.hidden).reduce((a, i) => { const c = (i.cfg && i.cfg.sh) || SH0; return a + (c.bays || []).length * (c.b2b ? 2 : 1) + (c.corner ? (c.cbays || []).length : 0); }, 0);
     SH_AUTO = bays > 16 ? 'low' : 'std'; }
@@ -4760,7 +4764,7 @@ function rebuild(keepCamera = false) {
   if (!isCab()) { spread = spreadTarget = 0; CAB = null; }
   document.getElementById('spreadBtn').hidden = !isCab() || mode === 'scene';
   if (world) { scene.remove(world); world.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); }
-  world = new THREE.Group();
+  world = new THREE.Group(); ROOM_WALLS.length = 0;
   TAMB = DOORS = SHELVES = null; SLD = null;
   controls.maxDistance = mode === 'scene' ? Math.max(7, Math.hypot(SCN.room.W, SCN.room.D) / 1000 * 1.6) : 7;   // a big room needs to be seen whole
   if (mode === 'scene') {
@@ -7331,10 +7335,9 @@ async function applyScan(r, photos) {
   pushRoomUndo();
   const R = SCN.room, cl = (v, d) => Math.max(2000, Math.min(100000, Math.round((+v || d) * 1000)));
   R.W = cl(r.width_m, R.W / 1000); R.D = cl(r.depth_m, R.D / 1000);
-  const w = r.walls || {}; R.back = w.back !== false; R.left = !!w.left; R.right = !!w.right; R.front = !!w.front;
+  R.back = R.left = R.right = R.front = true;                       // a scanned room is a real room: all four walls (the one facing the camera hides itself)
   R.openings = [];
   for (const o of r.openings || []) if (OPEN_TYPES[o.kind]) addOpening(o.kind, o.type, o.wall, { w:o.width_cm * 10, h:o.height_cm * 10, off:o.offset_cm * 10, sill:(o.sill_cm || 0) * 10 });
-  R.back = w.back !== false; R.left = !!w.left || R.openings.some(o => o.wall === 'left'); R.right = !!w.right || R.openings.some(o => o.wall === 'right');
   R.scan = { style:r.style || '', floor:r.floor || '', walls:r.wall_color || '', en:r.description_en || '' };
   if (r.description_he) renderFields.background = r.description_he;
   SCN.items.forEach(snapItem);
@@ -10680,6 +10683,7 @@ renderer.setAnimationLoop(() => {
   stepFree(dt); stepCamKeys(dt);
   if (!FREE.on) controls.update();
   placeItemBar();
+  updateWallCut();
   renderer.render(scene, camera);
   drawLightView();
 });
