@@ -2,14 +2,15 @@
 // product photos (hide a built-in one, add one from a file). Names only – the inner keys stay as they are, so the
 // studio photos and the saved scenes keep finding their products.
 // GET  → { names:{ prod:{ <product>:<shown name> }, opt:{ <product>:{ <choice>:<shown name> } } },
-//          photos:{ <product>:{ hide:[<choice>…], extra:[{ id, name, url }] } } }
+//          photos:{ <product>:{ hide:[<choice>…], extra:[{ id, name, url }] } }, agents:[<name>…] }
 // POST → { data }   the whole document (admin only)
 import { redis } from './_redis.js';
 import { isAdmin } from './_auth.js';
 
 const KEY = 'overrides';
 const clean = (d) => {
-  const out = { names:{ prod:{}, opt:{} }, photos:{} }, str = (v, n = 80) => String(v ?? '').slice(0, n);
+  const out = { names:{ prod:{}, opt:{} }, photos:{}, agents:[] }, str = (v, n = 80) => String(v ?? '').slice(0, n);
+  out.agents = [...new Set(((d && d.agents) || []).map(a => str(a, 60).trim()).filter(Boolean))].slice(0, 60);       // the agents a scene can belong to
   const n = (d && d.names) || {};
   for (const [k, v] of Object.entries(n.prod || {})) if (str(v).trim()) out.names.prod[str(k, 120)] = str(v).trim();
   for (const [p, m] of Object.entries(n.opt || {})) {

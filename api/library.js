@@ -1,6 +1,6 @@
 // Product models ("The Balloon Wall Stand" …) and saved scenes, shared by everyone; changes are admin only.
 // GET  → { models: { <type>: { <name>: { cfg, updated } } }, scenes: { <name>: { kind:'base'|'ready', scene, brief?, light?, camera, updated } } }
-// POST → { action: 'save-model' | 'delete-model' | 'rename-model' | 'save-scene' | 'delete-scene' | 'rename-scene', type?, name, newName?, data? }
+// POST → { action: 'save-model' | 'delete-model' | 'rename-model' | 'save-scene' | 'delete-scene' | 'rename-scene' | 'scene-meta', type?, name, newName?, data?, agent?, cover? }
 import { redis } from './_redis.js';
 import { isAdmin } from './_auth.js';
 
@@ -44,6 +44,18 @@ export default async function handler(req, res) {
       await dropImages(doc.scenes[n], [data.base?.url, data.final?.url]);
       doc.scenes[n] = { ...data, updated: new Date().toISOString() };
     } else if (action === 'delete-scene') { await dropImages(doc.scenes[n]); delete doc.scenes[n]; }
+    else if (action === 'scene-meta') {               // the scene's card: its picture, name and whose project it is
+      const sc = doc.scenes[n]; if (!sc) return res.status(404).json({ error: 'אין סצנה בשם הזה' });
+      const { agent, cover } = req.body || {};
+      if (agent !== undefined) { const a = clean(agent); if (a) sc.agent = a; else delete sc.agent; }
+      if (cover !== undefined) {
+        const c = typeof cover === 'string' && /^(https?:|\/)/.test(cover) ? cover.slice(0, 600) : '';
+        if (sc.cover && sc.cover !== c && (process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID)) { try { const { del } = await import('@vercel/blob'); await del([sc.cover]); } catch {} }
+        if (c) sc.cover = c; else delete sc.cover;
+      }
+      const nn = clean(newName);
+      if (nn && nn !== n) { if (doc.scenes[nn]) await dropImages(doc.scenes[nn], [sc.base?.url, sc.final?.url]); doc.scenes[nn] = sc; delete doc.scenes[n]; }
+    }
     else if (action === 'rename-scene') {            // a new name, the same scene and pictures (nothing is deleted from Blob)
       const nn = clean(newName); if (!nn || !doc.scenes[n]) return res.status(400).json({ error: 'שם לא תקין' });
       if (nn !== n) { if (doc.scenes[nn]) await dropImages(doc.scenes[nn], [doc.scenes[n].base?.url, doc.scenes[n].final?.url]); doc.scenes[nn] = doc.scenes[n]; delete doc.scenes[n]; }

@@ -899,7 +899,16 @@
   .adcard.big .adimgs { touch-action:pan-y; }
   .arch-new { display:grid; place-items:center; font-size:26px; font-weight:300; color:#0088FF; border:1.5px dashed #9ec9ff; box-sizing:border-box; }
   .setnew { margin:2px 0 12px; } .setnew .btn { width:100%; height:42px; font-weight:700; }
-  .archacts { display:flex; gap:8px; margin-top:10px; } .archacts .btn { flex:1; height:42px; } .archacts .danger { flex:none; }
+  .archacts { display:flex; gap:8px; margin-top:10px; } .archacts .btn { flex:none; height:42px; white-space:nowrap; } .archacts .btn.primary { flex:1; min-width:0; }
+  .btn.icon { width:42px; padding:0; display:inline-grid; place-items:center; font-size:16px; }
+  .smpic { position:relative; height:200px; border:1.5px dashed var(--line); border-radius:12px; display:grid; place-items:center; overflow:hidden; cursor:pointer; background:#f7f8f9; margin-bottom:12px; }
+  .smpic.over { border-color:#0088FF; background:#eef6ff; } .smpic img { width:100%; height:100%; object-fit:contain; }
+  .smpic .smempty { color:var(--muted); font-size:14px; text-align:center; line-height:1.6; }
+  .smpic .smhint { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.55); color:#fff; font-size:11px; padding:3px 10px; border-radius:999px; white-space:nowrap; }
+  .smpic .smx { position:absolute; top:8px; left:8px; width:28px; height:28px; border-radius:50%; border:0; background:rgba(0,0,0,.55); color:#fff; cursor:pointer; }
+  .smag { display:flex; gap:6px; margin-top:4px; align-items:stretch; } .smag select { flex:1; height:40px; font:inherit; padding:0 10px; border:1px solid var(--line); border-radius:8px; background:#fff; } .smag .btn.icon { height:40px; }
+  .smaglist { display:flex; flex-direction:column; gap:6px; padding:10px; background:#f7f8f9; border-radius:10px; margin:-4px 0 10px; }
+  .smrow { display:flex; gap:6px; } .smrow input { flex:1; font:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:8px; }
   .adch { display:inline-flex; align-items:center; gap:2px; } .adch.hid > button:first-child { opacity:.4; text-decoration:line-through; }
   .adoc .adpen { min-width:0; width:26px; height:26px; padding:0; border:0; background:none; font-size:13px; cursor:pointer; color:var(--muted); }
   .adoc .adpen:hover, .adol .adpen:hover, .adname .adpen:hover { color:var(--ink); } .adpen.del:hover { color:#b42318; }
@@ -5670,14 +5679,14 @@ function archRestore() {
 function sceneWheel(host, owner, start = 0, quiet = false, withNew = true) {
   const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const names = Object.keys(lib.scenes).sort((a, b) => (lib.scenes[b].updated || '').localeCompare(lib.scenes[a].updated || ''));
-  const img = (n) => { const sc = lib.scenes[n]; return sc && (sc.final?.url || sc.base?.url) || ''; };
+  const img = (n) => { const sc = lib.scenes[n]; return sc && (sc.cover || sc.final?.url || sc.base?.url) || ''; };
   const pic = (n) => { const u = img(n); return (u ? `<img src="${esc(u)}" alt="">` : '<span>לסצנה הזו אין עדיין תמונה</span>') + `<b>${esc(n)}</b>`; };
   // first on the wheel, and where it starts: a new, empty 12 × 12 m scene
   const NEW = '__new__', keys = withNew ? [NEW, ...names] : names;
   const newScene = () => { const R = deep(ARCH.snap ? ARCH.snap.scene.room : SCN.room);
     return { room:{ ...R, W:12000, D:12000, back:true, left:false, right:false, front:false, openings:[], obstacles:[] }, items:[], zones:[], shots:[], brief:null, next:1 }; };
   host.innerHTML = `<div class="archpic" id="archPic"></div><div class="adwh"></div>
-    <div class="archacts"><button class="btn primary" id="archGo">פתיחה</button>${isAdmin() ? '<button class="btn" id="archRen" title="שינוי שם" hidden>✎ שם</button><button class="btn danger" id="archDel" title="מחיקה" hidden>מחיקה</button>' : ''}</div>`;
+    <div class="archacts"><button class="btn primary" id="archGo">פתיחה</button>${isAdmin() ? '<button class="btn icon" id="archRen" title="עריכת הסצנה: תמונה, שם, של מי הפרויקט" aria-label="עריכת הסצנה" hidden>✎</button><button class="btn danger" id="archDel" title="מחיקה" hidden>מחיקה</button>' : ''}</div>`;
   let ci = 0;
   if (mode === 'scene' && !ARCH.snap) ARCH.snap = { scene:sceneSnap(), cam:shotNow('') };      // what was on screen: comes back if nothing is opened
   ARCH.owner = owner;
@@ -5696,7 +5705,7 @@ function sceneWheel(host, owner, start = 0, quiet = false, withNew = true) {
   let first = !!quiet;
   mountWheel(host.querySelector('.adwh'), keys.map(n => { if (n === NEW) return { label:'סצנה חדשה', sub:'חדר ריק 12×12 מ׳', icon:`<span class="elw-img arch-new">+</span>` };
       const sc = lib.scenes[n], u = img(n);
-      return { label:n, sub:`${sc.kind === 'ready' ? 'סצנה מלאה' : 'שלב א׳'} · ${(sc.scene?.items || []).length} מוצרים · ${new Date(sc.updated || Date.now()).toLocaleDateString('he-IL')}`,
+      return { label:n, sub:`${sc.agent ? 'של ' + sc.agent + ' · ' : ''}${sc.kind === 'ready' ? 'סצנה מלאה' : 'שלב א׳'} · ${(sc.scene?.items || []).length} מוצרים · ${new Date(sc.updated || Date.now()).toLocaleDateString('he-IL')}`,
         icon:u ? `<img class="elw-img" src="${esc(u)}" alt="" loading="lazy" style="object-fit:cover">` : '' }; }),
     (i) => open(i), start, (i) => {
       ci = i; const n = keys[i];
@@ -5708,14 +5717,70 @@ function sceneWheel(host, owner, start = 0, quiet = false, withNew = true) {
     }).focus({ preventScroll:true });
   function archPreviewNew() { if (mode !== 'scene' || !ARCH.snap || ARCH.cur === NEW) return; ARCH.cur = NEW; archApply(newScene(), null); }
   $('archGo').onclick = () => open(ci);
-  if ($('archRen')) $('archRen').onclick = async () => { const n = keys[ci]; if (n === NEW) return;
-    const nn = (prompt('שם חדש לסצנה:', n) || '').trim(); if (!nn || nn === n) return;
-    if (lib.scenes[nn] && !(await askConfirm(`כבר יש סצנה בשם "${nn}". להחליף אותה?`, 'להחליף', true))) return;
-    try { await persistLib('rename-scene', { name:n, newName:nn }); if ($('scnLib').value === n) { renderLibUI(); $('scnLib').value = nn; } else renderLibUI(); toast('השם עודכן');
-      const keep = ARCH.snap; owner === 'arch' ? openArchDrawer(true) : sceneWheel(host, owner, start, true, withNew); if (keep) ARCH.snap = keep; } catch (e) { toast(e.message); } };
+  if ($('archRen')) $('archRen').onclick = () => { const n = keys[ci]; if (n === NEW) return;
+    sceneMetaDialog(n, (nn) => { const keep = ARCH.snap; owner === 'arch' ? openArchDrawer(true) : sceneWheel(host, owner, start, true, withNew); if (keep) ARCH.snap = keep; }); };
   if ($('archDel')) $('archDel').onclick = async () => { const n = keys[ci]; if (n === NEW) return;
     if (!(await askConfirm(`למחוק את הסצנה "${n}"?`, 'מחיקה', true))) return;
     try { await persistLib('delete-scene', { name:n }); renderLibUI(); showSceneInfo(null); owner === 'arch' ? openArchDrawer(true) : sceneWheel(host, owner, start, true, withNew); } catch (e) { toast(e.message); } };
+}
+
+// ---- a saved scene's card (admin): its picture (drop / upload), its name, and whose project it is ----
+function sceneMetaDialog(n, after) {
+  const sc = lib.scenes[n]; if (!sc) return;
+  const st = { cover:sc.cover || '', file:null };
+  const agentOpts = () => ['', ...(OV.agents || [])].map(a => `<option value="${galEsc(a)}"${a === (st.agent ?? sc.agent ?? '') ? ' selected' : ''}>${a ? galEsc(a) : '— בלי —'}</option>`).join('');
+  openDialog(`<h3>עריכת סצנה</h3>
+    <div class="smpic" id="smPic" tabindex="0" role="button" aria-label="תמונת הסצנה: גררו לכאן או לחצו להעלאה"></div>
+    <label class="fld">שם הסצנה<input id="smName" value="${galEsc(n)}"></label>
+    <label class="fld">פרויקט של<span class="smag"><select id="smAgent">${agentOpts()}</select><button class="btn icon" id="smAgEd" type="button" title="עריכת רשימת הסוכנים" aria-label="עריכת רשימת הסוכנים">✎</button></span></label>
+    <div class="smaglist" id="smAgList" hidden></div>
+    <div class="dlg-actions"><button class="btn primary" id="smSave">שמירה</button><button class="btn" data-close>ביטול</button></div>`, (card, close) => {
+    const pic = card.querySelector('#smPic');
+    const drawPic = () => {
+      const u = st.file || st.cover || sc.final?.url || sc.base?.url || '';
+      pic.innerHTML = u ? `<img src="${galEsc(u)}" alt=""><span class="smhint">${st.file || st.cover ? 'גררו תמונה אחרת או לחצו להחלפה' : 'זו תמונת הרינדור – גררו או לחצו כדי לשים תמונה משלכם'}</span>${st.file || st.cover ? '<button class="smx" type="button" title="להסיר את התמונה">✕</button>' : ''}`
+        : '<span class="smempty">גררו לכאן תמונה<br>או לחצו להעלאה</span>';
+      const x = pic.querySelector('.smx'); if (x) x.onclick = (e) => { e.stopPropagation(); st.file = null; st.cover = ''; drawPic(); };
+    };
+    const take = async (f) => { if (!f || !/^image\//.test(f.type)) { toast('זה לא קובץ תמונה'); return; }
+      const bmp = await createImageBitmap(f), k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height)), cv = document.createElement('canvas');
+      cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k); cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+      st.file = cv.toDataURL('image/webp', 0.9); if (!st.file.startsWith('data:image/webp')) st.file = cv.toDataURL('image/jpeg', 0.9); drawPic(); };
+    pic.onclick = () => { const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.onchange = () => take(i.files[0]); i.click(); };
+    pic.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pic.click(); } };
+    pic.ondragover = (e) => { e.preventDefault(); pic.classList.add('over'); };
+    pic.ondragleave = () => pic.classList.remove('over');
+    pic.ondrop = (e) => { e.preventDefault(); pic.classList.remove('over'); take(e.dataTransfer.files && e.dataTransfer.files[0]); };
+    drawPic();
+    // the agents list: edit in place, saved with the rest of the admin's settings
+    const sel = card.querySelector('#smAgent'), box = card.querySelector('#smAgList');
+    const drawList = () => {
+      box.innerHTML = `${(OV.agents || []).map((a, i) => `<span class="smrow"><input value="${galEsc(a)}" data-i="${i}"><button class="btn icon" type="button" data-del="${i}" title="הסרה" aria-label="הסרה">✕</button></span>`).join('')}
+        <span class="smrow"><input id="smNew" placeholder="סוכן חדש…"><button class="btn icon" type="button" id="smAdd" title="הוספה" aria-label="הוספה">＋</button></span>
+        <button class="btn" type="button" id="smAgSave">שמירת הרשימה</button>`;
+      box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { OV.agents.splice(+b.dataset.del, 1); drawList(); });
+      const add = () => { const v = box.querySelector('#smNew').value.trim(); if (v) { OV.agents = [...(OV.agents || []), v]; drawList(); box.querySelector('#smNew').focus(); } };
+      box.querySelector('#smAdd').onclick = add; box.querySelector('#smNew').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } };
+      box.querySelector('#smAgSave').onclick = async () => {
+        OV.agents = [...box.querySelectorAll('[data-i]')].map(i => i.value.trim()).filter(Boolean);
+        const pick = sel.value; if (await saveOV()) { st.agent = (OV.agents || []).includes(pick) ? pick : ''; sel.innerHTML = agentOpts(); box.hidden = true; toast('הרשימה נשמרה'); }
+      };
+    };
+    card.querySelector('#smAgEd').onclick = () => { box.hidden = !box.hidden; if (!box.hidden) drawList(); };
+    sel.onchange = () => { st.agent = sel.value; };
+    card.querySelector('#smSave').onclick = async () => {
+      const nn = card.querySelector('#smName').value.trim(); if (!nn) { card.querySelector('#smName').focus(); return; }
+      if (nn !== n && lib.scenes[nn] && !(await askConfirm(`כבר יש סצנה בשם "${nn}". להחליף אותה?`, 'להחליף', true))) return;
+      const b = card.querySelector('#smSave'); b.disabled = true; b.textContent = 'שומר…';
+      try {
+        let cover = st.cover;
+        if (st.file) { cover = await uploadImage(st.file, 'cover'); if (!cover) throw new Error('העלאת התמונה לא הצליחה'); }
+        await persistLib('scene-meta', { name:n, newName:nn, agent:sel.value, cover });
+        renderLibUI(); if ($('scnLib').value === n || (nn !== n && !$('scnLib').value)) $('scnLib').value = nn;
+        close(); toast('הסצנה עודכנה'); after && after(nn);
+      } catch (e) { b.disabled = false; b.textContent = 'שמירה'; toast(e.message); }
+    };
+  });
 }
 // restore: the side drawer – the saved scenes by name; hovering one shows its picture at the top
 function openArchDrawer(refresh) {
@@ -5727,7 +5792,7 @@ function openArchDrawer(refresh) {
   const d = $('addDrawer'), list = $('adList'), esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   $('adTitle').textContent = 'סצנות שמורות'; $('adFoot').hidden = true;
   const names = Object.keys(lib.scenes).sort((a, b) => (lib.scenes[b].updated || '').localeCompare(lib.scenes[a].updated || ''));
-  const img = (n) => { const sc = lib.scenes[n]; return sc && (sc.final?.url || sc.base?.url) || ''; };
+  const img = (n) => { const sc = lib.scenes[n]; return sc && (sc.cover || sc.final?.url || sc.base?.url) || ''; };
   const pic = (n) => { const u = img(n); return (u ? `<img src="${esc(u)}" alt="">` : '<span>לסצנה הזו אין עדיין תמונה</span>') + `<b>${esc(n)}</b>`; };
   if (!names.length) list.innerHTML = '<div class="use" style="padding:14px 4px">עדיין אין סצנות שמורות. שומרים סצנה מ"הארכיון" שבפס העליון.</div>';
   else {
@@ -6420,6 +6485,10 @@ async function persistLib(action, payload) {
   if (action === 'save-scene') lib.scenes[name] = { ...data, updated:new Date().toISOString() };
   if (action === 'delete-scene') delete lib.scenes[name];
   if (action === 'rename-scene' && lib.scenes[name] && newName && newName !== name) { lib.scenes[newName] = lib.scenes[name]; delete lib.scenes[name]; }
+  if (action === 'scene-meta' && lib.scenes[name]) { const sc = lib.scenes[name];
+    if (payload.agent !== undefined) { if (payload.agent) sc.agent = payload.agent; else delete sc.agent; }
+    if (payload.cover !== undefined) { if (payload.cover) sc.cover = payload.cover; else delete sc.cover; }
+    if (newName && newName !== name) { lib.scenes[newName] = sc; delete lib.scenes[name]; } }
   LS.set('rbt-library', lib);
 }
 const curModel = {};                                // type → name of the model last chosen in its panel
@@ -6949,7 +7018,7 @@ function adCycle(dir) {
 }
 
 // ---- the admin's names and photos, on top of the code (kept on the server: /api/overrides) ----
-let OV = { names:{ prod:{}, opt:{} }, photos:{} };
+let OV = { names:{ prod:{}, opt:{} }, photos:{}, agents:[] };
 const pName = (f) => (OV.names.prod || {})[f.name] || f.name;
 const oName = (prod, t) => ((OV.names.opt || {})[prod] || {})[t] || t;
 const ovPh = (prod) => (OV.photos || {})[prod] || { hide:[], extra:[] };
