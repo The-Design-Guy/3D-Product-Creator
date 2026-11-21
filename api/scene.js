@@ -5,7 +5,7 @@
 import { isAdmin } from './_auth.js';
 
 export const config = { maxDuration: 60 };
-const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL || 'gpt-4.1-mini';
+const TEXT_MODEL = process.env.OPENAI_SCENE_MODEL || 'gpt-4.1';      // voice / text commands: the full model understands free Hebrew much better than mini
 
 const TYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn', 'lock', 'wb', 'shelf'];
 const OPS = ['add', 'move', 'move_to', 'rotate', 'rotate_to', 'delete', 'duplicate', 'set', 'bins', 'doors', 'tambour', 'contents', 'labels', 'select', 'room', 'light', 'opening', 'obstacle', 'photo', 'clear', 'commit', 'design'];

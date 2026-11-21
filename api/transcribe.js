@@ -1,0 +1,45 @@
+// Speech to text for the voice commands: the browser records, this sends the audio to OpenAI's transcription model
+// with the product words as a hint (the browser's own Hebrew recognition does not know "רב תא", "ארקלית"...).
+//
+//   POST /api/transcribe?lang=he|en   (admin)  raw audio body (webm / mp4 / ogg / wav) → { text }
+import { isAdmin } from './_auth.js';
+
+export const config = { maxDuration: 60 };
+const MODEL = process.env.OPENAI_TRANSCRIBE_MODEL || 'gpt-4o-transcribe';
+const EXT = { 'audio/webm':'webm', 'audio/mp4':'mp4', 'audio/x-m4a':'m4a', 'audio/m4a':'m4a', 'audio/ogg':'ogg', 'audio/wav':'wav', 'audio/mpeg':'mp3', 'audio/aac':'mp4' };
+const HINT_HE = 'שיחה על תכנון אחסון ב-HISTORGIC של MEDIKUP. מילים שיכולות להופיע: רב תא, רב-תא 2, 3, 4, 5, 6, 9, מגירות מתהפכות, ארקלית, ארקליות, '
+  + 'מעמד, מעמד 4 דפנות, עגלה, עגלת רב תא, ארון, ארון תריס, ארון 2 דלתות, ארון מנעול, תא נע, מדפים, מדף בעומס בינוני, מתקן קיר, '
+  + 'שולחן עבודה, עמדת מחשב, כיסא, עציץ, קיר אחורי, קיר שמאלי, קיר ימני, קיר קדמי, ויטרינה, דלת הזזה, מעבר, עמוד, צינור, קיר גבס, '
+  + 'סנטימטר, מטר, מילימטר, תוסיף, תמחק, תזיז, תסובב, תקרב, תרחיק, צמוד, ליד, מול, באמצע.';
+const HINT_EN = 'Storage planning in HISTORGIC by MEDIKUP: tilt-bin units, pick bins, stands, carts, cabinets, tambour cabinet, shelving, wall rack, desk, back wall, left wall, right wall, front wall, shop window.';
+
+async function rawBody(req) {
+  if (Buffer.isBuffer(req.body)) return req.body;
+  const chunks = []; for await (const c of req) chunks.push(c); return Buffer.concat(chunks);
+}
+
+export default async function handler(req, res) {
+  try {
+    if (req.method !== 'POST') return res.status(405).json({ error:'method not allowed' });
+    if (!isAdmin(req)) return res.status(401).json({ error:'נדרש מצב ניהול' });
+    if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error:'OPENAI_API_KEY is not set' });
+    const type = String(req.headers['content-type'] || '').split(';')[0].trim();
+    if (!EXT[type]) return res.status(400).json({ error:'פורמט שמע לא נתמך: ' + type });
+    const buf = await rawBody(req);
+    if (buf.length < 800) return res.status(200).json({ text:'' });                 // nothing was said
+    if (buf.length > 4_300_000) return res.status(413).json({ error:'ההקלטה ארוכה מדי' });
+    const en = String(req.query?.lang || '') === 'en';
+    const f = new FormData();
+    f.append('file', new Blob([buf], { type }), 'speech.' + EXT[type]);
+    f.append('model', MODEL);
+    f.append('language', en ? 'en' : 'he');
+    f.append('prompt', en ? HINT_EN : HINT_HE);
+    f.append('response_format', 'json');
+    const r = await fetch('https://api.openai.com/v1/audio/transcriptions', { method:'POST', headers:{ Authorization:`Bearer ${process.env.OPENAI_API_KEY}` }, body:f });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return res.status(502).json({ error:j.error?.message || `OpenAI ${r.status}` });
+    return res.status(200).json({ text:String(j.text || '').trim() });
+  } catch (e) {
+    return res.status(500).json({ error:e.message || 'transcribe failed' });
+  }
+}

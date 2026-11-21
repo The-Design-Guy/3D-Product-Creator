@@ -987,6 +987,35 @@
   .wallsq [data-v=front] { left:26px; right:26px; bottom:0; height:24px; } .wallsq [data-v=front]::after { left:0; right:0; top:0; height:5px; }
   .wallsq [data-v=left]  { left:0; top:24px; bottom:24px; width:26px; writing-mode:vertical-rl; transform:rotate(180deg); } .wallsq [data-v=left]::after { top:0; bottom:0; left:0; width:5px; }
   .wallsq [data-v=right] { right:0; top:24px; bottom:24px; width:26px; writing-mode:vertical-rl; } .wallsq [data-v=right]::after { top:0; bottom:0; left:0; width:5px; }
+  /* the room elements wheel: doors, windows and obstacles on a drum */
+  .elwheel { position:relative; height:232px; margin:2px 0 10px; perspective:700px; overflow:hidden; border-radius:14px; background:linear-gradient(#f4f6f8, #fff 30%, #fff 70%, #f4f6f8); border:1px solid var(--line); outline:none; touch-action:none; user-select:none; cursor:grab; }
+  .elwheel:focus-visible { box-shadow:0 0 0 2px var(--acc); }
+  .elw-band { position:absolute; left:10px; right:10px; top:50%; height:48px; margin-top:-24px; border-radius:12px; background:#fff; border:1.5px solid var(--ink); box-shadow:0 4px 14px rgba(0,0,0,.08); pointer-events:none; }
+  .elw-track { position:absolute; inset:0; transform-style:preserve-3d; }
+  .elw-it { position:absolute; left:18px; right:18px; top:50%; height:44px; margin-top:-22px; display:flex; align-items:center; gap:12px; padding:0 10px; font-size:14px; color:#4a535b; backface-visibility:hidden; cursor:pointer; }
+  .elw-it svg { flex:none; width:28px; height:28px; color:#6b747c; }
+  .elw-it span { flex:1; } .elw-it small { font-size:11px; color:var(--muted); }
+  .elw-it em { font-style:normal; font-size:12px; font-weight:700; color:#fff; background:var(--acc); border-radius:999px; padding:4px 10px; opacity:0; transition:opacity .15s; }
+  .elw-it.c { color:var(--ink); font-weight:800; font-size:15px; } .elw-it.c svg { color:#0088FF; } .elw-it.c em { opacity:1; }
+  .elw-hint { position:absolute; bottom:0; left:0; right:0; padding:10px 0 5px; text-align:center; font-size:11px; color:var(--muted); pointer-events:none; background:linear-gradient(rgba(244,246,248,0), #f4f6f8 55%); }
+  .elrow { display:flex; align-items:center; gap:10px; padding:7px 10px; border:1px solid var(--line); border-radius:10px; background:#fff; cursor:pointer; margin-bottom:6px; }
+  .elrow:hover { border-color:var(--ink); } .elrow svg { flex:none; width:22px; height:22px; color:#5b646c; }
+  .elrow span { flex:1; display:flex; flex-direction:column; font-size:13px; } .elrow small { font-size:11px; color:var(--muted); display:flex; align-items:center; gap:5px; }
+  .elrow small i { width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .elpop { position:fixed; z-index:95; left:var(--gl, 16px); top:calc(var(--hh) + 72px); width:min(320px, 92vw); max-height:calc(100vh - var(--hh) - var(--fh) - 100px); overflow:auto; background:rgba(255,255,255,.97); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); border:1px solid var(--line); border-radius:16px; box-shadow:0 18px 50px rgba(0,0,0,.18); padding:14px 16px 16px; direction:rtl; animation:welin .18s ease; }
+  html[dir=ltr] .elpop { direction:ltr; }
+  .elpop .eph { display:flex; align-items:center; gap:10px; margin-bottom:12px; } .elpop .eph svg { width:30px; height:30px; color:#0088FF; flex:none; }
+  .elpop .eph h3 { flex:1; margin:0; font-size:16px; }
+  .elpop .elbl { font-size:12px; font-weight:700; color:#3b4248; margin:10px 0 6px; }
+  .elpop .ewalls { display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; }
+  .elpop .ewalls button { font:inherit; font-size:12px; font-weight:700; padding:8px 0; border-radius:9px; border:2px solid var(--wc); color:var(--wc); background:#fff; cursor:pointer; }
+  .elpop .ewalls button.on { background:var(--wc); color:#fff; }
+  .elpop .efs { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .elpop .efs label { display:flex; flex-direction:column; gap:3px; font-size:11px; color:var(--muted); }
+  .elpop .efs input, .elpop .efs select { font:inherit; font-size:14px; padding:7px 8px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); width:100%; box-sizing:border-box; }
+  .elpop .eacts { display:flex; gap:8px; margin-top:14px; } .elpop .eacts .btn { flex:1; height:40px; }
+  .elpop .eacts .danger { flex:none; }
+  @media (max-width:640px) { .elpop { left:8px; right:8px; width:auto; top:auto; bottom:calc(var(--fh) + 8px); max-height:60vh; } }
   .wtagbtn { display:block; margin:10px auto 0; padding:6px 14px; font-size:13px; } .wtagbtn.on { background:var(--ink); color:#fff; border-color:var(--ink); }
   .wallsq.tags [data-v=back]::after { background:#0088FF !important; } .wallsq.tags [data-v=back] { color:#0088FF; }
   .wallsq.tags [data-v=right]::after { background:#ff8a00 !important; } .wallsq.tags [data-v=right] { color:#ff8a00; }
@@ -1041,6 +1070,7 @@
       <button class="btn wzbtn" id="scnRec">📷 שחזור חלל מתמונה</button>
       <div class="recbar" id="recBar" hidden><button class="btn" id="recUp">✨ הצע שדרוג</button><button class="btn" id="recSwap" hidden>⇆ הצג את המקור</button></div>
       <div class="roomscan" id="roomScan"><button class="btn" id="roomScanBtn"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span>צילום החדר</span></button><span class="use">סורקים ברקוד בטלפון, מצלמים את החדר ב־360° – והסצנה נבנית לפי החדר האמיתי.</span></div>
+      <div class="elwheel" id="elWheel" tabindex="0" role="listbox" aria-label="דלתות, חלונות ומכשולים – גלגלו ובחרו"><div class="elw-band"></div><div class="elw-track" id="elwTrack"></div><div class="elw-hint">גלגלו או ⇅ · לחיצה פותחת</div></div>
       <div class="opbox" id="scnOpen"></div>
       <div class="opbox" id="scnObst"></div>
       <div class="lbl">סצנות שמורות</div>
@@ -1466,6 +1496,7 @@
   <button class="tb big" id="renderBtn" title="RENDER REALISTIC PHOTO?" aria-label="רינדור ריאליסטי"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg><span>Render</span></button>
   <button class="tb" id="lockBtn" hidden aria-label="מצב ניהול"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
 </div>
+<div class="elpop" id="elPop" hidden role="dialog" aria-label="פרטי הפריט"></div>
 <div class="scnfab" id="scnFab" hidden>
   <button class="tb big" id="fabAdd" title="הוספת מוצר לסצנה"><span class="plus">＋</span><svg class="ico bin" xmlns="http://www.w3.org/2000/svg" viewBox="84 54 230 244" width="22" height="22" aria-hidden="true"><defs><clipPath id="tb-clip"><rect x="89.76" y="59.58" width="218.7" height="232.83" fill="none"/></clipPath></defs><g fill="currentColor" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><polygon points="308.46 123.3 308.46 244.17 222.57 292.41 222.07 292.14 114.1 232.07 114.28 157.97 114.28 155.61 114.45 85.84 116.49 85.84 116.49 87.64 116.32 156.79 116.31 159.15 116.14 230.87 221.55 289.52 222.56 290.08 223.6 289.49 305.34 243.59 306.42 242.98 306.42 124.46 199.77 61.14 200.79 59.63 308.46 123.3"/><polygon points="224.04 147.37 223.53 148.25 223.02 149.14 222.51 148.84 116.49 87.64 115.9 87.3 116.49 86.28 116.92 85.53 224.04 147.37"/><polygon points="224.55 148.26 224.22 196.91 224.21 199.23 223.6 289.49 223.59 291.25 221.54 291.24 221.55 289.52 222.17 198.12 222.19 195.79 222.51 148.84 222.51 148.24 223.53 148.25 224.55 148.26"/><path clip-path="url(#tb-clip)" d="M91.97,143.38l23.78,86.56,81.79-46.49.43-27.5-83.38-47.25-22.63,34.69ZM219.75,290.49l-21.57-84.86,22.57-36.78-20.75-11.76-.43,27.55-.51.29-84.58,48.08-24.72-89.970,24.18-37.06,84.08,47.64,1.82-91.97c-50.55,1.310-83.54,25.08-83.87,25.56l-1.7-1.140c.34-.5,34.39-25.81,86.59-26.49l1.03.7-1.86,94.48,23.56,13.35-23.23,37.85,21.36,84.02-1.98.51Z"/><polygon points="199.08 204.82 198.05 206.58 116.31 159.15 114.28 157.97 90.36 144.09 91.38 142.32 114.28 155.61 116.32 156.79 199.08 204.82"/><path clip-path="url(#tb-clip)" d="M224.37,148.42l-1.69-1.15c.33-.49,33.45-23.74,84.74-24.41l.02,2.04c-50.21.66-82.76,23.040-83.08,23.52"/><polygon points="307.93 242.68 306.95 244.47 305.34 243.59 224.21 199.23 222.17 198.12 198.07 184.94 199.05 183.14 222.19 195.79 224.22 196.91 306.42 241.85 307.93 242.68"/></g></svg><span>הוסף</span></button>
   <button class="tb" id="fabSet" title="הגדרות הסצנה: חדר, קירות, סצנות שמורות, מצלמה"><svg class="ico" viewBox="0 0 28 28" width="20" height="20" fill="currentColor" stroke="currentColor" stroke-width=".6" aria-hidden="true"><g> <path d="M25.67,8.57h-15.28c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h15.28c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M8.03,8.57H2.33c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h5.71c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M25.67,14.46h-5.99c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h5.99c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M18.04,14.46H2.33c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h15.71c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M25.67,20.35H9.66c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h16.01c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> <path d="M8.03,20.35H2.33c-.18,0-.33-.15-.33-.33s.15-.33.33-.33h5.71c.18,0,.33.15.33.33s-.15.33-.33.33Z"/> </g> <path d="M8.03,11.19c-.18,0-.33-.15-.33-.33v-5.78c0-.18.15-.33.33-.33s.33.15.33.33v5.78c0,.18-.15.33-.33.33Z"/> <path d="M8.03,23.25c-.18,0-.33-.15-.33-.33v-5.78c0-.18.15-.33.33-.33s.33.15.33.33v5.78c0,.18-.15.33-.33.33Z"/> <path d="M19.68,17.05c-.18,0-.33-.15-.33-.33v-5.86c0-.18.15-.33.33-.33s.33.15.33.33v5.86c0,.18-.15.33-.33.33Z"/></svg><span>הגדרות הסצנה</span></button>
@@ -3186,7 +3217,7 @@ function buildRoomWall(world, key, L, pos, ry) {
   let cur = -L/2;
   for (const q of list) {
     const a = Math.max(q.a, cur), b = Math.min(q.b, L/2); if (b <= a) continue;
-    panel(cur, a, 0, H); panel(a, b, q.sill + q.h, H); panel(a, b, 0, q.sill); cur = b;
+    panel(cur, a, 0, H); panel(a, b, q.sill + q.h, H); panel(a, b, 0, q.sill); cur = b; const n0 = g.children.length;
     const w = b - a, cx = (a + b)/2, y0 = q.sill, y1 = q.sill + q.h, F = 0.05, FD = 0.07;
     box(w + 2*F, F, FD, cx, y1 + F/2, 0, opFrameMat);                                    // frame
     box(F, q.h, FD, a - F/2, (y0 + y1)/2, 0, opFrameMat); box(F, q.h, FD, b + F/2, (y0 + y1)/2, 0, opFrameMat);
@@ -3218,6 +3249,7 @@ function buildRoomWall(world, key, L, pos, ry) {
         box(0.13, 0.022, 0.05, hx, 1.02, 0.025, opHandleMat);
       }
     }
+    g.children.slice(n0).forEach(m => m.userData.open = q.o);           // double-click → edit this opening
   }
   panel(cur, L/2, 0, H);
   if (WALL_TAGS) {                                                    // "שמות הקירות": a coloured veil + the wall's name
@@ -7079,64 +7111,176 @@ function adTabClick() {
   if (LAST_DRAWER === 'arch') openArchDrawer(); else if (LAST_DRAWER === 'light') openLightDrawer(); else if (LAST_DRAWER === 'set' || LAST_DRAWER === 'cam') openSetDrawer(LAST_DRAWER); else openAddDrawer();
 }
 // ---- doors & windows: the list in the scene settings ----
+
+// ---- room elements: a wheel (doors, windows, obstacles) → a floating card on the left with the sizes → add / edit ----
+const ICO = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const EL_ICONS = {
+  'door.single':ICO('<path d="M6 21V3h12v18"/><path d="M3 21h18"/><circle cx="15" cy="12" r=".9" fill="currentColor"/>'),
+  'door.double':ICO('<path d="M4 21V3h16v18"/><path d="M12 3v18"/><path d="M2 21h20"/><path d="M10 12h.5M13.5 12h.5"/>'),
+  'door.sliding':ICO('<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M12 3v18"/><path d="M7 12h3m-1.5-1.5L10 12l-1.5 1.5"/>'),
+  'door.passage':ICO('<path d="M5 21V9a7 7 0 0 1 14 0v12"/><path d="M2 21h20"/>'),
+  'window.std':ICO('<rect x="4" y="4" width="16" height="14" rx="1"/><path d="M12 4v14M4 11h16"/><path d="M3 21h18"/>'),
+  'window.shop':ICO('<rect x="2" y="5" width="20" height="13" rx="1"/><path d="M9 5v13M15 5v13"/><path d="M2 21h20"/>'),
+  'window.high':ICO('<rect x="3" y="3" width="18" height="5" rx="1"/><path d="M12 3v5"/><path d="M3 21h18" opacity=".4"/>'),
+  'obst.column':ICO('<path d="M8 3h8v18H8z"/><path d="M6 3h12M6 21h12"/>'),
+  'obst.pipe':ICO('<path d="M10 2v20M14 2v20"/><path d="M9 7h6M9 17h6"/>'),
+  'obst.gypsum':ICO('<rect x="3" y="6" width="18" height="12"/><path d="M3 10h18M3 14h18M9 6v4M15 10v4M9 14v4"/>'),
+  'obst.tap':ICO('<path d="M4 9h9a3 3 0 0 1 3 3v2"/><path d="M8 6v3M5 6h6"/><path d="M16 17v1M16 20v1"/>'),
+  'obst.step':ICO('<path d="M3 20h18v-4h-6v-4H9V8H3z"/>'),
+};
+const EL_ITEMS = [
+  { k:'door.single', he:'דלת רגילה', add:'הוסף דלת' }, { k:'door.double', he:'דלת כפולה', add:'הוסף דלת כפולה' },
+  { k:'door.sliding', he:'דלת הזזה מזכוכית', add:'הוסף דלת הזזה' }, { k:'door.passage', he:'מעבר פתוח', add:'הוסף מעבר' },
+  { k:'window.std', he:'חלון', add:'הוסף חלון' }, { k:'window.shop', he:'ויטרינה', add:'הוסף ויטרינה' }, { k:'window.high', he:'חלון גבוה צר', add:'הוסף חלון' },
+  { k:'obst.column', he:'עמוד', add:'הוסף עמוד' }, { k:'obst.pipe', he:'צינור', add:'הוסף צינור' }, { k:'obst.gypsum', he:'קיר גבס', add:'הוסף קיר גבס' },
+  { k:'obst.tap', he:'ברז / נקודת מים', add:'הוסף ברז' }, { k:'obst.step', he:'מדרגה / במה', add:'הוסף מדרגה' },
+];
+const elKey = (o) => o.kind === 'door' || o.kind === 'window' ? o.kind + '.' + o.type : 'obst.' + o.kind;
+const elName = (o) => (EL_ITEMS.find(x => x.k === elKey(o)) || {}).he || '';
+const WHEEL = { pos:0, target:0, raf:0, drag:null, acc:0 };
+function wheelDraw() {
+  const tr = $('elwTrack'); if (!tr) return;
+  const N = EL_ITEMS.length;
+  if (!tr.children.length) {
+    tr.innerHTML = EL_ITEMS.map((x, i) => `<div class="elw-it" data-i="${i}" role="option">${EL_ICONS[x.k]}<span>${x.he}</span><em>פתיחה ›</em></div>`).join('');
+  }
+  [...tr.children].forEach((el, i) => {
+    const d = ((i - WHEEL.pos) % N + N + N / 2) % N - N / 2, a = Math.abs(d);
+    el.style.transform = `translateY(${d * 46}px) rotateX(${-d * 19}deg)`;
+    el.style.opacity = a > 2.6 ? 0 : Math.max(0, 1 - a * 0.3);
+    el.style.visibility = a > 2.8 ? 'hidden' : 'visible';
+    el.classList.toggle('c', a < 0.5); el.setAttribute('aria-selected', a < 0.5);
+  });
+}
+function wheelAnim() {
+  cancelAnimationFrame(WHEEL.raf);
+  const step = () => { WHEEL.pos += (WHEEL.target - WHEEL.pos) * 0.22; if (Math.abs(WHEEL.target - WHEEL.pos) < 0.002) WHEEL.pos = WHEEL.target; wheelDraw(); if (WHEEL.pos !== WHEEL.target) WHEEL.raf = requestAnimationFrame(step); };
+  WHEEL.raf = requestAnimationFrame(step);
+}
+const wheelIdx = () => { const N = EL_ITEMS.length; return ((Math.round(WHEEL.target) % N) + N) % N; };
+function initWheel() {
+  const w = $('elWheel'); if (!w || w.dataset.on) return; w.dataset.on = 1;
+  wheelDraw();
+  w.addEventListener('wheel', (e) => { e.preventDefault(); WHEEL.acc += e.deltaY; if (Math.abs(WHEEL.acc) >= 40) { WHEEL.target = Math.round(WHEEL.target) + Math.sign(WHEEL.acc); WHEEL.acc = 0; wheelAnim(); } }, { passive:false });
+  w.addEventListener('mouseenter', () => { if (!typing()) w.focus({ preventScroll:true }); });
+  w.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); WHEEL.target = Math.round(WHEEL.target) + (e.key === 'ArrowDown' ? 1 : -1); wheelAnim(); }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); elNew(EL_ITEMS[wheelIdx()].k); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') e.stopPropagation();
+  });
+  w.addEventListener('pointerdown', (e) => { WHEEL.drag = { y:e.clientY, p:WHEEL.pos, moved:false, id:e.pointerId }; });
+  w.addEventListener('pointermove', (e) => {
+    const D = WHEEL.drag; if (!D) return; const dy = e.clientY - D.y;
+    if (!D.moved && Math.abs(dy) < 5) return;
+    if (!D.moved) { D.moved = true; w.setPointerCapture(D.id); w.style.cursor = 'grabbing'; }
+    cancelAnimationFrame(WHEEL.raf); WHEEL.pos = WHEEL.target = D.p - dy / 46; wheelDraw();
+  });
+  const up = (e) => {
+    const D = WHEEL.drag; WHEEL.drag = null; w.style.cursor = ''; if (!D) return;
+    if (D.moved) { WHEEL.target = Math.round(WHEEL.pos); wheelAnim(); return; }
+    const it = e.target.closest && e.target.closest('.elw-it'); if (!it) return;
+    const i = +it.dataset.i, N = EL_ITEMS.length, d = ((i - WHEEL.pos) % N + N + N / 2) % N - N / 2;
+    WHEEL.target = Math.round(WHEEL.pos + d); wheelAnim();
+    elNew(EL_ITEMS[i].k);
+  };
+  w.addEventListener('pointerup', up); w.addEventListener('pointercancel', () => { WHEEL.drag = null; });
+}
+// the floating card
+const EL = { o:null, draft:false, tags:false, t:0 };
+function elNew(k) {
+  if (EL.o) elClose(false);
+  pushRoomUndo();
+  const [g, t] = k.split('.'), R = SCN.room;
+  let o;
+  if (g === 'obst') o = addObst(t);
+  else o = addOpening(g, t, g === 'window' && R.left && !roomOpenings().some(x => x.wall === 'left') ? 'left' : 'back');
+  EL.draft = true; elShow(o);
+}
+function elEdit(o) { if (EL.o === o) return; if (EL.o) elClose(false); pushRoomUndo(); EL.draft = false; elShow(o); }
+function elShow(o) {
+  EL.o = o; EL.tags = WALL_TAGS; WALL_TAGS = true; rebuild(true); elDraw();
+  $('elPop').hidden = false;
+}
+function elIsOpen(o) { return o.kind === 'door' || o.kind === 'window'; }
+function elDraw() {
+  const o = EL.o, P = $('elPop'); if (!o) return;
+  const it = EL_ITEMS.find(x => x.k === elKey(o)) || EL_ITEMS[0], cm = (v) => Math.round((v || 0) / 10);
+  const num = (f, v, l, max) => `<label>${l}<input type="number" inputmode="numeric" data-f="${f}" value="${cm(v)}" min="0"${max ? ` max="${max}"` : ''} step="1"></label>`;
+  const opt = (cur, v, t) => `<option value="${v}"${String(cur) === String(v) ? ' selected' : ''}>${t}</option>`;
+  let body = '';
+  if (elIsOpen(o)) {
+    const side = o.wall === 'left' || o.wall === 'right';
+    body = `<div class="elbl">על איזה קיר</div><div class="ewalls">${['back', 'right', 'front', 'left'].map(k => `<button data-wall="${k}" class="${o.wall === k ? 'on' : ''}" style="--wc:${WALL_COL[k]}">${WALL_HE[k]}</button>`).join('')}</div>
+      <div class="elbl">מידות (ס"מ)</div><div class="efs">${num('w', o.w, 'רוחב')}${num('h', o.h, 'גובה')}${num('off', o.off, side ? 'מרחק מהקיר האחורי' : 'מרחק מהקיר השמאלי')}${o.kind === 'window' ? num('sill', o.sill, 'גובה מהרצפה') : ''}</div>`;
+  } else {
+    const head = o.kind === 'column' ? `<label>צורה<select data-f="round">${opt(!!o.round, false, 'מרובע')}${opt(!!o.round, true, 'עגול')}</select></label>`
+      : o.kind === 'pipe' ? `<label>כיוון<select data-f="axis">${Object.entries(PIPE_HE).map(([k, t]) => opt(o.axis, k, t)).join('')}</select></label>`
+      : o.kind === 'gypsum' ? `<label>סטטוס<select data-f="status">${Object.entries(GYP_HE).map(([k, t]) => opt(o.status, k, t)).join('')}</select></label><label>כיוון<select data-f="axis">${opt(o.axis, 'x', 'לרוחב החדר')}${opt(o.axis, 'z', 'לעומק החדר')}</select></label>` : '';
+    const f = o.kind === 'column' ? num('w', o.w, o.round ? 'קוטר' : 'רוחב') + (o.round ? '' : num('d', o.d, 'עומק'))
+      : o.kind === 'tap' ? num('y', o.y, 'גובה מהרצפה')
+      : o.kind === 'step' ? num('w', o.w, 'רוחב') + num('d', o.d, 'עומק') + num('h', o.h, 'גובה')
+      : o.kind === 'pipe' ? num('dia', o.dia, 'קוטר') + (o.axis === 'y' ? '' : num('len', o.len, 'אורך') + num('y', o.y, 'גובה מהרצפה'))
+      : num('len', o.len, 'אורך') + num('t', o.t, 'עובי') + num('h', o.h || WALL_H, 'גובה');
+    body = (head ? `<div class="efs">${head}</div>` : '') + `<div class="elbl">מיקום (ס"מ, מרכז)</div><div class="efs">${num('x', o.x, 'מהקיר השמאלי')}${num('z', o.z, 'מהקיר האחורי')}</div>
+      <div class="elbl">מידות (ס"מ)</div><div class="efs">${f}</div>`;
+  }
+  P.innerHTML = `<div class="eph">${EL_ICONS[it.k]}<h3>${elName(o)}</h3><button class="xb" data-x aria-label="סגירה">✕</button></div>${body}
+    <div class="eacts">${EL.draft ? `<button class="btn primary" data-ok>${it.add}</button><button class="btn" data-x>ביטול</button>`
+      : `<button class="btn primary" data-ok>סיום</button><button class="btn danger" data-del>מחיקה</button>`}</div>`;
+  P.querySelectorAll('[data-x]').forEach(b => b.onclick = () => elClose(false));
+  P.querySelector('[data-ok]').onclick = () => elClose(true);
+  const del = P.querySelector('[data-del]'); if (del) del.onclick = () => { elRemove(o); EL.o = null; elClose(true); toast('נמחק'); };
+  P.querySelectorAll('[data-wall]').forEach(b => b.onclick = () => { o.wall = b.dataset.wall; if (o.wall !== 'front') SCN.room[o.wall] = true; o.off = null; openFix(o); rebuild(true); elDraw(); });
+  P.querySelectorAll('[data-f]').forEach(el => {
+    const apply = () => { const f = el.dataset.f;
+      if (f === 'round') o.round = el.value === 'true'; else if (f === 'axis' || f === 'status') o[f] = el.value; else o[f] = (+el.value || 0) * 10;
+      if (elIsOpen(o)) openFix(o); else obstFix(o); };
+    el.oninput = () => { if (el.tagName === 'SELECT') return; apply(); clearTimeout(EL.t); EL.t = setTimeout(() => rebuild(true), 140); };
+    el.onchange = () => { apply(); rebuild(true); elDraw(); };
+  });
+}
+function elRemove(o) { if (elIsOpen(o)) SCN.room.openings = roomOpenings().filter(x => x !== o); else SCN.room.obstacles = roomObst().filter(x => x !== o); }
+function elClose(commit) {
+  const o = EL.o;
+  if (o && EL.draft && !commit) { elRemove(o); VOICE.undo.pop(); }
+  if (o && !EL.draft && !commit) { /* edits are live; closing keeps them (undo brings them back) */ }
+  EL.o = null; EL.draft = false; WALL_TAGS = EL.tags; $('elPop').hidden = true;
+  rebuild(true); renderOpenings(); renderObstacles();
+}
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && EL.o && !typing()) elClose(false); });
+// double-click a door / window / obstacle in the scene: the same card
+canvas.addEventListener('dblclick', (e) => {
+  if (mode !== 'scene') return;
+  dragRay.setFromCamera(pointerNDC(e), camera);
+  const parts = [...OBST_PARTS]; for (const w of ROOM_WALLS) if (w.g.visible) w.g.traverse(m => { if (m.userData.open) parts.push(m); });
+  const h = dragRay.intersectObjects(parts, true)[0]; if (!h) return;
+  let m = h.object; while (m && !m.userData.obst && !m.userData.open) m = m.parent;
+  if (m) elEdit(m.userData.obst || m.userData.open);
+});
 function renderOpenings() {
   const box = $('scnOpen'); if (!box) return;
-  const list = roomOpenings();
-  const opt = (o, v, t) => `<option value="${v}"${o === v ? ' selected' : ''}>${t}</option>`;
-  const num = (f, v, l) => `<label>${l}<input type="number" data-f="${f}" value="${Math.round(v / 10)}" min="0" step="1"></label>`;
-  box.innerHTML = (list.length ? '' : '<div class="opempty">אין עדיין דלתות או חלונות בחדר.</div>') + list.map(o => `<div class="oprow" data-id="${o.id}">
-      <div class="oph"><b>${o.kind === 'door' ? 'דלת' : 'חלון'}</b><select data-f="type">${Object.entries(OPEN_TYPES[o.kind]).map(([k, t]) => opt(o.type, k, t.he)).join('')}</select><button class="opdel" title="הסרה" aria-label="הסרה">✕</button></div>
-      <div class="opf"><label>קיר<select data-f="wall">${Object.entries(WALL_HE).map(([k, t]) => opt(o.wall, k, t)).join('')}</select></label>
-        ${num('off', o.off, o.wall === 'left' || o.wall === 'right' ? 'מהקיר האחורי (ס"מ)' : 'מהקיר השמאלי (ס"מ)')}
-        ${num('w', o.w, 'רוחב (ס"מ)')}${num('h', o.h, 'גובה (ס"מ)')}${o.kind === 'window' ? num('sill', o.sill, 'גובה מהרצפה (ס"מ)') : ''}</div></div>`).join('')
-    + `<div class="opadd"><button class="btn" id="opAddDoor">+ דלת</button><button class="btn" id="opAddWin">+ חלון</button></div>`;
-  const changed = () => { pushRoomUndo(); rebuild(true); renderOpenings(); };
-  box.querySelectorAll('.oprow').forEach(row => {
+  initWheel();
+  const list = roomOpenings().filter(o => o !== EL.o || !EL.draft);
+  const cm = (v) => Math.round(v / 10);
+  box.innerHTML = list.map(o => `<div class="elrow" data-id="${o.id}">${EL_ICONS[elKey(o)] || ''}<span><b>${elName(o)}</b><small><i style="background:${WALL_COL[o.wall]}"></i>קיר ${WALL_HE[o.wall]} · ${cm(o.w)}×${cm(o.h)} ס"מ</small></span><button class="opdel" title="הסרה" aria-label="הסרה">✕</button></div>`).join('');
+  box.querySelectorAll('.elrow').forEach(row => {
     const o = list.find(x => String(x.id) === row.dataset.id); if (!o) return;
-    row.querySelector('.opdel').onclick = () => { SCN.room.openings = list.filter(x => x !== o); changed(); };
-    row.querySelectorAll('[data-f]').forEach(el => el.onchange = () => {
-      const f = el.dataset.f;
-      if (f === 'type') { const T = OPEN_TYPES[o.kind][el.value]; o.type = el.value; o.w = T.w; o.h = T.h; o.sill = T.sill || 0; }
-      else if (f === 'wall') { o.wall = el.value; if (o.wall !== 'front') SCN.room[o.wall] = true; o.off = null; }
-      else o[f] = (+el.value || 0) * 10;
-      openFix(o); changed();
-    });
+    row.onclick = (e) => { if (e.target.closest('.opdel')) return; elEdit(o); };
+    row.querySelector('.opdel').onclick = () => { pushRoomUndo(); if (EL.o === o) { EL.o = null; $('elPop').hidden = true; WALL_TAGS = EL.tags; } elRemove(o); rebuild(true); renderOpenings(); };
   });
-  $('opAddDoor').onclick = () => { addOpening('door', 'single', 'back'); changed(); };
-  $('opAddWin').onclick = () => { addOpening('window', 'std', SCN.room.left ? 'left' : 'back'); changed(); };
 }
 function renderObstacles() {
   const box = $('scnObst'); if (!box) return;
-  const list = roomObst();
-  const opt = (o, v, t) => `<option value="${v}"${String(o) === String(v) ? ' selected' : ''}>${t}</option>`;
-  const num = (f, v, l) => `<label>${l}<input type="number" data-f="${f}" value="${Math.round(v / 10)}" min="0" step="1"></label>`;
-  const head = (o) => o.kind === 'column' ? `<select data-f="round">${opt(!!o.round, false, 'מרובע')}${opt(!!o.round, true, 'עגול')}</select>`
-    : o.kind === 'pipe' ? `<select data-f="axis">${Object.entries(PIPE_HE).map(([k, t]) => opt(o.axis, k, t)).join('')}</select>`
-    : o.kind === 'tap' || o.kind === 'step' ? '<span style="flex:1"></span>'
-    : `<select data-f="status">${Object.entries(GYP_HE).map(([k, t]) => opt(o.status, k, t)).join('')}</select>`;
-  const fields = (o) => num('x', o.x, 'מרכז – מהקיר השמאלי (ס"מ)') + num('z', o.z, 'מרכז – מהקיר האחורי (ס"מ)') + (
-    o.kind === 'column' ? num('w', o.w, o.round ? 'קוטר (ס"מ)' : 'רוחב (ס"מ)') + (o.round ? '' : num('d', o.d, 'עומק (ס"מ)'))
-    : o.kind === 'tap' ? num('y', o.y, 'גובה מהרצפה (ס"מ)')
-    : o.kind === 'step' ? num('w', o.w, 'רוחב (ס"מ)') + num('d', o.d, 'עומק (ס"מ)') + num('h', o.h, 'גובה (ס"מ)')
-    : o.kind === 'pipe' ? num('dia', o.dia, 'קוטר (ס"מ)') + (o.axis === 'y' ? '' : num('len', o.len, 'אורך (ס"מ)') + num('y', o.y, 'גובה מהרצפה (ס"מ)'))
-    : `<label>כיוון<select data-f="axis">${opt(o.axis, 'x', 'לרוחב החדר')}${opt(o.axis, 'z', 'לעומק החדר')}</select></label>` + num('len', o.len, 'אורך (ס"מ)') + num('t', o.t, 'עובי (ס"מ)') + num('h', o.h || WALL_H, 'גובה (ס"מ)'));
-  box.innerHTML = (list.length ? '' : '<div class="opempty">אין מכשולים בחדר (עמוד, צינור, קיר גבס, ברז, מדרגה).</div>') + list.map(o => `<div class="oprow" data-id="${o.id}">
-      <div class="oph"><b>${OBST_HE[o.kind]}</b>${head(o)}<button class="opdel" title="הסרה" aria-label="הסרה">✕</button></div>
-      <div class="opf">${fields(o)}</div></div>`).join('')
-    + `<div class="opadd"><button class="btn" data-add="column">+ עמוד</button><button class="btn" data-add="pipe">+ צינור</button><button class="btn" data-add="gypsum">+ קיר גבס</button><button class="btn" data-add="tap">+ ברז</button><button class="btn" data-add="step">+ מדרגה</button></div>`;
-  const changed = () => { pushRoomUndo(); rebuild(true); renderObstacles(); };
-  box.querySelectorAll('.oprow').forEach(row => {
+  initWheel();
+  const list = roomObst().filter(o => o !== EL.o || !EL.draft);
+  const cm = (v) => Math.round(v / 10);
+  const sz = (o) => o.kind === 'column' ? (o.round ? `⌀${cm(o.w)}` : `${cm(o.w)}×${cm(o.d)}`) : o.kind === 'pipe' ? `⌀${cm(o.dia)} · ${PIPE_HE[o.axis]}` : o.kind === 'gypsum' ? `${cm(o.len)} ס"מ · ${GYP_HE[o.status]}` : o.kind === 'step' ? `${cm(o.w)}×${cm(o.d)}×${cm(o.h)}` : `גובה ${cm(o.y)}`;
+  box.innerHTML = list.map(o => `<div class="elrow" data-id="${o.id}">${EL_ICONS['obst.' + o.kind] || ''}<span><b>${OBST_HE[o.kind]}</b><small>${sz(o)}</small></span><button class="opdel" title="הסרה" aria-label="הסרה">✕</button></div>`).join('');
+  box.querySelectorAll('.elrow').forEach(row => {
     const o = list.find(x => String(x.id) === row.dataset.id); if (!o) return;
-    row.querySelector('.opdel').onclick = () => { SCN.room.obstacles = list.filter(x => x !== o); changed(); };
-    row.querySelectorAll('[data-f]').forEach(el => el.onchange = () => {
-      const f = el.dataset.f;
-      if (f === 'round') o.round = el.value === 'true';
-      else if (f === 'axis' || f === 'status') o[f] = el.value;
-      else o[f] = (+el.value || 0) * 10;
-      obstFix(o); changed();
-    });
+    row.onclick = (e) => { if (e.target.closest('.opdel')) return; elEdit(o); };
+    row.querySelector('.opdel').onclick = () => { pushRoomUndo(); if (EL.o === o) { EL.o = null; $('elPop').hidden = true; WALL_TAGS = EL.tags; } elRemove(o); rebuild(true); renderObstacles(); };
   });
-  box.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { addObst(b.dataset.add); changed(); });
 }
 function pushRoomUndo() { if (typeof VOICE !== 'undefined') { VOICE.undo.push(sceneState()); if (VOICE.undo.length > 30) VOICE.undo.shift(); } }
 // ---- "הגדרות הסצנה": the same drawer, with the scene's settings as cards (their controls are lent from the scene panel) ----
@@ -7162,8 +7306,7 @@ function openSetDrawer(kind = 'set') {
   if (kind === 'cam') card('', [...$('camMode').closest('.camsec').children].filter(k => !(k.classList.contains('lbl') && k.textContent.trim() === 'מצלמה')));
   else {
   card('החדר', [kids.find(k => k.classList.contains('pair') && k.querySelector('#scnW')), $('roomScan')]);
-  card('דלתות וחלונות', [$('scnOpen')]); renderOpenings();
-  card('מכשולים וקירות גבס', [$('scnObst')]); renderObstacles();
+  card('דלתות, חלונות ומכשולים', [$('elWheel'), $('scnOpen'), $('scnObst')]); renderOpenings(); renderObstacles();
   card('מוצרים בסצנה', [$('scnList')]);
   card('סצנות שמורות', [$('scnLib').closest('.mrow'), $('scnSaveBase') && $('scnSaveBase').closest('.pair'), $('scnLibInfo')]);
   }
@@ -9578,7 +9721,7 @@ function openWizard(at) {
       } else if (s === 3) {
         body.innerHTML = `<h3>דלתות, חלונות ומכשולים</h3><p class="dlg-sub">עמודים, צינורות, ברזים, קירות גבס (קיימים / להסרה / חדשים לבנייה). אפשר גם להזיז אותם אחר כך בסצנה עם Ctrl + גרירה.</p>
           <div class="wzsplit"><div id="wzLists"></div><div id="wzMapBox"></div></div>`;
-        lend($('scnOpen'), q('#wzLists')); lend($('scnObst'), q('#wzLists')); renderOpenings(); renderObstacles();
+        lend($('elWheel'), q('#wzLists')); lend($('scnOpen'), q('#wzLists')); lend($('scnObst'), q('#wzLists')); renderOpenings(); renderObstacles();
         q('#wzMapBox').innerHTML = wzMap();
         mo = new MutationObserver(() => { const m = q('#wzMapBox'); if (m) m.innerHTML = wzMap(); });
         mo.observe(q('#wzLists'), { childList:true, subtree:true });
@@ -10043,6 +10186,7 @@ const Mic = {
   async init() {
     try { if (window.claude && window.claude.use) { this.d = await window.claude.use('dictation'); if (this.d) this.kind = 'claude'; } } catch {}
     if (!this.kind && (window.SpeechRecognition || window.webkitSpeechRecognition)) this.kind = 'web';
+    if (!this.kind && window.MediaRecorder && navigator.mediaDevices) this.kind = 'rec';
     if (this.kind === 'claude') {
       this.d.onPartial(({ text }) => { this.kick(); this.level = Math.min(1, this.level + 0.35); this.handlers.partial && this.handlers.partial(text); });
       this.d.onFinal(({ text }) => { this.kick(); this.level = 1; this.handlers.final && this.handlers.final(text); });
@@ -10055,7 +10199,40 @@ const Mic = {
     return this.kind;
   },
   on(h) { this.handlers = h; },
+  // on the site (with the admin key) the speech goes to OpenAI's transcription, which knows the product words
+  useServer() { return this.kind !== 'claude' && server && !!adminKey() && !!window.MediaRecorder && !!navigator.mediaDevices; },
+  async startRec() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true } });
+    this.stream = stream; this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this.analyser = this.ctx.createAnalyser(); this.analyser.fftSize = 1024;
+    this.ctx.createMediaStreamSource(stream).connect(this.analyser); this.buf = new Uint8Array(this.analyser.fftSize);
+    const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'].find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
+    const rec = this.rec = new MediaRecorder(stream, mime ? { mimeType:mime } : {}), chunks = [];
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = async () => {
+      const type = (rec.mimeType || mime || 'audio/webm').split(';')[0], blob = new Blob(chunks, { type });
+      clearInterval(this.vadT); this.cleanup();
+      this.handlers.partial && this.handlers.partial('מתמלל…');
+      try {
+        const r = await fetch('/api/transcribe?lang=' + (LANG === 'en' ? 'en' : 'he'), { method:'POST', headers:{ 'content-type':type, 'x-admin-key':adminKey() }, body:blob });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+        this.handlers.partial && this.handlers.partial('');
+        if (j.text) this.handlers.final && this.handlers.final(j.text);
+      } catch (e) { this.handlers.partial && this.handlers.partial(''); this.handlers.error && this.handlers.error('transcribe'); toast('התמלול נכשל: ' + e.message); }
+      this.handlers.state && this.handlers.state(false, 'stopped');
+    };
+    rec.start(250);
+    this.listening = true; this.kick(); this.handlers.state && this.handlers.state(true);
+    this.handlers.partial && this.handlers.partial('מקשיב…');
+    // silence detection: speaking keeps it open, 5 s of quiet ends it (as with the other engines)
+    this.vadT = setInterval(() => { if (!this.analyser) return; this.analyser.getByteTimeDomainData(this.buf); let e = 0;
+      for (let i = 0; i < this.buf.length; i++) { const v = (this.buf[i] - 128) / 128; e += v * v; }
+      if (Math.sqrt(e / this.buf.length) > 0.03) { this.kick(); this.level = 1; } }, 120);
+  },
   start() {                                     // must run straight from the click
+    if (this.useServer()) return this.startRec();
+    if (this.kind === 'rec') return Promise.reject(new Error('no speech recognition'));
     if (this.kind === 'claude') {
       return this.d.start({ language: LANG === 'en' ? 'en' : 'he' }).catch(e => {
         if (e && e.code === 'unavailable') return this.d.start();
@@ -10091,7 +10268,8 @@ const Mic = {
   },
   async stop() {
     if (this.kind === 'claude') return this.d.stop();
-    this.rec && this.rec.stop();
+    if (this.rec && this.rec.state === 'recording') { this.listening = false; clearTimeout(this.quietT); this.rec.stop(); return; }
+    if (this.rec && this.rec.stop && !(this.rec instanceof (window.MediaRecorder || Object))) this.rec.stop();
   },
   cleanup() {
     this.listening = false; clearTimeout(this.quietT); this.quietT = 0;
