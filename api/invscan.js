@@ -3,6 +3,8 @@
 // the AI turns them into the inventory table, the phone confirms, and the computer's planning wizard gets the rows.
 //
 //   POST ?a=new[&share=1]            (admin)  → { id, exp }
+//   POST ?a=ask&id=…                 (phone)  → { wa, by }                    the link expired: ask the agent for more time
+//   POST ?a=extend&id=…              (admin)  → { exp }                       one more hour for the same link
 //   GET  ?a=check&id=…               (phone)  → { ok, share, exp, status }
 //   GET  ?a=status&id=…              (admin)  → the session
 //   POST ?a=photo&id=…&n=0..29       (phone)  raw JPEG / WebP body → { url }
@@ -36,6 +38,7 @@ async function jsonBody(req) {
 }
 const num = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 && n < 10000 ? n : null; };
 
+const agent = (b) => ({ wa:String(b?.wa || '').replace(/[^0-9]/g, '').replace(/^0/, '972').slice(0, 15), by:String(b?.by || '').slice(0, 40) });
 export default async function handler(req, res) {
   const a = String(req.query?.a || ''), id = String(req.query?.id || '');
   try {
@@ -45,16 +48,31 @@ export default async function handler(req, res) {
       if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) return res.status(501).json({ error:'לא חובר אחסון תמונות (Vercel Blob) – ראו README' });
       const nid = randomBytes(15).toString('base64').replace(/[^a-z0-9]/gi, '').toLowerCase().padEnd(20, '0').slice(0, 20);
       const share = String(req.query?.share || '') === '1', now = Date.now(), exp = now + (share ? SHARE_TTL : TTL) * 1000;
-      await save(nid, { kind:'items', status:'waiting', created:now, exp, items:[], rows:null, questions:[], error:'', ...(share ? { share:true } : {}) });
+      await save(nid, { kind:'items', status:'waiting', created:now, exp, items:[], rows:null, questions:[], error:'', ...(share ? { share:true, ...agent(await jsonBody(req)) } : {}) });
       return res.status(200).json({ id:nid, exp });
     }
     const s = await load(id);
     if (!s) return res.status(404).json({ error:'הסשן לא נמצא או שפג תוקפו – בקשו קישור חדש' });
     const expired = Date.now() > s.exp && s.status !== 'done';
-    if (a === 'check') return res.status(200).json({ ok:!expired && s.status !== 'cancelled' && s.status !== 'done', share:!!s.share, exp:s.exp, status:s.status, items:s.items, rows:s.rows });
+    if (a === 'check') return res.status(200).json({ ok:!expired && s.status !== 'cancelled' && s.status !== 'done', share:!!s.share, exp:s.exp, status:s.status, ask:!!s.ask, wa:s.wa || '', items:s.items, rows:s.rows });
     if (a === 'status') {
       if (!isAdmin(req)) return res.status(401).json({ error:'נדרש מצב ניהול' });
       return res.status(200).json(s);
+    }
+    // an expired shared link: the phone asks for more time, the agent (any admin) extends the same link with one tap
+    if (a === 'ask') {
+      if (req.method !== 'POST') return res.status(405).json({ error:'method not allowed' });
+      if (!s.share) return res.status(400).json({ error:'רק לקישור ששלחו לכם' });
+      if (!s.ask) { s.ask = Date.now(); await save(id, s); }
+      return res.status(200).json({ ok:true, wa:s.wa || '', by:s.by || '' });
+    }
+    if (a === 'extend') {
+      if (req.method !== 'POST') return res.status(405).json({ error:'method not allowed' });
+      if (!isAdmin(req)) return res.status(401).json({ error:'נדרש מצב ניהול' });
+      if (s.status === 'done') return res.status(200).json({ ok:true, done:true });
+      s.exp = Date.now() + SHARE_TTL * 1000; s.ask = 0; if (s.status === 'cancelled') s.status = 'waiting';
+      await save(id, s);
+      return res.status(200).json({ ok:true, exp:s.exp });
     }
     if (req.method !== 'POST') return res.status(405).json({ error:'method not allowed' });
     if (s.status === 'cancelled') return res.status(410).json({ error:'הצילום בוטל במחשב' });

@@ -8,6 +8,8 @@
 //   POST ?a=confirm&id=…             (phone)  JSON { result } → { ok }        the (corrected) room goes to the computer
 //   POST ?a=cancel&id=…              (either)
 //   POST ?a=new&share=1              (admin)  → { id, exp }                   a link to send to someone else: works for an hour
+//   POST ?a=ask&id=…                 (phone)  → { wa, by }                    the link expired: ask the agent for more time
+//   POST ?a=extend&id=…              (admin)  → { exp }                       one more hour for the same link
 //   GET  ?a=check&id=…               (phone)  → { ok, share, exp }            is the link still good
 //
 // The phone has no admin password: the session id (random, 20 characters, 30 minutes) is what lets it in.
@@ -69,6 +71,7 @@ Estimate the room's size from things of known size: doors are about 200–210 cm
 List every door, doorway and window you can see, on the wall it is in, with its size and position. Keep the same wall names (back / right / front / left) as defined above.
 Be honest about how sure you are (confidence). Answer only with the JSON.`;
 
+const agent = (b) => ({ wa:String(b?.wa || '').replace(/[^0-9]/g, '').replace(/^0/, '972').slice(0, 15), by:String(b?.by || '').slice(0, 40) });
 export default async function handler(req, res) {
   const a = String(req.query?.a || ''), id = String(req.query?.id || '');
   try {
@@ -78,17 +81,32 @@ export default async function handler(req, res) {
       if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) return res.status(501).json({ error:'לא חובר אחסון תמונות (Vercel Blob) – ראו README' });
       const nid = randomBytes(15).toString('base64').replace(/[^a-z0-9]/gi, '').toLowerCase().padEnd(20, '0').slice(0, 20);
       const share = String(req.query?.share || '') === '1', now = Date.now();
-      await save(nid, { status:'waiting', created:now, photos:Array(MAX_PHOTOS).fill(null), result:null, error:'', ...(share ? { share:true, exp:now + SHARE_TTL * 1000 } : {}) });
+      await save(nid, { status:'waiting', created:now, photos:Array(MAX_PHOTOS).fill(null), result:null, error:'', ...(share ? { share:true, exp:now + SHARE_TTL * 1000, ...agent(await jsonBody(req)) } : {}) });
       return res.status(200).json({ id:nid, ttl:share ? SHARE_TTL : TTL, exp:share ? now + SHARE_TTL * 1000 : now + TTL * 1000 });
     }
     const s = await load(id);
     if (!s) return res.status(404).json({ error:'הסשן לא נמצא או שפג תוקפו – סרקו שוב את הברקוד מהמחשב' });
 
     const expired = s.share && Date.now() > s.exp && s.status !== 'done';
-    if (a === 'check') return res.status(200).json({ ok:!expired && s.status !== 'cancelled' && s.status !== 'done', share:!!s.share, exp:s.exp || null, status:s.status });
+    if (a === 'check') return res.status(200).json({ ok:!expired && s.status !== 'cancelled' && s.status !== 'done', share:!!s.share, exp:s.exp || null, status:s.status, ask:!!s.ask, wa:s.wa || '' });
     if (a === 'status') {
       if (!isAdmin(req)) return res.status(401).json({ error:'נדרש מצב ניהול' });
       return res.status(200).json(s);
+    }
+    // an expired shared link: the phone asks for more time, the agent (any admin) extends the same link with one tap
+    if (a === 'ask') {
+      if (req.method !== 'POST') return res.status(405).json({ error:'method not allowed' });
+      if (!s.share) return res.status(400).json({ error:'רק לקישור ששלחו לכם' });
+      if (!s.ask) { s.ask = Date.now(); await save(id, s); }
+      return res.status(200).json({ ok:true, wa:s.wa || '', by:s.by || '' });
+    }
+    if (a === 'extend') {
+      if (req.method !== 'POST') return res.status(405).json({ error:'method not allowed' });
+      if (!isAdmin(req)) return res.status(401).json({ error:'נדרש מצב ניהול' });
+      if (s.status === 'done') return res.status(200).json({ ok:true, done:true });
+      s.exp = Date.now() + SHARE_TTL * 1000; s.ask = 0; if (s.status === 'cancelled') s.status = 'waiting';
+      await save(id, s);
+      return res.status(200).json({ ok:true, exp:s.exp });
     }
     if (req.method !== 'POST') return res.status(405).json({ error:'method not allowed' });
     if (s.status === 'cancelled') return res.status(410).json({ error:'הצילום בוטל במחשב' });

@@ -930,6 +930,7 @@
   .scanqr summary { cursor:pointer; font-size:13px; color:var(--muted); margin:6px 0; }
   .scanshare { border-top:1px solid var(--line); margin-top:12px; padding-top:12px; } .scanshare > .btn { width:100%; }
   .shlist { display:flex; flex-direction:column; gap:6px; margin-top:8px; } .shrow { display:flex; align-items:center; gap:6px; border:1px solid var(--line); border-radius:10px; padding:6px 8px; font-size:13px; }
+  .walink { font-size:12px; color:var(--muted); margin-top:6px; } .walink a { color:var(--blue); }
   .shrow span { flex:1; display:flex; flex-direction:column; } .shrow small { color:var(--muted); font-size:11px; } .shrow .btn { padding:5px 10px; font-size:12px; }
   .qrbox { display:flex; justify-content:center; margin:14px 0 8px; }
   .qrbox img { width:220px; height:220px; border:1px solid var(--line); border-radius:12px; background:#fff; }
@@ -5692,7 +5693,7 @@ $('lockBtn').onclick = () => {
   (card, close) => {
     const go = async () => {
       LS.set('rbt-admin-key', card.querySelector('#aPass').value);
-      try { await api('/api/presets', { action:'login' }); renderPresetPicker(); renderLibUI(); close(); toast('מצב ניהול פעיל'); }
+      try { await api('/api/presets', { action:'login' }); renderPresetPicker(); renderLibUI(); close(); toast('מצב ניהול פעיל'); extendFromUrl(); }
       catch { LS.set('rbt-admin-key', ''); const e = card.querySelector('#aErr'); e.textContent = 'סיסמה שגויה'; e.hidden = false; }
     };
     card.querySelector('#aGo').onclick = go;
@@ -7202,16 +7203,18 @@ function scanShares(card, onBuild, C = SHARE_CFG.room) {
     const L = list(); LS.set(C.ls, L);
     const rows = await Promise.all(L.map(async x => { try { const r = await fetch(C.api + '?a=status&id=' + x.id, { headers:{ 'x-admin-key':adminKey() } }); const st = await r.json(); return { x, st:r.ok ? st : null }; } catch { return { x, st:null }; } }));
     if (!live || !card.isConnected) return;
-    box.innerHTML = rows.length ? `<div class="shlist">${rows.map(({ x, st }) => { const url = location.origin + C.page + '?s=' + x.id, left = Math.round((x.exp - Date.now()) / 60000);
-      const s0 = !st ? 'לא נמצא' : st.status === 'done' ? ST.done : left <= 0 ? 'פג תוקף' : `${ST[st.status] || st.status} · עוד ${left} דק'`;
+    box.innerHTML = rows.length ? `<div class="shlist">${rows.map(({ x, st }) => { const url = location.origin + C.page + '?s=' + x.id, left = Math.round(((st && st.exp) || x.exp) - Date.now()) / 60000 | 0;
+      const s0 = !st ? 'לא נמצא' : st.status === 'done' ? ST.done : st.ask ? '🔔 ביקשו הארכה' : left <= 0 ? 'פג תוקף' : `${ST[st.status] || st.status} · עוד ${left} דק'`;
+      const ext = st && st.status !== 'done' && (st.ask || left <= 5) ? `<button class="btn primary" data-a="extend">הארכה בשעה</button>` : '';
       return `<div class="shrow" data-id="${x.id}"><span>${x.label || 'קישור'} · ${new Date(x.created).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' })}<small>${s0}</small></span>
-        ${st && st.status === 'done' ? `<button class="btn primary" data-a="build">${C.build}</button>` : left > 0 && st ? `<button class="btn" data-a="copy" data-u="${url}">העתקה</button>${navigator.share ? `<button class="btn" data-a="share" data-u="${url}">שליחה</button>` : ''}` : ''}
+        ${ext}${st && st.status === 'done' ? `<button class="btn primary" data-a="build">${C.build}</button>` : left > 0 && st ? `<button class="btn" data-a="copy" data-u="${url}">העתקה</button>${navigator.share ? `<button class="btn" data-a="share" data-u="${url}">שליחה</button>` : ''}` : ''}
         <button class="opdel" data-a="del" aria-label="הסרה">✕</button></div>`; }).join('')}</div>` : '';
     box.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
       const id = b.closest('.shrow').dataset.id, a = b.dataset.a;
       if (a === 'copy') { try { await navigator.clipboard.writeText(b.dataset.u); toast('הקישור הועתק'); } catch { prompt('העתיקו את הקישור:', b.dataset.u); } }
       if (a === 'share') navigator.share({ title:C.what, text:C.msg, url:b.dataset.u }).catch(() => {});
       if (a === 'del') { LS.set(C.ls, list().filter(x => x.id !== id)); draw(); }
+      if (a === 'extend') { b.disabled = true; if (await extendShare(C, id)) draw(); else b.disabled = false; }
       if (a === 'build') { try { const r = await fetch(C.api + '?a=status&id=' + id, { headers:{ 'x-admin-key':adminKey() } }); const st = await r.json(); if (!(st.result || st.rows)) throw 0;
         LS.set(C.ls, list().filter(x => x.id !== id)); live = false; onBuild(st); } catch { toast('לא הצלחתי לקבל את הצילום'); } }
     });
@@ -7220,14 +7223,72 @@ function scanShares(card, onBuild, C = SHARE_CFG.room) {
   card.querySelector('#shareNew').onclick = async (e) => {
     const b = e.currentTarget; b.disabled = true;
     try {
-      const r = await api(C.api + '?a=new&share=1', {}), url = location.origin + C.page + '?s=' + r.id;
+      const wa = myWa(true);
+      if (wa === null) { b.disabled = false; return; }
+      const r = await api(C.api + '?a=new&share=1', { wa }), url = location.origin + C.page + '?s=' + r.id;
+      if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
       const L = list(); L.unshift({ id:r.id, created:Date.now(), exp:r.exp, label:'קישור ' + (L.length + 1) }); LS.set(C.ls, L.slice(0, 20));
       if (navigator.share && matchMedia('(pointer: coarse)').matches) navigator.share({ title:C.what, text:C.msg, url }).catch(() => {});
       else { try { await navigator.clipboard.writeText(url); toast('נוצר קישור לשעה והועתק – שלחו אותו'); } catch { prompt('העתיקו את הקישור ושלחו:', url); } }
     } catch (er) { toast(er.message); }
-    b.disabled = false; draw();
+    b.disabled = false; draw(); drawWa();
   };
+  // my WhatsApp: the customer can ask me for more time when the link runs out
+  const nb = card.querySelector('#shareNew'), wl = document.createElement('div'); wl.className = 'walink'; nb.after(wl);
+  const drawWa = () => { const w = myWa(); wl.innerHTML = w ? `וואטסאפ להארכות: <b dir="ltr">+${w}</b> · <a href="#">שינוי</a>` : `<a href="#">הוספת וואטסאפ – כדי שיוכלו לבקש ממך הארכה</a>`;
+    wl.querySelector('a').onclick = (e) => { e.preventDefault(); myWa(true, true); drawWa(); }; };
+  drawWa();
   draw();
+}
+// ---- expired shared links: my WhatsApp number, one-tap extension, and a heads-up when someone asks ----
+function myWa(ask = false, force = false) {
+  let w = LS.get('rbt-my-wa', '');
+  if (ask && (!w || force)) {
+    const v = prompt('מספר הוואטסאפ שלך – כדי שהלקוח יוכל לבקש ממך הארכה כשהקישור פג (אפשר להשאיר ריק):', w ? '+' + w : '');
+    if (v === null) return force ? w : null;
+    w = v.replace(/[^0-9]/g, ''); if (w.startsWith('0')) w = '972' + w.slice(1);
+    LS.set('rbt-my-wa', w);
+  }
+  return w;
+}
+async function extendShare(C, id) {
+  try { const r = await api(C.api + '?a=extend&id=' + id, {});
+    LS.set(C.ls, LS.get(C.ls, []).map(x => x.id === id ? { ...x, exp:r.exp || x.exp } : x));
+    toast(r.done ? 'הצילום כבר נשלח' : 'הקישור הוארך בשעה – הלקוח ממשיך מאותו מקום'); return true; }
+  catch (e) { toast(e.message); return false; }
+}
+// the link in the customer's WhatsApp message: /?extend=room.<id> (or items.<id>)
+async function extendFromUrl() {
+  const q = new URLSearchParams(location.search), v = q.get('extend') || LS.get('rbt-extend-pending', '');
+  if (!v) return;
+  const [k, id] = v.split('.'), C = SHARE_CFG[k];
+  if (q.get('extend')) { q.delete('extend'); history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '')); }
+  if (!C || !/^[a-z0-9]{20}$/.test(id || '')) { LS.set('rbt-extend-pending', ''); return; }
+  if (!server) return;
+  if (!adminKey()) { LS.set('rbt-extend-pending', v); toast('כדי להאריך את הקישור – היכנסו למצב ניהול'); $('lockBtn').click(); return; }
+  LS.set('rbt-extend-pending', '');
+  await extendShare(C, id);
+}
+let askSeen = new Set(LS.get('rbt-asks-seen', []));
+async function watchAsks() {
+  try {
+    if (server && adminKey()) {
+      await extendFromUrl();
+      for (const [k, C] of Object.entries(SHARE_CFG)) for (const x of LS.get(C.ls, [])) {
+        if (Date.now() - x.created > 7 * 864e5) continue;
+        const r = await fetch(C.api + '?a=status&id=' + x.id, { headers:{ 'x-admin-key':adminKey() } }); if (!r.ok) continue;
+        const st = await r.json(), tag = x.id + ':' + st.ask;
+        if (!st.ask || st.status === 'done' || askSeen.has(tag)) continue;
+        askSeen.add(tag); LS.set('rbt-asks-seen', [...askSeen].slice(-50));
+        const msg = `${C.what}: ${x.label || 'קישור'} – הקישור פג תוקף וביקשו הארכה.`;
+        if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+          const n = new Notification('HISTORGIC – ביקשו הארכה', { body:msg, tag:x.id });
+          n.onclick = () => { focus(); n.close(); extendShare(C, x.id); };
+        } else if (await askConfirm(msg, 'הארכה בשעה')) await extendShare(C, x.id);
+      }
+    }
+  } catch {}
+  setTimeout(watchAsks, 20000);
 }
 // ---- inventory by phone: photos item by item (with a reference object) → rows for the planning wizard ----
 async function openInvScan() {
@@ -9859,6 +9920,7 @@ async function withDpi(blob, dpi) {
   await loadLib(); renderLibUI();
   renderPresetPicker();
   if (store.active && store.presets[store.active]) selectPreset(store.active);
+  extendFromUrl(); watchAsks();
 })();
 
 // =====================================================================
