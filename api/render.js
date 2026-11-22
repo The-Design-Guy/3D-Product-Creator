@@ -19,7 +19,7 @@ const REF_TEXT = {
   tech:'a TECHNICAL DRAWING of this same product: front and side orthographic views, flat colour-coded parts (orange = aluminium profiles, blue = tilt-bin units, tan = base board) with dimensions in mm. Use it ONLY to understand the construction, the proportions and the true thickness and depth of every part – for example the aluminium profiles are only 30 mm thick and the depth comes from the tilt-bin units. NEVER copy its flat colours, lines, arrows, labels, numbers or text into the result',
 };
 
-const HOLES = 'HANGING HOLES: the keyhole-shaped hanging slots and the small round holes in the back wall (and sides) of a tilt-bin housing are EMPTY OPENINGS cut through the grey plastic – you may see the background or the wall through them. Never put anything in them: no rivets, no screws, no bolts, no metal studs, no grommets, no shiny metal circles.';
+const HOLES = 'BACK WALL: the back wall of every tilt-bin housing is SOLID, smooth grey plastic – no keyhole hanging slots, no holes, no openings, no screws, no rivets, no metal studs or circles anywhere on it. Keep the side walls as in the model.';
 // stage 1 (or the single-stage render): photorealistic photo from the 3D view
 function prompt(description, background, lighting, brief, labels, structure, productRef, stage) {
   const n = 1 + labels.length + (productRef ? 1 : 0);

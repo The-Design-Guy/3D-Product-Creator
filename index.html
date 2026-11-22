@@ -2004,18 +2004,10 @@ function buildUnitTemplate(n) {
   const tbGeo = new THREE.BoxGeometry(W - 2*T_BODY, T_BODY, D);
   put(root, shadowOn(new THREE.Mesh(tbGeo, bodyMat))).position.set(0, H - T_BODY/2, -D/2);
   put(root, shadowOn(new THREE.Mesh(tbGeo, bodyMat))).position.set(0, T_BODY/2, -D/2);
-  // back with keyholes, small screw holes, injection mark
+  // the back: a solid wall (the keyhole hanging slots and screw holes were taken out – the renders came out cleaner without them)
   const bx0 = -W/2 + T_BODY, bx1 = W/2 - T_BODY, by0 = T_BODY, by1 = H - T_BODY;
   const backShape = new THREE.Shape();
   backShape.moveTo(bx0, by0); backShape.lineTo(bx1, by0); backShape.lineTo(bx1, by1); backShape.lineTo(bx0, by1); backShape.lineTo(bx0, by0);
-  const ky = by1 - Math.min(32, innerH*0.55);
-  const kR = Math.min(7, innerH*0.12), ka = kR*0.5, kL = Math.min(22, innerH*0.35);
-  backShape.holes.push(keyholePath(bx0 + 30, ky, kR, ka, kL, 0));
-  backShape.holes.push(keyholePath(bx1 - 30, ky, kR, ka, kL, 0));
-  const hy = by1 - Math.min(24, innerH*0.3);
-  backShape.holes.push(keyholePath(-W*0.22, hy, kR, ka, kL, Math.PI/2));
-  backShape.holes.push(keyholePath( W*0.22, hy, kR, ka, kL, -Math.PI/2));
-  for (const x of [-W*0.12, -W*0.08, W*0.08, W*0.12]) backShape.holes.push(circlePath(x, hy, Math.min(3.5, innerH*0.05)));
   const backGeo = new THREE.ExtrudeGeometry(backShape, { depth:T_BACK, bevelEnabled:false, curveSegments:8 });
   const back = shadowOn(new THREE.Mesh(backGeo, bodyMat)); back.position.z = -D + 1.5; root.add(back);
   const mark = new THREE.Mesh(new THREE.CylinderGeometry(Math.min(9, innerH*0.1), Math.min(9, innerH*0.1), 0.4, 12), bodyMat);
