@@ -128,6 +128,10 @@
   .gal-nav:not(:disabled):hover { background:var(--ink); color:#fff; }
   #grHold.on { background:var(--ink); color:#fff; } #grHold { touch-action:none; user-select:none; -webkit-user-select:none; }
   .gal-none { grid-column:1/-1; text-align:center; color:var(--muted); padding:30px 0; }
+  .gal-pick { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 10px; margin:0 0 8px; background:#eef6ff; border-radius:10px; font-size:13px; } .gal-pick b { margin-inline-end:auto; }
+  .gal-c.picked { outline:3px solid #0088FF; outline-offset:-3px; } .gal-c { position:relative; }
+  .gal-tick { position:absolute; top:6px; inset-inline-start:6px; width:22px; height:22px; border-radius:50%; border:2px solid #fff; background:rgba(0,0,0,.25); color:transparent; font-size:13px; line-height:18px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+  .gal-c.picked .gal-tick { background:#0088FF; color:#fff; }
   .gal-zh { display:block; font-size:11px; color:var(--muted); margin-top:4px; }
   .gal-rev .gal-imgs { display:flex; gap:12px; justify-content:center; margin-bottom:10px; } .gal-rev figure { margin:0; flex:1; max-width:420px; text-align:center; }
   .gal-rev figure img { width:100%; aspect-ratio:4/5; object-fit:contain; border-radius:10px; cursor:zoom-in; background:repeating-conic-gradient(#f1f2f4 0 25%, #fff 0 50%) 0 0/18px 18px; }
@@ -7143,11 +7147,7 @@ async function catShoot(v, onStep = () => {}) {
   if (PHOTO.on) exitPhoto();
   if (mode !== 'scene') throw new Error('הסטודיו עובד רק במסך הסצנה');
   onStep('מכין את המוצר');
-  SCN.items = []; SCN.sel = null;
-  const it = { id:SCN.next++, type:v.t, cfg:deep(v.cfg), rot:0, name:v.name, x:0, z:0, contents:v.set ? v.set.txt : '' };
-  SCN.items.push(it); rebuild(true); selectItem(it.id); await nextFrames();
-  enterPhoto(it); await nextFrames(6);                                   // the product alone, framed, on a transparent background
-  const cv = padToRatio(captureCanvas(1536), CAT_SIZE.w, CAT_SIZE.h);
+  const cv = await catCapture(v);
   let image = cv.toDataURL('image/webp', 0.95); if (!image.startsWith('data:image/webp')) image = cv.toDataURL('image/png');
   const body = { image, background:'transparent', description:describe(), structure:[structureSummary(), profileNotes()].filter(Boolean).join('\n'),
     size:`${CAT_SIZE.w}x${CAT_SIZE.h}`, lighting:lightingText(),
@@ -7162,12 +7162,79 @@ async function catShoot(v, onStep = () => {}) {
   }
   onStep('שומר');
   { const host = document.getElementById('stuGauge'); if (host) setTimeout(() => { host.hidden = true; host.innerHTML = ''; }, 900); }
-  const out = await catFit(r.image);                                      // exactly 1024 × 1280, transparent PNG
+  let out = await catFit(r.image);                                        // exactly 1024 × 1280, transparent PNG
+  // the AI moves, resizes and stretches the product a little each time: put it back exactly where (and as big as) the 3D model is
+  let ref = alphaBox(cv); if (ref && ref.w > CAT_SIZE.w * 0.97 && ref.h > CAT_SIZE.h * 0.97) ref = null;   // no transparent background to measure: leave it
+  const al = ref ? await catAlign(out, ref) : null;
+  if (al && al.ok) out = al.url;
   const url = await uploadImage(out, 'catalog');
   if (!url) throw new Error('אין חיבור לאחסון התמונות');
   await api('/api/catalog', { action:'set', key:v.key, url, name:v.name, set:v.set ? v.set.id : '' });
+  if (al && al.bad) await catDistorted(v.key, v.fix, al.d);
   exitPhoto();
-  return { url, check:r.check || null };
+  return { url, check:r.check || null, distorted:!!(al && al.bad) };
+}
+
+// the variant alone in photo mode → the 3D picture (transparent, catalogue size) the render is made from
+async function catCapture(v) {
+  if (PHOTO.on) exitPhoto();
+  SCN.items = []; SCN.sel = null;
+  const it = { id:SCN.next++, type:v.t, cfg:deep(v.cfg), rot:0, name:v.name, x:0, z:0, contents:v.set ? v.set.txt : '' };
+  SCN.items.push(it); rebuild(true); selectItem(it.id); await nextFrames();
+  enterPhoto(it); await nextFrames(6);                                   // the product alone, framed, on a transparent background
+  return padToRatio(captureCanvas(1536), CAT_SIZE.w, CAT_SIZE.h);
+}
+// where the product is in a transparent picture (its solid part: faint shadows left out)
+function alphaBox(src, thr = 110) {
+  const c = document.createElement('canvas'); c.width = CAT_SIZE.w; c.height = CAT_SIZE.h;
+  const x = c.getContext('2d', { willReadFrequently:true }); x.drawImage(src, 0, 0, c.width, c.height);
+  const d = x.getImageData(0, 0, c.width, c.height).data, W = c.width, H = c.height;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) for (let i = y * W, e = i + W, xx = 0; i < e; i++, xx++) if (d[i * 4 + 3] > thr) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (y < y0) y0 = y; y1 = y; }
+  return x1 < 0 ? null : { x:x0, y:y0, w:x1 - x0 + 1, h:y1 - y0 + 1 };
+}
+const loadImgX = async (src) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.src = src; await im.decode(); return im; };
+// the render back onto the 3D model's box: width and height each to size, same place. Stretched more than 12% → not fixed, "do again"
+async function catAlign(src, ref) {
+  const im = await loadImgX(src), b = alphaBox(im); if (!b) return { ok:false };
+  const sx = ref.w / b.w, sy = ref.h / b.h, d = Math.abs(sx / sy - 1);
+  if (d > 0.12) return { ok:false, bad:true, d };
+  const c = document.createElement('canvas'); c.width = CAT_SIZE.w; c.height = CAT_SIZE.h;
+  const k = im.naturalWidth / CAT_SIZE.w, kh = im.naturalHeight / CAT_SIZE.h, g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+  g.drawImage(im, b.x * k, b.y * kh, b.w * k, b.h * kh, ref.x, ref.y, ref.w, ref.h);
+  const moved = Math.abs(b.x - ref.x) + Math.abs(b.y - ref.y) + Math.abs(b.w - ref.w) + Math.abs(b.h - ref.h);
+  return { ok:true, url:c.toDataURL('image/png'), d, moved };
+}
+// too stretched to fix: back to "do again" (automatically up to twice; then it waits for you, with a note)
+async function catDistorted(key, fix, d) {
+  const m = String(fix || '').match(/אוטומטי ×(\d)/), n = m ? +m[1] : 0, pct = Math.round(d * 100);
+  const keep = String(fix || '').replace(/\s*\[[^\]]*אוטומטי ×\d\]\s*/g, '').trim();
+  const note = (keep ? keep + ' ' : '') + `[הפרופורציות עוותו ב-${pct}% – לשמור בדיוק על הצורה והמידות של המודל · אוטומטי ×${n + 1}]`;
+  try { await api('/api/catalog', { action:'review', key, review:n < 2 ? 'redo' : '', note }); } catch {}
+}
+// "יישור" on photos that already exist: the 3D model again (no render, free) and each photo moved onto it; the review stays as it was
+async function catRealign(keys) {
+  const all = catVariants(), list = keys.map(k => all.find(v => v.key === k)).filter(v => v && GAL.have[v.key]);
+  if (!list.length) return;
+  STUDIO.pause = true; let fixed = 0, bad = 0, same = 0, err = '';
+  try {
+    while (STUDIO.curKey) await bgSleep(400);                          // let a render in progress finish first
+    for (const [i, v] of list.entries()) {
+      toast(`מיישר ${i + 1}/${list.length}…`);
+      const x = GAL.have[v.key];
+      try {
+        const ref = alphaBox(await catCapture(v)); if (!ref || (ref.w > CAT_SIZE.w * 0.97 && ref.h > CAT_SIZE.h * 0.97)) { same++; continue; }
+        const al = await catAlign(x.url, ref);
+        if (al.bad) { await catDistorted(v.key, x.note, al.d); bad++; continue; }
+        if (!al.ok || al.moved < 4) { same++; continue; }
+        const url = await uploadImage(al.url, 'catalog'); if (!url) throw new Error('אין חיבור לאחסון');
+        await api('/api/catalog', { action:'set', key:v.key, url, name:v.name, set:v.set ? v.set.id : '' });
+        if (x.review || x.note) await api('/api/catalog', { action:'review', key:v.key, review:x.review || '', note:x.note || '' });
+        fixed++;
+      } catch (e) { err = e.name === 'SecurityError' ? 'הדפדפן לא מאפשר לקרוא את התמונה מהאחסון' : e.message; break; }
+    }
+  } finally { if (PHOTO.on) exitPhoto(); STUDIO.pause = false; GAL.sel.clear(); GAL.pick = false; studioGal(); }
+  toast(err ? 'היישור נעצר: ' + err : `יושרו ${fixed}` + (same ? ` · ${same} כבר היו במקום` : '') + (bad ? ` · ${bad} מעוותות מדי – סומנו "לעשות שוב"` : ''));
 }
 // the render back to the exact catalogue size, keeping it transparent
 async function catFit(src) {
@@ -7254,7 +7321,7 @@ async function studioZip(only) {
   finally { b.disabled = false; b.textContent = label; }
 }
 // ---- the gallery on the right: products with their progress → the variants of one product, live ----
-const GAL = { prod:null, have:{} };
+const GAL = { prod:null, have:{}, pick:false, sel:new Set() };
 const galEsc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 function galState(v) {
   const x = GAL.have[v.key];
@@ -7299,9 +7366,12 @@ async function studioGal(fetchIndex = true) {
     back(); return;
   }
   const vs = all.filter(v => v.prod === GAL.prod), n = vs.filter(v => GAL.have[v.key]).length;
-  g.innerHTML = `<div class="gal-h"><button class="btn" id="galBack">→ כל המוצרים</button><b>${galEsc(GAL.prod)}</b><span>${n}/${vs.length}</span><button class="btn" id="galZip" title="כל התמונות של המוצר הזה, גם הלא טובות וגם הגרסאות הקודמות" ${n ? '' : 'disabled'}>ZIP</button>${stuQ.get().includes(GAL.prod) ? '<button class="btn" id="galQ">בתור ✓ (להוציא)</button>' : `<button class="btn primary" id="galQ" ${n === vs.length ? 'disabled' : ''}>לרנדר את המוצר</button>`}<button class="btn warnbtn" id="galAll" ${n ? '' : 'disabled'} title="מוחק את כל התמונות של המוצר, והסטודיו מרנדר אותן מחדש">לרנדר הכול מחדש</button></div>
+  [...GAL.sel].forEach(k => { if (!vs.some(v => v.key === k && GAL.have[k])) GAL.sel.delete(k); });
+  const pick = GAL.pick ? `<div class="gal-pick"><b>נבחרו ${GAL.sel.size}</b><button class="btn" id="galPAll">הכול</button><button class="btn primary" id="galPRedo" ${GAL.sel.size ? '' : 'disabled'}>לרנדר שוב (${GAL.sel.size})</button><button class="btn" id="galPAlign" ${GAL.sel.size ? '' : 'disabled'}>יישור (${GAL.sel.size})</button><button class="btn" id="galPX">ביטול</button></div>` : '';
+  g.innerHTML = `<div class="gal-h"><button class="btn" id="galBack">→ כל המוצרים</button><b>${galEsc(GAL.prod)}</b><span>${n}/${vs.length}</span><button class="btn" id="galPick" ${n ? '' : 'disabled'} title="לסמן כמה תמונות – לרנדר שוב או ליישר">בחירה</button><button class="btn" id="galAlign" ${n ? '' : 'disabled'} title="ליישר את כל התמונות של המוצר לפי המודל התלת־ממדי – בלי לרנדר">יישור</button><button class="btn" id="galZip" title="כל התמונות של המוצר הזה, גם הלא טובות וגם הגרסאות הקודמות" ${n ? '' : 'disabled'}>ZIP</button>${stuQ.get().includes(GAL.prod) ? '<button class="btn" id="galQ">בתור ✓ (להוציא)</button>' : `<button class="btn primary" id="galQ" ${n === vs.length ? 'disabled' : ''}>לרנדר את המוצר</button>`}<button class="btn warnbtn" id="galAll" ${n ? '' : 'disabled'} title="מוחק את כל התמונות של המוצר, והסטודיו מרנדר אותן מחדש">לרנדר הכול מחדש</button></div>
     <div class="gal-grid">${vs.map(v => { const st = galState(v), x = GAL.have[v.key], lbl = v.key.slice(v.prod.length).replace(/^\s*–\s*/, '') || v.prod;
-      return `<button class="gal-c st-${st}" data-k="${galEsc(v.key)}" ${x ? '' : 'disabled'}>${x ? `<img src="${galEsc(x.url)}" alt="" loading="lazy">` : '<i></i>'}<span class="gal-l">${galEsc(lbl)}</span><span class="gal-s">${GAL_TXT[st]}</span></button>`; }).join('')}</div>`;
+      return `<button class="gal-c st-${st}${GAL.pick && GAL.sel.has(v.key) ? ' picked' : ''}" data-k="${galEsc(v.key)}" ${x ? '' : 'disabled'}>${x ? `<img src="${galEsc(x.url)}" alt="" loading="lazy">` : '<i></i>'}${GAL.pick && x ? '<span class="gal-tick">✓</span>' : ''}<span class="gal-l">${galEsc(lbl)}</span><span class="gal-s">${GAL_TXT[st]}</span></button>`; }).join('')}</div>`;
+  if (pick) g.querySelector('.gal-h').insertAdjacentHTML('afterend', pick);
   g.querySelector('#galBack').onclick = () => { GAL.prod = null; GAL.touched = true; studioGal(false); };
   g.querySelector('#galZip').onclick = () => studioZip(GAL.prod);
   g.querySelector('#galQ').onclick = () => {
@@ -7315,7 +7385,25 @@ async function studioGal(fetchIndex = true) {
     stuQ.add(GAL.prod); STUDIO.fail.clear(); studioGal(false); toast('נמחק – הסטודיו ירנדר אותן מחדש');
     if (!STUDIO.run) startStudio();
   };
-  g.querySelectorAll('.gal-c:not([disabled])').forEach(b => b.onclick = () => galOpen(b.dataset.k));
+  g.querySelectorAll('.gal-c:not([disabled])').forEach(b => b.onclick = () => {
+    if (!GAL.pick) return galOpen(b.dataset.k);
+    const k = b.dataset.k; GAL.sel.has(k) ? GAL.sel.delete(k) : GAL.sel.add(k); GAL.touched = true; studioGal(false);
+  });
+  g.querySelector('#galPick').onclick = () => { GAL.pick = !GAL.pick; GAL.sel.clear(); studioGal(false); };
+  g.querySelector('#galAlign').onclick = async () => { const ks = vs.filter(v => GAL.have[v.key]).map(v => v.key);
+    if (await askConfirm(`ליישר את ${ks.length} התמונות של "${GAL.prod}" לפי המודל התלת־ממדי? (בלי רינדור, בלי עלות)`, 'ליישר')) catRealign(ks); };
+  if (GAL.pick) {
+    g.querySelector('#galPAll').onclick = () => { vs.forEach(v => GAL.have[v.key] && GAL.sel.add(v.key)); studioGal(false); };
+    g.querySelector('#galPX').onclick = () => { GAL.pick = false; GAL.sel.clear(); studioGal(false); };
+    g.querySelector('#galPAlign').onclick = () => catRealign([...GAL.sel]);
+    g.querySelector('#galPRedo').onclick = async () => {
+      const ks = [...GAL.sel], note = prompt(`הערה לרינדור החוזר של ${ks.length} התמונות (לא חובה) – למשל: התכולה גדולה מדי`, '');
+      if (note === null) return;
+      for (const k of ks) { try { await api('/api/catalog', { action:'review', key:k, review:'redo', note:note.trim() }); GAL.have[k] = { ...GAL.have[k], review:'redo', note:note.trim() }; } catch (e) { toast(e.message); break; } }
+      GAL.pick = false; GAL.sel.clear(); studioGal(false); toast(`${ks.length} סומנו "לעשות שוב" – הסטודיו ירנדר אותן`);
+      if (!STUDIO.run) startStudio();
+    };
+  }
   back();
 }
 // the review pop-up: the photo big, good / do again + notes, download, the one before it (after a redo) and ‹ › within the product
