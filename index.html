@@ -7189,10 +7189,20 @@ async function catCapture(v) {
   SCN.items = []; SCN.sel = null;
   const it = { id:SCN.next++, type:v.t, cfg:deep(v.cfg), rot:0, name:v.name, x:0, z:0, contents:v.set ? v.set.txt : '' };
   SCN.items.push(it); rebuild(true); selectItem(it.id); await nextFrames();
-  enterPhoto(it); await nextFrames(6);                                   // the product alone, framed, on a transparent background
+  enterPhoto(it); await nextFrames(2);                                   // the product alone, framed, on a transparent background
+  catOpenUp(v); await nextFrames(4);
   const raw = captureCanvas(1536), cv = padToRatio(raw, CAT_SIZE.w, CAT_SIZE.h);
   if (v.set && !v.set.empty) try { cv._mask = catMask(raw._box); } catch (e) { cv._mask = null; }
   return cv;
+}
+// "דלתות פתוחות" / "תריס פתוח" are only words in the variant's settings: the doors themselves open by animation, so the studio opens them
+// (or closes them) at once – otherwise every cabinet is photographed closed and its contents never show
+function catOpenUp(v) {
+  const S = metalState(); if (!S || mode === 'lock') return;
+  const c = v.cfg || {}, shut = !!((c.md && c.md.shut) || (c.mt && c.mt.shut) || (c.tb && c.tb.shut));
+  if (S.doors) S.doors = S.doors.map(() => shut ? 0 : 1);
+  if (TAMB && S.target !== undefined) S.target = shut ? 0 : TBX.MAXO;
+  for (let i = 0; i < 3; i++) stepMetal(1);
 }
 // the mask for a content photo, from the same frame: the cells (inside the bins) transparent = may change; everything else solid = stays
 function catMask(box) {
@@ -7487,7 +7497,7 @@ async function studioGal(fetchIndex = true) {
   }
   const vs = all.filter(v => v.prod === GAL.prod), n = vs.filter(v => GAL.have[v.key]).length;
   [...GAL.sel].forEach(k => { if (!vs.some(v => v.key === k && GAL.have[k])) GAL.sel.delete(k); });
-  const pick = GAL.pick ? `<div class="gal-pick"><b>נבחרו ${GAL.sel.size}</b><button class="btn" id="galPAll">הכול</button><button class="btn primary" id="galPRedo" ${GAL.sel.size ? '' : 'disabled'}>לרנדר שוב (${GAL.sel.size})</button><button class="btn" id="galPAlign" ${GAL.sel.size ? '' : 'disabled'}>יישור (${GAL.sel.size})</button><button class="btn" id="galPX">ביטול</button></div>` : '';
+  const pick = GAL.pick ? `<div class="gal-pick"><b>נבחרו ${GAL.sel.size}</b><button class="btn" id="galPAll">הכול</button><button class="btn" id="galPOk" ${GAL.sel.size ? '' : 'disabled'}>אישור (${GAL.sel.size})</button><button class="btn primary" id="galPRedo" ${GAL.sel.size ? '' : 'disabled'}>לרנדר שוב (${GAL.sel.size})</button><button class="btn" id="galPAlign" ${GAL.sel.size ? '' : 'disabled'}>יישור (${GAL.sel.size})</button><button class="btn" id="galPX">ביטול</button></div>` : '';
   g.innerHTML = `<div class="gal-h"><button class="btn" id="galBack">→ כל המוצרים</button><b>${galEsc(GAL.prod)}</b><span>${n}/${vs.length}</span><button class="btn" id="galPick" ${n ? '' : 'disabled'} title="לסמן כמה תמונות – לרנדר שוב או ליישר">בחירה</button><button class="btn" id="galAlign" ${n ? '' : 'disabled'} title="ליישר את כל התמונות של המוצר לפי המודל התלת־ממדי – בלי לרנדר">יישור</button><button class="btn" id="galZip" title="כל התמונות של המוצר הזה, גם הלא טובות וגם הגרסאות הקודמות" ${n ? '' : 'disabled'}>ZIP</button>${stuQ.get().includes(GAL.prod) ? '<button class="btn" id="galQ">בתור ✓ (להוציא)</button>' : `<button class="btn primary" id="galQ" ${n === vs.length ? 'disabled' : ''}>לרנדר את המוצר</button>`}<button class="btn warnbtn" id="galAll" ${n ? '' : 'disabled'} title="מוחק את כל התמונות של המוצר, והסטודיו מרנדר אותן מחדש">לרנדר הכול מחדש</button></div>
     <div class="gal-grid">${vs.map(v => { const st = galState(v), x = GAL.have[v.key], lbl = v.key.slice(v.prod.length).replace(/^\s*–\s*/, '') || v.prod;
       return `<button class="gal-c st-${st}${GAL.pick && GAL.sel.has(v.key) ? ' picked' : ''}" data-k="${galEsc(v.key)}" ${x ? '' : 'disabled'}>${x ? `<img src="${galEsc(x.url)}" alt="" loading="lazy">` : '<i></i>'}${GAL.pick && x ? '<span class="gal-tick">✓</span>' : ''}<span class="gal-l">${galEsc(lbl)}</span><span class="gal-s">${GAL_TXT[st]}</span></button>`; }).join('')}</div>`;
@@ -7516,6 +7526,12 @@ async function studioGal(fetchIndex = true) {
     g.querySelector('#galPAll').onclick = () => { vs.forEach(v => GAL.have[v.key] && GAL.sel.add(v.key)); studioGal(false); };
     g.querySelector('#galPX').onclick = () => { GAL.pick = false; GAL.sel.clear(); studioGal(false); };
     g.querySelector('#galPAlign').onclick = () => catRealign([...GAL.sel]);
+    g.querySelector('#galPOk').onclick = async () => {
+      const ks = [...GAL.sel]; let n = 0;
+      for (const k of ks) { const x = GAL.have[k]; if (!x) continue;
+        try { await api('/api/catalog', { action:'review', key:k, review:'ok', note:'' }); GAL.have[k] = { ...x, review:'ok', note:'' }; n++; } catch (e) { toast(e.message); break; } }
+      GAL.rev = (GAL.rev || 0) + 1; GAL.pick = false; GAL.sel.clear(); studioStats(); studioGal(false); toast(`${n} אושרו`);
+    };
     g.querySelector('#galPRedo').onclick = async () => {
       const ks = [...GAL.sel], note = prompt(`הערה לרינדור החוזר של ${ks.length} התמונות (לא חובה) – למשל: התכולה גדולה מדי`, '');
       if (note === null) return;
