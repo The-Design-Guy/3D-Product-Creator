@@ -2794,6 +2794,24 @@ const absEdgeMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#1c1d
 const absTopMats = (c) => [absEdgeMat, absEdgeMat, c === 'white' ? absWhiteMat : absMat, absEdgeMat, absEdgeMat, absEdgeMat];
 const absTopTxt = (c) => c === 'white' ? 'a white ABS top with a black edge band' : 'a black ABS top (black edge band)';
 const bumperMat = new THREE.MeshStandardMaterial({ color:new THREE.Color('#aeb4b9'), roughness:0.7 });
+// the EXCLUSIVE caster: a round, ribbed grey bumper straight under the corner profile, the dark wheel tucked under it
+// (one part – no separate corner block between the profiles)
+const EXC_BUMP = (() => { const pts = [], r0 = 33, r1 = 37, H = 60;
+  pts.push(new THREE.Vector2(0, 0), new THREE.Vector2(r0 - 6, 0), new THREE.Vector2(r0, 4));
+  for (let i = 0; i < 5; i++) { const y = 6 + i * 10.5; pts.push(new THREE.Vector2(r1, y), new THREE.Vector2(r1, y + 6), new THREE.Vector2(r0 + 1, y + 9)); }
+  pts.push(new THREE.Vector2(r1 - 1, H - 2), new THREE.Vector2(r1 - 5, H), new THREE.Vector2(0, H));
+  return new THREE.LatheGeometry(pts, 44); })();
+function exclCaster(parent, x, z, topY, brake) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); parent.add(g);
+  const bh = 60, by = topY - bh;                                        // the bumper: most of the height, its top against the profile
+  const bump = new THREE.Mesh(EXC_BUMP, bumperMat); bump.position.y = by; g.add(bump);
+  const R = 22, wy = R;                                                 // the small wheel, half hidden under the bumper
+  const wheel = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 20, 32), rubberMat); wheel.rotation.z = Math.PI / 2; wheel.position.y = wy; g.add(wheel);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 22, 16), rubberMat); hub.rotation.z = Math.PI / 2; hub.position.y = wy; g.add(hub);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(14, 16, Math.max(2, by - wy), 20), rubberMat); neck.position.y = wy + Math.max(2, by - wy) / 2; g.add(neck);
+  if (brake) { const lever = new THREE.Mesh(new THREE.BoxGeometry(14, 5, 16), rubberMat); lever.position.set(0, by + 2, Math.sign(z || 1) * 38); g.add(lever); }
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+}
 const handleMat = new THREE.MeshPhysicalMaterial({ color:new THREE.Color('#d9dcdc'), roughness:0.35, clearcoat:0.4 });
 const EXV = {
   excl: { cols:1, models:[4, 5, 6, 9], D:392, minH:1100, maxH:1500, name:'עגלת רב-תא EXCLUSIVE' },
@@ -2828,13 +2846,12 @@ function buildExcl(k) {
   pvc(W - 2*P, 4, D - 2*P, 0, y0 + P - 2, 0);
   pvc(W + 8, EX_ABS, D + 8, 0, yTopF + EX_ABS/2, 0, absTopMats(S.top));
   // casters (all braked on the partition) + corner bumpers
-  const wide = k === 'part' && S.wide, zc = wide ? D/2 + 70 : D/2 - 45;
-  if (wide) for (const x of [xs[0], xs[xs.length - 1]]) bar(root, 2*zc + 60, 'z', x, y0 - P/2 + 2, 0);   // outrigger feet
+  // a bumper caster straight under every vertical profile (the wide partition: at the ends of its feet)
+  const wide = k === 'part' && S.wide, zc = wide ? D/2 + 70 : zf;
+  if (wide) for (const x of [xs[0], xs[xs.length - 1]]) bar(root, 2*zc + 60, 'z', x, y0 + P/2, 0);   // outrigger feet: the bottom side rails, carried out to the casters
   const corners = [[xs[0], zc], [xs[xs.length - 1], zc], [xs[0], -zc], [xs[xs.length - 1], -zc]];
   if (V.cols > 1 && !wide) for (let i = 1; i < V.cols; i++) corners.push([xs[i], zc], [xs[i], -zc]);
-  corners.forEach(([x, z], i) => caster(root, x, z, wide ? y0 - P : y0, k === 'part' || i < 2));
-  const bump = new THREE.CylinderGeometry(26, 26, 46, 24);
-  for (const x of [xs[0], xs[xs.length - 1]]) for (const z of [zf, zb]) { const b = shadowOn(new THREE.Mesh(bump, bumperMat)); b.position.set(x, y0 + 26, z); root.add(b); }
+  corners.forEach(([x, z], i) => exclCaster(root, x, z, y0, k === 'part' || i < 2));
   // side handle (one side): U tube along the depth
   const hs = S.side === 'right' ? 1 : -1, hy = exHandleY(k, H), hx = hs*(W/2 + 4), out = hs*105, hz = D/2 - 55;   // right / left as seen from the front
   const hp = [new THREE.Vector3(hx, hy, hz), new THREE.Vector3(hx + out, hy, hz), new THREE.Vector3(hx + out, hy, -hz), new THREE.Vector3(hx, hy, -hz)];
@@ -7179,7 +7196,7 @@ function studioUI() {
     const lim = el.querySelector('#stuLim'); lim.value = studioLimit();
     lim.onchange = () => { try { localStorage.setItem('rbt-studio-limit', String(Math.max(1, +lim.value || 50))); } catch {} studioDay(); if (!STUDIO.run && STUDIO.on) startStudio(); };
     el.querySelector('#stuRun').onclick = () => { if (STUDIO.run) { STUDIO.stop = true; STUDIO.cur = 'עוצר אחרי התמונה הנוכחית…'; document.getElementById('stuCur').textContent = STUDIO.cur; } else startStudio(); };
-    el.querySelector('#stuZip').onclick = studioZip;
+    el.querySelector('#stuZip').onclick = () => studioZip();
   }
   return el;
 }
@@ -7189,15 +7206,41 @@ function studioToday() { const d = new Date().toISOString().slice(0, 10); try { 
 function studioCount() { const d = new Date().toISOString().slice(0, 10); try { localStorage.setItem('rbt-studio-day', JSON.stringify({ d, n:studioToday() + 1 })); } catch {} }
 function studioDay() { const e = document.getElementById('stuDay'); if (e) e.textContent = `היום: ${studioToday()}/${studioLimit()}`; }
 // all the catalogue photos in one ZIP (stored, not compressed – PNGs are compressed already), named after their variant
-async function studioZip() {
-  const b = document.getElementById('stuZip'); b.disabled = true;
+async function studioZip(only) {
+  // everything the studio ever made (or one product's photos – only = its name); a folder per product: the current photo of each variant, the one before it, and every older file still in Blob (sorted later by hand)
+  const b = only ? document.getElementById('galZip') : document.getElementById('stuZip'), label = b.textContent; b.disabled = true;
   try {
-    const items = Object.entries(await catIndex()); if (!items.length) { toast('עדיין אין תמונות'); return; }
-    const enc = new TextEncoder(), parts = [], dir = []; let off = 0, i = 0;
+    const prodOf = new Map(catVariants().map(v => [v.key, v.prod]));
+    const items = Object.entries(await catIndex()).filter(([k]) => !only || prodOf.get(k) === only), safe = (t) => t.replace(/[\\/:*?"<>|]/g, '-').replace(/\s*–\s*/g, '_').replace(/\s*·\s*/g, '_');
+    const ext = (u) => (String(u).split('?')[0].match(/\.(png|webp|jpe?g)$/i) || [, 'png'])[1].toLowerCase();
+    const files = [], seen = new Set();
     for (const [key, x] of items) {
-      b.textContent = `מוריד ${++i}/${items.length}`;
-      let data; try { data = new Uint8Array(await (await fetch(x.url)).arrayBuffer()); } catch { continue; }
-      const name = enc.encode(key.replace(/[\\/:*?"<>|]/g, '-').replace(/\s*–\s*/g, '_').replace(/\s*·\s*/g, '_') + '.png'), crc = crc32(data);
+      const tag = x.review === 'ok' ? '' : x.review === 'redo' ? ' (לעשות שוב)' : ' (ממתינה)';
+      const dirN = only ? '' : safe(prodOf.get(key) || 'אחר') + '/';
+      if (x.url && !seen.has(x.url)) { seen.add(x.url); files.push({ name:`${dirN}${safe(key)}${tag}.${ext(x.url)}`, url:x.url }); }
+      if (x.prev && !seen.has(x.prev)) { seen.add(x.prev); files.push({ name:`${dirN}גרסאות קודמות/${safe(key)}_קודמת.${ext(x.prev)}`, url:x.prev }); }
+    }
+    if (!only) try { const r = await fetch('/api/catalog?files=1', { headers:{ 'x-admin-key':adminKey() } }); const j = r.ok ? await r.json() : {};
+      (j.files || []).filter(f => !seen.has(f.url)).sort((p, q) => String(p.at).localeCompare(String(q.at))).forEach((f, i) => {
+        const d = new Date(f.at), p2 = (v) => String(v).padStart(2, '0');
+        seen.add(f.url); files.push({ name:`לא בגלריה/${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}_${p2(d.getHours())}-${p2(d.getMinutes())}_${i + 1}.${ext(f.url)}`, url:f.url }); });
+    } catch {}
+    if (!files.length) { toast('עדיין אין תמונות'); return; }
+    // the files go into ZIPs of up to ~350 MB each (a browser cannot hold much more at once)
+    const enc = new TextEncoder(); let parts = [], dir = [], off = 0, part = 1, i = 0, skipped = 0;
+    const flush = async (last) => {
+      if (!dir.length) return;
+      const size = dir.reduce((a, x) => a + x.length, 0), n = dir.length / 2, e = new DataView(new ArrayBuffer(22));
+      e.setUint32(0, 0x06054b50, true); e.setUint16(8, n, true); e.setUint16(10, n, true); e.setUint32(12, size, true); e.setUint32(16, off, true);
+      const base = only ? 'catalog-' + safe(only).replace(/\s+/g, '-') : 'catalog-photos';
+      await saveFile(new Blob([...parts, ...dir, new Uint8Array(e.buffer)], { type:'application/zip' }), last && part === 1 ? base + '.zip' : `${base}-${part}.zip`);
+      parts = []; dir = []; off = 0; part++;
+    };
+    for (const f of files) {
+      b.textContent = `מוריד ${++i}/${files.length}`;
+      let data; try { const r = await fetch(f.url); if (!r.ok) throw 0; data = new Uint8Array(await r.arrayBuffer()); } catch { skipped++; continue; }
+      if (off + data.length > 350e6) await flush(false);
+      const name = enc.encode(f.name), crc = crc32(data);
       const h = new DataView(new ArrayBuffer(30));
       h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true);
       parts.push(new Uint8Array(h.buffer), name, data);
@@ -7205,11 +7248,10 @@ async function studioZip() {
       c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
       dir.push(new Uint8Array(c.buffer), name); off += 30 + name.length + data.length;
     }
-    const size = dir.reduce((a, x) => a + x.length, 0), n = dir.length / 2, e = new DataView(new ArrayBuffer(22));
-    e.setUint32(0, 0x06054b50, true); e.setUint16(8, n, true); e.setUint16(10, n, true); e.setUint32(12, size, true); e.setUint32(16, off, true);
-    await saveFile(new Blob([...parts, ...dir, new Uint8Array(e.buffer)], { type:'application/zip' }), 'catalog-photos.zip');
+    await flush(true);
+    toast(`ירדו ${files.length - skipped} תמונות${skipped ? ` (${skipped} לא נמצאו)` : ''}`);
   } catch (er) { toast('ההורדה נכשלה: ' + er.message); }
-  finally { b.disabled = false; b.textContent = 'הורדת ZIP'; }
+  finally { b.disabled = false; b.textContent = label; }
 }
 // ---- the gallery on the right: products with their progress → the variants of one product, live ----
 const GAL = { prod:null, have:{} };
@@ -7257,10 +7299,11 @@ async function studioGal(fetchIndex = true) {
     back(); return;
   }
   const vs = all.filter(v => v.prod === GAL.prod), n = vs.filter(v => GAL.have[v.key]).length;
-  g.innerHTML = `<div class="gal-h"><button class="btn" id="galBack">→ כל המוצרים</button><b>${galEsc(GAL.prod)}</b><span>${n}/${vs.length}</span>${stuQ.get().includes(GAL.prod) ? '<button class="btn" id="galQ">בתור ✓ (להוציא)</button>' : `<button class="btn primary" id="galQ" ${n === vs.length ? 'disabled' : ''}>לרנדר את המוצר</button>`}<button class="btn warnbtn" id="galAll" ${n ? '' : 'disabled'} title="מוחק את כל התמונות של המוצר, והסטודיו מרנדר אותן מחדש">לרנדר הכול מחדש</button></div>
+  g.innerHTML = `<div class="gal-h"><button class="btn" id="galBack">→ כל המוצרים</button><b>${galEsc(GAL.prod)}</b><span>${n}/${vs.length}</span><button class="btn" id="galZip" title="כל התמונות של המוצר הזה, גם הלא טובות וגם הגרסאות הקודמות" ${n ? '' : 'disabled'}>ZIP</button>${stuQ.get().includes(GAL.prod) ? '<button class="btn" id="galQ">בתור ✓ (להוציא)</button>' : `<button class="btn primary" id="galQ" ${n === vs.length ? 'disabled' : ''}>לרנדר את המוצר</button>`}<button class="btn warnbtn" id="galAll" ${n ? '' : 'disabled'} title="מוחק את כל התמונות של המוצר, והסטודיו מרנדר אותן מחדש">לרנדר הכול מחדש</button></div>
     <div class="gal-grid">${vs.map(v => { const st = galState(v), x = GAL.have[v.key], lbl = v.key.slice(v.prod.length).replace(/^\s*–\s*/, '') || v.prod;
       return `<button class="gal-c st-${st}" data-k="${galEsc(v.key)}" ${x ? '' : 'disabled'}>${x ? `<img src="${galEsc(x.url)}" alt="" loading="lazy">` : '<i></i>'}<span class="gal-l">${galEsc(lbl)}</span><span class="gal-s">${GAL_TXT[st]}</span></button>`; }).join('')}</div>`;
   g.querySelector('#galBack').onclick = () => { GAL.prod = null; GAL.touched = true; studioGal(false); };
+  g.querySelector('#galZip').onclick = () => studioZip(GAL.prod);
   g.querySelector('#galQ').onclick = () => {
     if (stuQ.get().includes(GAL.prod)) stuQ.del(GAL.prod); else { stuQ.add(GAL.prod); toast(`"${GAL.prod}" נכנס לתור`); if (!STUDIO.run) startStudio(); }
     studioGal(false);

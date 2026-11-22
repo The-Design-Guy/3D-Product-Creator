@@ -1,6 +1,7 @@
 // Catalogue photos made by the studio tab: one transparent 4:5 photo per product variant (and content set).
 // The images live in Vercel Blob (uploaded through /api/blob); this keeps the index: variant key → image URL.
 // GET  → { items: { <key>: { url, name, set, updated } } }
+// GET ?files=1 → { files: [{ url, at, size }] }   every studio file kept in Blob, old ones too (admin)
 // POST → { action: 'set', key, url, name?, set? } | { action: 'review', key, review: 'ok'|'redo'|'', note? } | { action: 'delete', key }   (admin only)
 import { redis } from './_redis.js';
 import { isAdmin } from './_auth.js';
@@ -14,6 +15,13 @@ async function read() {
 export default async function handler(req, res) {
   res.setHeader('cache-control', 'no-store');
   try {
+    if (req.method === 'GET' && req.query?.files) {           // every studio file in Blob – also older renders the gallery no longer shows (admin)
+      if (!isAdmin(req)) return res.status(401).json({ error: 'נדרש מצב ניהול' });
+      if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) return res.status(200).json({ files: [] });
+      const { list } = await import('@vercel/blob'); const files = []; let cursor;
+      do { const r = await list({ prefix: 'scenes/catalog-', cursor, limit: 1000 }); for (const b of r.blobs) files.push({ url: b.url, at: b.uploadedAt, size: b.size }); cursor = r.hasMore ? r.cursor : null; } while (cursor && files.length < 20000);
+      return res.status(200).json({ files });
+    }
     if (req.method === 'GET') return res.status(200).json(await read());
     if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
     if (!isAdmin(req)) return res.status(401).json({ error: 'נדרש מצב ניהול' });
