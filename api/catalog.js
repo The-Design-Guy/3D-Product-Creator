@@ -2,7 +2,7 @@
 // The images live in Vercel Blob (uploaded through /api/blob); this keeps the index: variant key → image URL.
 // GET  → { items: { <key>: { url, name, set, updated } } }
 // GET ?files=1 → { files: [{ url, at, size }] }   every studio file kept in Blob, old ones too (admin)
-// POST → { action: 'set', key, url, name?, set? } | { action: 'review', key, review: 'ok'|'redo'|'', note? } | { action: 'delete', key }   (admin only)
+// POST → { action: 'set', key, url, name?, set?, ref? } | { action: 'review', key, review: 'ok'|'redo'|'', note? } | { action: 'delete', key }   (admin only)
 import { redis } from './_redis.js';
 import { isAdmin } from './_auth.js';
 
@@ -25,14 +25,15 @@ export default async function handler(req, res) {
     if (req.method === 'GET') return res.status(200).json(await read());
     if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
     if (!isAdmin(req)) return res.status(401).json({ error: 'נדרש מצב ניהול' });
-    const { action, key, url, name, set, review, note } = req.body || {};
+    const { action, key, url, name, set, review, note, ref } = req.body || {};
     const k = typeof key === 'string' ? key.trim().slice(0, 200) : '';
     if (!k) return res.status(400).json({ error: 'חסר מפתח' });
     const doc = await read();
     if (action === 'set') {
       if (typeof url !== 'string' || !/^(https?:|\/)/.test(url)) return res.status(400).json({ error: 'כתובת תמונה לא תקינה' });
       const old = doc.items[k];                     // a new render of a variant keeps the one before it, to compare
-      doc.items[k] = { url, name: String(name || '').slice(0, 200), set: String(set || '').slice(0, 20), updated: new Date().toISOString(),
+      const r0 = typeof ref === 'string' && /^(https?:|\/)/.test(ref) ? ref.slice(0, 600) : old?.ref;     // the 3D picture it was made from (to compare)
+      doc.items[k] = { url, name: String(name || '').slice(0, 200), set: String(set || '').slice(0, 20), updated: new Date().toISOString(), ...(r0 ? { ref: r0 } : {}),
         ...(old && old.url !== url ? { prev: old.url, prevNote: old.note || '' } : {}) };
     } else if (action === 'review') {
       if (!doc.items[k]) return res.status(404).json({ error: 'אין תמונה לווריאציה הזו' });
