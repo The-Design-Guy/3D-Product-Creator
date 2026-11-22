@@ -52,7 +52,7 @@ function prompt(description, background, lighting, brief, labels, structure, pro
 }
 
 // stage 2 of the two-stage render: the approved, empty base photo is edited – only additions from the brief
-function editPrompt(description, background, brief, labels, structure) {
+function editPrompt(description, background, brief, labels, structure, masked) {
   const n = 1 + labels.length;
   return [
     `You receive ${n} image${n > 1 ? 's' : ''}. The FIRST image is an approved photorealistic photograph of the product(s) with EMPTY bins. EDIT this photograph: keep every product, unit, bin, profile, frame, wall and floor, the materials, the lighting, the camera angle, perspective and framing exactly as they are – the result must look like the same photograph with things added.`,
@@ -68,6 +68,7 @@ function editPrompt(description, background, brief, labels, structure) {
     'Keep EXACTLY the units, columns, rows and bins of the FIRST image: never add, remove, merge, split, enlarge or shrink bins, rows, columns, shelves or units. Every profile, rail, upright, side wall and frame keeps its shape, width, colour and finish; add no screws, brackets or fittings. The clear bins stay INSIDE their grey housings.',
     brief ? 'Anything the brief puts "in the bins" goes INSIDE the bins that already exist, behind their clear fronts; it never creates new bins or changes how many there are. If something cannot be done without changing the products, leave it out.' : '',
     'New items get the same lighting as the photograph, with natural contact shadows.',
+    masked ? 'Only the inside of the bins may change (the masked area): fill it with the contents, sitting naturally inside each bin behind its clear front; everything outside stays exactly as it is.' : '',
   ].filter(Boolean).join('\n');
 }
 
@@ -136,8 +137,11 @@ export default async function handler(req, res) {
   } else {
     form.append('image', blob(m), `view.${ext(m)}`);
   }
+  // a mask (PNG, same size as the first image): only its transparent part may change – the rest of the photo stays pixel for pixel
+  const mk = /^data:image\/png;base64,(.+)$/.exec(String(req.body?.mask || ''));
+  if (mk) form.append('mask', new Blob([Buffer.from(mk[1], 'base64')], { type:'image/png' }), 'mask.png');
   form.append('prompt', stage === 'edit'
-    ? editPrompt(String(description).slice(0, 2000), background, brief, labels, structure)
+    ? editPrompt(String(description).slice(0, 2000), background, brief, labels, structure, !!mk)
     : prompt(String(description).slice(0, 2000), background, lighting, brief, labels, structure, productRef, stage));
   form.append('background', background === 'transparent' ? 'transparent' : 'opaque');
   form.append('output_format', 'webp');          // smaller response than PNG, keeps transparency

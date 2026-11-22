@@ -1954,7 +1954,7 @@ function buildDrawer(w, h, d) {
   }
   // opens until the top-back corner of the bin reaches the front edge of the top panel
   g.name = 'drawer';
-  g.userData = { labelSize:[lw, lhh], P, open: a1 - Math.PI/2 - 0.1 };
+  g.userData = { labelSize:[lw, lhh], P, open: a1 - Math.PI/2 - 0.1, cell:true };
   bake(g, (c) => c.name === 'label');
   return g;
 }
@@ -1974,7 +1974,7 @@ function makeUnit(n) {
   group.traverse(o => { if (o.name === 'drawer') list.push(o); if (o.name === 'rod') rod = o; });
   list.forEach(d => {
     const s = d.userData;
-    d.userData = { P:s.P, open:s.open, labelSize:s.labelSize, angle:0, target:0, pending:false, label:d.getObjectByName('label'), rod };
+    d.userData = { P:s.P, open:s.open, labelSize:s.labelSize, angle:0, target:0, pending:false, label:d.getObjectByName('label'), rod, cell:true };
     d.rotation.x = 0;
   });
   rod.userData = { angle:0, target:0, lift:rod.userData.lift, drawers:list }; rod.rotation.x = 0;
@@ -3847,6 +3847,7 @@ function makeArcBin(m, mat, div) {
   }
   else { add(G.label, 0, ly, P.zf + 0.6, inMat); labelPaper(Wb * 0.48, H * 0.115, 0, ly, P.zf + 2.2, g); for (const sx of [-1, 1]) add(G.labelEdge, sx * Wb * 0.26, ly, P.zf + t * 0.5); }
   if (div && ARC_MODELS[m].div) add(G.div, 0, t, 0);
+  g.userData.cell = true;                                // the inside of the bin: the only part a content photo may change
   return g;
 }
 const arcBlockSize = (a = ARC) => { const M = ARC_MODELS[a.model]; return { W:a.cols * M.W + (a.cols - 1) * ARC_GAP, D:M.D, H:M.H + (a.rows - 1) * (M.H - ARC_NEST) }; };
@@ -5935,7 +5936,7 @@ $('lockBtn').onclick = () => {
 };
 
 // ---------- capture the model as an image (transparent background) ----------
-function captureCanvas(maxSide = 2400) {
+function captureCanvas(maxSide = 2400, box = null, paint = null) {
   const w = renderer.domElement.clientWidth, h = renderer.domElement.clientHeight;
   const pr = Math.min(3, maxSide / Math.max(w, h));
   const oldPr = renderer.getPixelRatio();
@@ -5943,7 +5944,9 @@ function captureCanvas(maxSide = 2400) {
   const helpers = [];
   scene.traverse(o => { if (o.visible && (o.isSprite || o.userData.wallTag || ((o.isLine || o.isLineSegments) && (o.material === selMat || o.material === guideMat)))) { helpers.push(o); o.visible = false; } });
   renderer.setPixelRatio(pr); renderer.setSize(w, h, false);
+  const undo = paint ? paint() : null;
   renderer.render(scene, camera);
+  undo && undo();
   helpers.forEach(o => o.visible = true);
   // crop to the model with a small margin
   const src = renderer.domElement, cw = src.width, ch = src.height;
@@ -5951,14 +5954,14 @@ function captureCanvas(maxSide = 2400) {
   const tx = tmp.getContext('2d'); tx.drawImage(src, 0, 0);
   const px = tx.getImageData(0, 0, cw, ch).data;
   let x0 = cw, y0 = ch, x1 = 0, y1 = 0;
-  for (let y = 0; y < ch; y += 2) for (let x = 0; x < cw; x += 2) {
+  if (box) ({ x0, y0, x1, y1 } = box); else for (let y = 0; y < ch; y += 2) for (let x = 0; x < cw; x += 2) {
     if (px[(y*cw + x)*4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
   }
   renderer.setPixelRatio(oldPr); renderer.setSize(w, h, false);
   if (x1 <= x0) return tmp;
-  const m = Math.round(Math.max(x1 - x0, y1 - y0) * 0.05);
-  x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m); x1 = Math.min(cw, x1 + m); y1 = Math.min(ch, y1 + m);
-  const out = document.createElement('canvas'); out.width = x1 - x0; out.height = y1 - y0;
+  if (!box) { const m = Math.round(Math.max(x1 - x0, y1 - y0) * 0.05);
+    x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m); x1 = Math.min(cw, x1 + m); y1 = Math.min(ch, y1 + m); }
+  const out = document.createElement('canvas'); out.width = x1 - x0; out.height = y1 - y0; out._box = { x0, y0, x1, y1 };
   out.getContext('2d').drawImage(tmp, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
   return out;
 }
@@ -7145,9 +7148,12 @@ async function catShoot(v, onStep = () => {}) {
   onStep('מכין את המוצר');
   const cv = await catCapture(v);
   let image = cv.toDataURL('image/webp', 0.95); if (!image.startsWith('data:image/webp')) image = cv.toDataURL('image/png');
+  const base = v.base || null; let fromBase = false;                       // the approved empty photo → only the cells change
+  if (base) try { onStep('טוען את התמונה הריקה'); image = await toDataURL(base.url); fromBase = true; } catch (e) { fromBase = false; }
   const body = { image, background:'transparent', description:describe(), structure:[structureSummary(), profileNotes()].filter(Boolean).join('\n'),
     size:`${CAT_SIZE.w}x${CAT_SIZE.h}`, lighting:lightingText(),
     contents:v.set ? v.set.txt : '', backdrop:'', extra:'Catalogue product photo: the product alone, centred, nothing around it.' + (v.set && v.set.empty ? ' Every bin, cell, drawer and shelf is completely EMPTY: nothing at all inside, no contents, no labels with text.' : '') + (v.fix ? ' CORRECTIONS from the review of the previous attempt (apply them): ' + v.fix : ''), contentRefs:[], roomRefs:[] };
+  if (fromBase) { body.image = image; body.stage = 'edit'; if (cv._mask) body.mask = cv._mask; }
   let r = null;
   for (let a = 1; a <= 3; a++) {                                          // a result whose count does not match the model is rendered again
     onStep(a > 1 ? `מרנדר שוב (${a}/3)` : 'מרנדר');
@@ -7184,7 +7190,66 @@ async function catCapture(v) {
   const it = { id:SCN.next++, type:v.t, cfg:deep(v.cfg), rot:0, name:v.name, x:0, z:0, contents:v.set ? v.set.txt : '' };
   SCN.items.push(it); rebuild(true); selectItem(it.id); await nextFrames();
   enterPhoto(it); await nextFrames(6);                                   // the product alone, framed, on a transparent background
-  return padToRatio(captureCanvas(1536), CAT_SIZE.w, CAT_SIZE.h);
+  const raw = captureCanvas(1536), cv = padToRatio(raw, CAT_SIZE.w, CAT_SIZE.h);
+  if (v.set && !v.set.empty) try { cv._mask = catMask(raw._box); } catch (e) { cv._mask = null; }
+  return cv;
+}
+// the mask for a content photo, from the same frame: the cells (inside the bins) transparent = may change; everything else solid = stays
+function catMask(box) {
+  if (!box) return null;
+  const white = new THREE.MeshBasicMaterial({ color:0xffffff, toneMapped:false, fog:false, side:THREE.DoubleSide }),
+        black = new THREE.MeshBasicMaterial({ color:0x000000, toneMapped:false, fog:false, side:THREE.DoubleSide }),
+        lineB = new THREE.LineBasicMaterial({ color:0x000000, toneMapped:false, fog:false });
+  let cells = 0;
+  const paint = () => {
+    const keep = [];
+    scene.traverse(o => {
+      if (!o.visible || !(o.isMesh || o.isLine || o.isLineSegments || o.isPoints)) return;
+      const m0 = Array.isArray(o.material) ? o.material[0] : o.material;
+      if (m0 && m0.isShadowMaterial) { keep.push([o, o.material, true]); o.visible = false; return; }
+      let p = o, cell = false; while (p) { if (p.userData && p.userData.cell) { cell = true; break; } p = p.parent; }
+      keep.push([o, o.material, false]);
+      o.material = o.isMesh ? (cell ? white : black) : lineB; if (cell && o.isMesh) cells++;
+    });
+    const bg = scene.background; scene.background = null;
+    return () => { keep.forEach(([o, m, hid]) => { o.material = m; if (hid) o.visible = true; }); scene.background = bg; };
+  };
+  const shot = padToRatio(captureCanvas(1536, box, paint), CAT_SIZE.w, CAT_SIZE.h);
+  white.dispose(); black.dispose(); lineB.dispose();
+  if (!cells) return null;
+  const W = CAT_SIZE.w, H = CAT_SIZE.h, a = document.createElement('canvas'); a.width = W; a.height = H;
+  const ag = a.getContext('2d'); ag.drawImage(shot, 0, 0, W, H);
+  const id = ag.getImageData(0, 0, W, H), px = id.data; let n = 0;
+  for (let i = 0; i < px.length; i += 4) { const on = px[i + 3] > 40 && px[i] > 128; px[i] = px[i + 1] = px[i + 2] = 255; px[i + 3] = on ? 255 : 0; if (on) n++; }
+  if (n < W * H * 0.005) return null;                                     // hardly any cell visible: no mask
+  ag.putImageData(id, 0, 0);
+  const d = document.createElement('canvas'); d.width = W; d.height = H; const dg = d.getContext('2d');
+  for (let r = 1; r <= 6; r += 2.5) for (let k = 0; k < 12; k++) dg.drawImage(a, Math.cos(k * Math.PI / 6) * r, Math.sin(k * Math.PI / 6) * r);   // a little wider than the cells
+  dg.drawImage(a, 0, 0);
+  const m = document.createElement('canvas'); m.width = W; m.height = H; const mg = m.getContext('2d');
+  mg.fillStyle = '#000'; mg.fillRect(0, 0, W, H); mg.globalCompositeOperation = 'destination-out'; mg.drawImage(d, 0, 0);
+  return m.toDataURL('image/png');
+}
+// the approved EMPTY photo of the same variant – the content photos are made from it, so they are the same photo with contents
+const CAT_CASC = 'הגרסה הריקה נעשית מחדש – להכין שוב ממנה';
+const catEmptyKey = (v) => v.name + ' – ' + CAT_SETS.find(s => s.empty).he;
+function catEmptyOf(v, have) { if (!v.set || v.set.empty) return null; const x = have[catEmptyKey(v)]; return x && x.url && x.review === 'ok' ? x : null; }
+async function toDataURL(url) {
+  const b = await (await fetch(url, { cache:'no-store' })).blob();
+  return await new Promise((r, j) => { const f = new FileReader(); f.onload = () => r(f.result); f.onerror = j; f.readAsDataURL(b); });
+}
+// an empty photo marked "do again": its content photos were made from it, so they are done again too (after it is approved)
+async function catCascade(keys, note) {
+  const all = catVariants(); let c = 0;
+  for (const k of keys) {
+    const v = all.find(x => x.key === k); if (!v || !v.set || !v.set.empty) continue;
+    for (const s of all.filter(x => x.name === v.name && x.set && !x.set.empty && GAL.have[x.key] && GAL.have[x.key].review !== 'redo')) {
+      const nt = CAT_CASC;
+      try { await api('/api/catalog', { action:'review', key:s.key, review:'redo', note:nt }); GAL.have[s.key] = { ...GAL.have[s.key], review:'redo', note:nt }; c++; } catch {}
+    }
+  }
+  if (c) toast(`גם ${c} גרסאות התכולה שלה סומנו "לעשות שוב"`);
+  return c;
 }
 // where the product is in a transparent picture (its solid part: faint shadows left out)
 function alphaBox(src, thr = 110) {
@@ -7403,6 +7468,7 @@ async function studioGal(fetchIndex = true) {
       const ks = [...GAL.sel], note = prompt(`הערה לרינדור החוזר של ${ks.length} התמונות (לא חובה) – למשל: התכולה גדולה מדי`, '');
       if (note === null) return;
       for (const k of ks) { try { await api('/api/catalog', { action:'review', key:k, review:'redo', note:note.trim() }); GAL.have[k] = { ...GAL.have[k], review:'redo', note:note.trim() }; } catch (e) { toast(e.message); break; } }
+      await catCascade(ks);
       GAL.pick = false; GAL.sel.clear(); studioGal(false); toast(`${ks.length} סומנו "לעשות שוב" – הסטודיו ירנדר אותן`);
       if (!STUDIO.run) startStudio();
     };
@@ -7425,7 +7491,7 @@ function galOpen(key) {
       const note = card.querySelector('#grNote').value.trim();
       if (review === 'redo' && !note && !(await askConfirm('לעשות שוב בלי הערה? כדאי לכתוב מה לתקן.', 'בכל זאת'))) return;
       GAL.rev = (GAL.rev || 0) + 1;
-      try { await api('/api/catalog', { action:'review', key, review, note }); GAL.have[key] = { ...x, review, note }; GAL.rev++; studioStats(); studioGal(false); }
+      try { await api('/api/catalog', { action:'review', key, review, note }); GAL.have[key] = { ...x, review, note }; if (review === 'redo') await catCascade([key]); GAL.rev++; studioStats(); studioGal(false); }
       catch (e) { toast('השמירה נכשלה: ' + e.message); return; }
       if (i < vs.length - 1) galOpen(vs[i + 1].key); else close();       // straight on to the next one
     };
@@ -7519,12 +7585,16 @@ async function startStudio() {
     // first everything that has no photo yet; then the ones you marked "do again" (with your notes); nothing else is ever rendered twice
     const ok = (v) => (STUDIO.fail.get(v.key) || 0) < 3;
     const Q = stuQ.get();
-    let todo = all.filter(v => Q.includes(v.prod) && !have[v.key] && ok(v)).sort((a, b) => Q.indexOf(a.prod) - Q.indexOf(b.prod));
-    if (!todo.length) todo = all.filter(v => have[v.key] && have[v.key].review === 'redo' && ok(v)).map(v => ({ ...v, fix:have[v.key].note || '' }));
+    // a content photo is made from its approved empty photo: it waits until that one is approved (photos with no empty version go as before)
+    const emptyGate = (v) => !v.set || v.set.empty || !all.some(x => x.key === catEmptyKey(v)) || !!catEmptyOf(v, have);
+    const withBase = (v) => { const b = catEmptyOf(v, have); return b ? { ...v, base:b } : v; };
+    let todo = all.filter(v => Q.includes(v.prod) && !have[v.key] && ok(v) && emptyGate(v)).sort((a, b) => Q.indexOf(a.prod) - Q.indexOf(b.prod)).map(withBase);
+    if (!todo.length) todo = all.filter(v => have[v.key] && have[v.key].review === 'redo' && ok(v) && emptyGate(v)).map(v => withBase({ ...v, fix:have[v.key].note === CAT_CASC ? '' : (have[v.key].note || '') }));
+    const gated = all.filter(v => (!have[v.key] ? Q.includes(v.prod) : have[v.key].review === 'redo') && !emptyGate(v)).length;
     STUDIO.left = all.filter(v => !have[v.key]).length; studioShow(total);
     if (!todo.length) {                              // all done: wait for new "do again" marks, without spending anything
       Q.forEach(p => { if (all.filter(v => v.prod === p).every(v => have[v.key])) stuQ.del(p); });     // finished products leave the queue
-      STUDIO.cur = 'ממתין – בחרו מוצר בגלריה ולחצו "לרנדר את המוצר"'; studioShow(total); studioGal(false);
+      STUDIO.cur = gated ? `ממתין – ${gated} גרסאות תכולה מחכות לאישור הגרסה הריקה שלהן` : 'ממתין – בחרו מוצר בגלריה ולחצו "לרנדר את המוצר"'; studioShow(total); studioGal(false);
       await bgSleep(3000); continue;
     }
     // product by product: all the variants of the first unfinished product, in order; one that failed is tried again at the end of its product
