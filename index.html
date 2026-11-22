@@ -7325,13 +7325,14 @@ function studioUI() {
     el = document.createElement('div'); el.id = 'studio';
     el.innerHTML = `<div class="stu-h"><b>סטודיו תמונות קטלוג</b><span id="stuCount"></span></div><div class="stu-bar"><i id="stuBar"></i></div>
       <div id="stuCur" class="stu-cur"></div><div id="stuGauge" hidden></div>
-      <div class="stu-ctl"><button class="btn" id="stuRun">עצירה</button><label>מגבלה יומית <input id="stuLim" type="number" min="1" max="500"></label><span id="stuDay"></span><button class="btn" id="stuZip">הורדת ZIP</button></div>
+      <div class="stu-ctl"><button class="btn" id="stuRun">עצירה</button><label>מגבלה יומית <input id="stuLim" type="number" min="1" max="500"></label><span id="stuDay"></span><button class="btn" id="stuZip">הורדת ZIP</button><button class="btn" id="stuImp" title="ZIP או קובצי PNG בשמות של הווריאציות (כמו בהורדה) – כל תמונה נכנסת לגלריה כמאושרת">ייבוא בחירות</button></div>
       <div id="stuLog" class="stu-log"></div>`;
     document.body.appendChild(el);
     const lim = el.querySelector('#stuLim'); lim.value = studioLimit();
     lim.onchange = () => { try { localStorage.setItem('rbt-studio-limit', String(Math.max(1, +lim.value || 50))); } catch {} studioDay(); if (!STUDIO.run && STUDIO.on) startStudio(); };
     el.querySelector('#stuRun').onclick = () => { if (STUDIO.run) { STUDIO.stop = true; STUDIO.cur = 'עוצר אחרי התמונה הנוכחית…'; document.getElementById('stuCur').textContent = STUDIO.cur; } else startStudio(); };
     el.querySelector('#stuZip').onclick = () => studioZip();
+    el.querySelector('#stuImp').onclick = () => { const i = document.createElement('input'); i.type = 'file'; i.multiple = true; i.accept = '.zip,.png,.webp,image/png,image/webp'; i.onchange = () => i.files.length && studioImport([...i.files]); i.click(); };
   }
   return el;
 }
@@ -7386,6 +7387,57 @@ async function studioZip(only) {
     await flush(true);
     toast(`ירדו ${files.length - skipped} תמונות${skipped ? ` (${skipped} לא נמצאו)` : ''}`);
   } catch (er) { toast('ההורדה נכשלה: ' + er.message); }
+  finally { b.disabled = false; b.textContent = label; }
+}
+// "ייבוא בחירות": photos picked outside (a ZIP, or the PNGs themselves) – named like the ZIP download – become the approved photo of their variant.
+// A photo that is already the current one is only approved; any other is uploaded and set (the current one becomes "the one before")
+async function zipEntries(file) {
+  const buf = new Uint8Array(await file.arrayBuffer()), dv = new DataView(buf.buffer), out = [], dec = new TextDecoder();
+  let e = buf.length - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('קובץ ZIP לא תקין');
+  let p = dv.getUint32(e + 16, true); const n = dv.getUint16(e + 10, true);
+  for (let k = 0; k < n; k++) {
+    const meth = dv.getUint16(p + 10, true), csz = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
+    const name = dec.decode(buf.subarray(p + 46, p + 46 + nl)); p += 46 + nl + xl + cl;
+    if (name.endsWith('/')) continue;
+    const st = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true); let data = buf.slice(st, st + csz);
+    if (meth === 8) data = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+    else if (meth !== 0) continue;
+    out.push({ name, data });
+  }
+  return out;
+}
+async function studioImport(files) {
+  const b = document.getElementById('stuImp'), label = b.textContent; b.disabled = true;
+  try {
+    const safe = (t) => t.replace(/[\\/:*?"<>|]/g, '-').replace(/\s*–\s*/g, '_').replace(/\s*·\s*/g, '_');
+    const byName = new Map(catVariants().map(v => [safe(v.key), v]));
+    const list = [];
+    for (const f of files) {
+      if (/\.zip$/i.test(f.name)) (await zipEntries(f)).forEach(x => list.push(x));
+      else list.push({ name:f.name, data:new Uint8Array(await f.arrayBuffer()) });
+    }
+    const have = await catIndex(), hash = async (u8) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', u8))).join(',');
+    let set = 0, ok = 0; const miss = [];
+    for (const [i, x] of list.entries()) {
+      const base = x.name.split('/').pop().replace(/\.(png|webp|jpe?g)$/i, '').replace(/\s*\((ממתינה|לעשות שוב)\)$/, '').replace(/_קודמת$/, '');
+      if (!/\.(png|webp|jpe?g)$/i.test(x.name)) continue;
+      const v = byName.get(base); if (!v) { miss.push(x.name.split('/').pop()); continue; }
+      b.textContent = `מייבא ${i + 1}/${list.length}`;
+      const cur = have[v.key]; let same = false;
+      if (cur && cur.url) try { const r = await fetch(cur.url); if (r.ok) same = (await hash(new Uint8Array(await r.arrayBuffer()))) === (await hash(x.data)); } catch {}
+      if (!same) {
+        const type = /\.webp$/i.test(x.name) ? 'image/webp' : 'image/png';
+        const d = await new Promise((r, j) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.onerror = j; fr.readAsDataURL(new Blob([x.data], { type })); });
+        const url = await uploadImage(d, 'catalog'); if (!url) throw new Error('אין חיבור לאחסון התמונות');
+        await api('/api/catalog', { action:'set', key:v.key, url, name:v.name, set:v.set ? v.set.id : '' }); set++;
+      } else ok++;
+      await api('/api/catalog', { action:'review', key:v.key, review:'ok', note:'' });
+    }
+    GAL.rev = (GAL.rev || 0) + 1; await studioGal();
+    toast(`יובאו ${set + ok}: ${set} הוחלפו, ${ok} כבר היו הנוכחיות ואושרו` + (miss.length ? ` · ${miss.length} לא זוהו` : ''));
+    if (miss.length) studioLog('לא זוהו: ' + miss.slice(0, 20).join(', ') + (miss.length > 20 ? '…' : ''), true);
+  } catch (e) { toast('הייבוא נכשל: ' + e.message); }
   finally { b.disabled = false; b.textContent = label; }
 }
 // ---- the gallery on the right: products with their progress → the variants of one product, live ----
