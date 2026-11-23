@@ -49,3 +49,40 @@ Status: **visual prototype for approval – not engineering-approved.** Viewer: 
 | Diagonal straps | 33510010 | 2 straps | 1 set |
 | Shelf 97 × 40 | 33530400 | 5 | 5 |
 | Shelf clip | 33530020 | 20 (4 per shelf) | **?** – depends on Q2 |
+
+
+---
+
+# Round 2 (HISTORGIC v010) – corrected reference assembly
+
+Status: **NOT engineering-approved. No load or safety rating is shown for any configuration.** Temporary components are independent modules (`MODULES` in `lf.html`: `build()` + named ports); the assembly only uses the ports, so their geometry can be replaced later without rebuilding the system.
+
+## Decisions applied
+| # | Decision | Implementation |
+|---|---|---|
+| 1 | Bracing mandatory everywhere | In the model, BOM (marked "חובה") and price column. 2 crosses stacked (MFR p.33 "up to H 3000 = 2 braces in height" – interpretation). 33510010 ↔ 8717540 **not** assumed. |
+| 2 | Clip temporary | Module `clip`, status PENDING. 4 per shelf = manufacturer figure; inclusion in 33530400 PENDING. |
+| 3 | Upright re-check | Section rebuilt from MFR p.18: U, two V grooves per 49 mm wall, folded lips. Slots placed in the grooves (interpretation). Orientation and slotted face PENDING – profile not approved. |
+| 4 | Side ties | 2 per frame, hooks snapped to slots; count and heights PENDING. |
+| 5 | Shelves | 5 shelves, demo heights, derived from a slot index; mounting check (foot bracket, upright top). |
+| 6 | Anchor feet | Foot module port = upright axis; anchor holes ±31 mm (PENDING). |
+| 7 | Render | Dark studio background, key / fill / rim lights, soft shadows, outlines; colour by material / component / status. |
+| 8 | Close-ups | clip ↔ upright ↔ shelf, brace ↔ upright, tie ↔ upright (+ foot), each with "פירוק החיבור" and status labels. |
+
+## New evidence read in round 2
+- **MFR p.33:** bracing strap section **50 × 1.5**, galvanised; fixed with bolt + nut; codes per L 770–1270 (8717540 = L 970); "up to H 3000 = 2 braces in height, every 8 bays, with fixing feet 8723874"; frame-ties bar 8742435 only in frames with braces.
+- **MFR p.18:** slots 16 / gap 9 / pitch 25; section 28 × 49 (29 in plan). The slot elevation's column positions (0.30 / 0.72 of the face) match the V-groove positions (≈15 / 37 mm from the web) – read as "slots in the grooves" (provisional).
+- **MFR p.21:** fixed traverse hooks into the upright slots (drawing, no dimensions); foot 8723874 is a U bracket around the upright on a 50 × 76 plate.
+- **LOC p.68:** set 33510010 and clip 33530020 – names and codes only, no dimensions or contents.
+
+## Verified vs provisional (summary – full table in the viewer side panel)
+| Status | Count | Examples |
+|---|---|---|
+| Verified | 19 | upright 28 × 49 × 2000, slots 16/9/25, shelf 970 × 400 × 33, strap 50 × 1.5, foot plate 50 × 76 × 25, tie length 400, 4 clips per shelf |
+| Provisional | 9 | upright section shape and groove positions, slots-in-grooves, shelf return, tie hook, brace L = bay length, brace fixing, 2 crosses in height, foot alignment |
+| PENDING VERIFICATION | 18 | upright orientation / sheet / slot width / first slot, shelf thickness and 970 = length vs module, clip (all geometry, inclusion), tie section / count / heights, brace bolt direction / heights / set contents, foot holes / plate thickness |
+
+## Open questions
+See the "שאלות פתוחות" list in the viewer. Prices: none supplied – every BOM row shows "חסר מחיר".
+
+QA images: `qa/assembly-material.webp`, `qa/assembly-components.webp`, `qa/joints-closeups.webp`.

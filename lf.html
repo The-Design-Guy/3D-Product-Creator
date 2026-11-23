@@ -3,44 +3,53 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LA FORTEZZA UNIVERSAL – הרכבת ייחוס לאישור</title>
+<title>LA FORTEZZA UNIVERSAL – הרכבת ייחוס (לא מאושרת הנדסית)</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root { --ink:#1d2328; --muted:#6b747c; --line:#d9dee2; --ok:#1f8a4c; --prov:#c98a00; --pend:#c0392b; }
+  :root { --ink:#1d2328; --muted:#6b747c; --line:#d9dee2; --ok:#1f8a4c; --prov:#c98a00; --pend:#c0392b; --pol:#3b5bdb; }
   * { box-sizing:border-box; }
   html, body { margin:0; height:100%; font-family:'Heebo', system-ui, sans-serif; color:var(--ink); background:#f3f4f5; }
   header { height:56px; display:flex; align-items:center; gap:14px; padding:0 18px; background:#fff; border-bottom:1px solid var(--line); }
   header h1 { font-size:17px; margin:0; } header .ver { margin-inline-start:auto; font-size:12px; color:var(--muted); direction:ltr; }
-  .warn { background:#fff4e0; color:#7a5200; font-size:13px; padding:7px 18px; border-bottom:1px solid #f0d9a8; }
-  main { display:grid; grid-template-columns:minmax(0, 1fr) 420px; height:calc(100% - 56px - 33px); }
-  #view { position:relative; min-width:0; }
+  .warn { background:#fdecea; color:#8a1f13; font-size:13px; padding:7px 18px; border-bottom:1px solid #f2c4bd; }
+  main { display:grid; grid-template-columns:minmax(0, 1fr) 460px; height:calc(100% - 56px - 33px); }
+  #view { position:relative; min-width:0; background:#262b31; }
   #c { display:block; width:100%; height:100%; }
   .bar { position:absolute; top:10px; right:10px; left:10px; display:flex; flex-wrap:wrap; gap:6px; pointer-events:none; }
-  .bar button { pointer-events:auto; font:inherit; font-size:13px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:rgba(255,255,255,.92); cursor:pointer; }
-  .bar button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
-  .bar .sep { width:1px; background:var(--line); margin:0 2px; }
-  #tip { position:absolute; pointer-events:none; background:#101820; color:#fff; font-size:12px; padding:6px 8px; border-radius:6px; max-width:320px; display:none; }
+  .bar button { pointer-events:auto; font:inherit; font-size:12.5px; padding:5px 9px; border:1px solid #4a525b; border-radius:8px; background:rgba(38,43,49,.88); color:#e8ecef; cursor:pointer; }
+  .bar button.on { background:#e8ecef; color:#1d2328; border-color:#e8ecef; }
+  .bar .sep { width:1px; background:#4a525b; margin:0 2px; } .bar .lab { color:#9aa4ad; font-size:12px; align-self:center; padding:0 2px; }
+  #tip { position:absolute; pointer-events:none; background:#101820; color:#fff; font-size:12px; padding:6px 8px; border-radius:6px; max-width:320px; display:none; z-index:3; }
+  #lbl { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  #lbl .l { position:absolute; transform:translate(-50%, -100%); background:rgba(16,24,32,.92); color:#fff; font-size:11.5px; line-height:1.35; padding:4px 7px; border-radius:6px; white-space:nowrap; border-inline-start:4px solid #888; }
+  #lbl .l::after { content:''; position:absolute; left:50%; bottom:-6px; width:1px; height:6px; background:#fff; }
+  #lbl .l.verified { border-color:#3cb371; } #lbl .l.provisional { border-color:#f0b429; } #lbl .l.pending { border-color:#ff6b5a; } #lbl .l.policy { border-color:#7b96ff; }
+  #legend { position:absolute; bottom:10px; right:10px; display:flex; flex-wrap:wrap; gap:8px; font-size:11.5px; color:#dfe4e8; pointer-events:none; }
+  #legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-inline-end:4px; vertical-align:-1px; }
   aside { overflow:auto; background:#fff; border-inline-start:1px solid var(--line); padding:12px 14px 30px; font-size:13px; }
-  aside h2 { font-size:15px; margin:16px 0 6px; } aside h2:first-child { margin-top:2px; }
+  aside h2 { font-size:15px; margin:18px 0 6px; } aside h2:first-child { margin-top:2px; }
+  .eng { border:2px solid var(--pend); border-radius:10px; padding:8px 10px; background:#fff6f5; }
+  .eng b { color:var(--pend); } .eng ul { margin:4px 0 0; }
   table { width:100%; border-collapse:collapse; font-size:12px; } th, td { text-align:right; padding:5px 4px; border-bottom:1px solid #eef0f2; vertical-align:top; }
   th { color:var(--muted); font-weight:500; } td.n { text-align:center; } code { font-size:11px; direction:ltr; unicode-bidi:embed; }
+  tr.grp td { background:#f6f7f8; font-weight:700; }
   .st { display:inline-block; font-size:10.5px; font-weight:700; padding:1px 6px; border-radius:20px; color:#fff; white-space:nowrap; }
-  .st.verified { background:var(--ok); } .st.provisional { background:var(--prov); } .st.pending { background:var(--pend); } .st.policy { background:#3b5bdb; }
-  .comp { border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:6px; cursor:pointer; } .comp:hover, .comp.sel { border-color:var(--ink); }
-  .comp b { font-size:13px; } .comp p { margin:3px 0 0; color:var(--muted); font-size:12px; }
+  .st.verified { background:var(--ok); } .st.provisional { background:var(--prov); } .st.pending { background:var(--pend); } .st.policy { background:var(--pol); } .st.must { background:#1d2328; }
+  .comp { border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:6px; } .comp b { font-size:13px; } .comp p { margin:3px 0 0; color:var(--muted); font-size:12px; }
+  .sum { display:flex; gap:10px; flex-wrap:wrap; margin:4px 0 8px; }
   ul { padding-inline-start:18px; margin:4px 0; } li { margin:3px 0; }
-  .legend { display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 2px; }
+  small { color:var(--muted); }
 </style>
 <script type="importmap">{ "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
 </head>
 <body>
-<header><h1>LA FORTEZZA UNIVERSAL · הרכבת ייחוס 97 × 40 × 200</h1><span class="ver" id="ver">HISTORGIC v007</span></header>
-<div class="warn">אב־טיפוס חזותי לאישור – <b>לא אושר הנדסית</b>. כל רכיב מסומן במקורו ובסטטוס שלו; רכיבים צהובים/אדומים לא מאומתים במידותיהם.</div>
+<header><h1>LA FORTEZZA UNIVERSAL · הרכבת ייחוס 97 × 40 × 200</h1><span class="ver" id="ver">HISTORGIC v010 · ref-assembly r2</span></header>
+<div class="warn"><b>לא מאושר הנדסית.</b> אב־טיפוס חזותי לבדיקה. אין הצגת עומס מותר לתצורה. רכיבים זמניים ונתונים שלא אומתו מסומנים <b>PENDING VERIFICATION</b>.</div>
 <main>
-  <section id="view"><canvas id="c"></canvas>
-    <div class="bar" id="bar"></div><div id="tip"></div></section>
+  <section id="view"><canvas id="c"></canvas><div id="lbl"></div>
+    <div class="bar" id="bar"></div><div id="tip"></div><div id="legend"></div></section>
   <aside id="side"></aside>
 </main>
 <script type="module">
@@ -49,270 +58,414 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 // ======================================================================================================
-// SOURCES (page numbers = PDF pages of LA_FORTEZZA_Original_Manufacturer_2024.pdf; LOC = Huliot local catalogue page)
-// status: 'verified' = read from a dimensioned drawing / table; 'provisional' = visual estimate, must be approved;
-//         'pending'  = PENDING VERIFICATION – no drawing or dimensions in the sources; 'policy' = HISTORGIC product decision
-// Manufacturer codes, Huliot SKUs and instance IDs are separate namespaces. A mapping is never assumed.
+// SOURCES – MFR = LA_FORTEZZA_Original_Manufacturer_2024.pdf (PDF page numbers); LOC = Huliot local catalogue 2024 (printed page numbers)
+// status: verified    = read from a dimensioned drawing or a table in the source
+//         provisional = read off a drawing without a dimension, or an interpretation – must be approved
+//         pending     = PENDING VERIFICATION – not in the sources; a placeholder value so the model can be built
+//         policy      = HISTORGIC product decision (not a manufacturer requirement)
+// Manufacturer codes, Huliot SKUs and instance IDs are separate namespaces. A mapping between them is never assumed.
 // ======================================================================================================
 const SRC = {
-  upright: 'MFR p.18 (2A01-2), p.19 (2A01-3)', feet: 'MFR p.21 (2A01-5)', traverse: 'MFR p.21 (2A01-5), p.22 (2A01-6)',
-  frame: 'MFR p.24–25 (2A02-2/3)', brace: 'MFR p.33 (2A02-11); LOC p.68', shelf: 'MFR p.43–46 (2A04-3…6); LOC p.66',
-  clip: 'MFR p.47 (2A04-7) – no drawing; LOC p.68 (illustration, no dimensions)', loc: 'Huliot LA FORTEZZA local catalogue 2024',
+  upright:'MFR p.18 (2A01-2: section + slots), p.19 (2A01-3: heights / codes)', feet:'MFR p.21 (2A01-5)', traverse:'MFR p.21 (2A01-5), p.22 (2A01-6)',
+  brace:'MFR p.33 (2A02-11: bracing cross, strap section, rule); LOC p.68 (set 33510010, no dimensions)', shelf:'MFR p.43–46 (2A04-3…6); LOC p.66',
+  clip:'MFR p.47 (2A04-7) – code only, no drawing; LOC p.68 (illustration, no dimensions)', loc:'Huliot LA FORTEZZA local catalogue 2024, p.66–68',
 };
-// ---- ManufacturerPart: what the manufacturer documents ----
+const ENG = { approved:false, loadShown:false };          // fixed: nothing on this page is an engineering approval or a load rating
+
+// ---- ManufacturerPart ----
 const MFR = {
-  U25000023:{ name:'UNIVERSAL upright H 2000', src:'MFR p.19', status:'verified' },
-  '1078':   { name:'Fixed traverse (traversino terminale) P 400', src:'MFR p.21', status:'verified' },
-  '8723874':{ name:'Foot with floor fixing plate, 2 bolts + 1 drive screw, 50×76×25', src:'MFR p.21', status:'verified' },
-  '2192':   { name:'Nylon foot 35×54×6', src:'MFR p.21', status:'verified' },
-  '8717540':{ name:'Bracing cross (crociera di bloccaggio) L 970, galvanised', src:'MFR p.33', status:'verified' },
-  G25000000:{ name:'Galvanised shelf clip', src:'MFR p.47', status:'pending' },
+  U25000023:{ name:'UNIVERSAL upright H 2000 (28 × 49)', src:'MFR p.19' },
+  '1078':   { name:'Fixed traverse (traversino terminale) P 400', src:'MFR p.21' },
+  '8723874':{ name:'Foot with floor fixing plate, 2 bolts + 1 drive screw, 50 × 76 × 25', src:'MFR p.21' },
+  '2192':   { name:'Nylon foot 35 × 54 × 6', src:'MFR p.21' },
+  '8717540':{ name:'Bracing cross (crociera di bloccaggio) L 970, galvanised, strap 50 × 1.5', src:'MFR p.33' },
+  G25000000:{ name:'Galvanised shelf clip (no drawing)', src:'MFR p.47' },
 };
-// ---- CommercialSKU: what MEDIKUP / Huliot sells (LOC) and its evidenced manufacturer mapping ----
+// ---- CommercialSKU (Huliot / MEDIKUP). price: null = missing ----
 const SKU = {
-  '33540612':{ he:'עמוד 200 ס"מ', mfr:'U25000023', map:'unverified' },
-  '33540604':{ he:'קושרת צד 400', mfr:'1078', map:'unverified' },
-  '33530400':{ he:'מדף 97 × 40 ללא חיזוק (105 ק"ג)', mfr:null, map:'unverified', clipsIncluded:null },
-  '33530020':{ he:'קליפ מתכת לחיבור מדף', mfr:'G25000000', map:'unverified' },
-  '33520550':{ he:'רגל עם עיגון', mfr:'8723874', map:'unverified' },
-  '33520560':{ he:'רגל פלסטיק', mfr:'2192', map:'unverified' },
-  '33510010':{ he:'סט אלכסוני ייצוב', mfr:'8717540', map:'unverified' },
+  '33540612':{ he:'עמוד 200 ס"מ', mfr:'U25000023', map:'unverified', price:null },
+  '33540604':{ he:'קושרת צד 400', mfr:'1078', map:'unverified', price:null },
+  '33530400':{ he:'מדף 97 × 40 ללא חיזוק', mfr:null, map:'unverified', price:null },
+  '33530020':{ he:'קליפ מתכת לחיבור מדף', mfr:'G25000000', map:'unverified', price:null },
+  '33520550':{ he:'רגל עם עיגון', mfr:'8723874', map:'unverified', price:null },
+  '33520560':{ he:'רגל פלסטיק', mfr:'2192', map:'unverified', price:null },
+  '33510010':{ he:'סט אלכסוני ייצוב', mfr:'8717540', map:'unverified – no evidence that the set equals the manufacturer cross', price:null },
 };
-// ---- PhysicalComponent: one definition per part, with its dimensions and where each came from ----
+// ---- PhysicalComponent: every value with its status and source ----
+const d = (he, v, st, src) => ({ he, v, st, src });
 const PC = {
-  upright:{ he:'עמוד UNIVERSAL', sku:'33540612', status:'provisional',
-    dims:{ L:{ v:28, st:'verified', src:'p.18' }, P:{ v:49, st:'verified', src:'p.18' }, plan:{ v:29, st:'verified', src:'p.18 (allow 29 mm in plan)' },
-      H:{ v:2000, st:'verified', src:'p.19 / LOC p.67' }, slot:{ v:16, st:'verified', src:'p.18' }, gap:{ v:9, st:'verified', src:'p.18' }, pitch:{ v:25, st:'verified', src:'p.18' },
-      t:{ v:1.5, st:'provisional', src:'not dimensioned' }, slotW:{ v:5, st:'provisional', src:'not dimensioned' }, cols:{ v:[15, 34], st:'provisional', src:'column positions read off p.18 drawing, not dimensioned' } },
-    note:'Section and slot pitch from the drawing; sheet thickness, slot width and the exact corrugation are not dimensioned. Slots on both 49 mm faces, two columns each (as drawn).' },
-  shelf:{ he:'מדף מלא N (ללא חיזוק)', sku:'33530400', status:'provisional',
-    dims:{ L:{ v:970, st:'verified', src:'LOC p.66' }, P:{ v:400, st:'verified', src:'LOC p.66' }, edge:{ v:33, st:'verified', src:'p.43 (33 mm)' }, ribs:{ v:0, st:'verified', src:'LOC p.66: ללא חיזוקים' },
-      t:{ v:0.8, st:'provisional', src:'not dimensioned' }, ret:{ v:10, st:'provisional', src:'return under the edge, read off p.43, not dimensioned' } },
-    note:'Local SKU 33530400 is listed without reinforcement. Its match to a manufacturer shelf code is not evidenced.' },
-  clip:{ he:'קליפ מדף מגולוון', sku:'33530020', status:'pending',
-    dims:{ shape:{ v:'J-hook', st:'provisional', src:'LOC p.68 illustration' }, size:{ v:'≈22 × 42 × 18', st:'pending', src:'PENDING VERIFICATION – no drawing on MFR p.47' } },
-    note:'PENDING VERIFICATION: shape follows the local illustration only. Needs a drawing, a photo with a ruler, or a sample.' },
-  tie:{ he:'קושרת צד (traverse) 400', sku:'33540604', status:'provisional',
-    dims:{ P:{ v:400, st:'verified', src:'p.21 / LOC p.68' }, sec:{ v:'30 × 20 L', st:'provisional', src:'not dimensioned' }, y:{ v:[150, 1975], st:'provisional', src:'150 mm from floor: p.25; top position: estimate' } },
-    note:'Two per side frame (bottom + top). The count for H 2000 is not given (p.25 gives counts from 2750 H up).' },
-  brace:{ he:'אלכסון ייצוב (רצועה)', sku:'33510010', status:'provisional',
-    dims:{ L:{ v:970, st:'verified', src:'MFR 8717540 L 970, p.33' }, strap:{ v:'25 × 1.5', st:'provisional', src:'not dimensioned' }, ends:{ v:[150, 1850], st:'provisional', src:'attachment heights: estimate' } },
-    note:'HISTORGIC policy: always included. Placed in the back plane, crossing between the two back uprights (LOC p.68).' },
-  footA:{ he:'רגל עם עיגון', sku:'33520550', status:'provisional',
-    dims:{ plate:{ v:'50 × 76', st:'verified', src:'MFR 8723874 p.21 (mapping to 33520550 unverified)' }, H:{ v:25, st:'verified', src:'p.21' }, bolts:{ v:'2 + 1 drive screw', st:'verified', src:'p.21 description' } },
-    note:'Mandatory here: H/P = 2000/400 = 5 > 4 (MFR p.21: "OBBLIGATORIO quando il rapporto tra H e P è > 4:1").' },
-  footP:{ he:'רגל פלסטיק', sku:'33520560', status:'provisional',
-    dims:{ size:{ v:'35 × 54 × 6', st:'verified', src:'MFR 2192 p.21 (mapping unverified)' } }, note:'Modelled; not used in this assembly (anchoring required).' },
+  upright:{ he:'עמוד UNIVERSAL', sku:'33540612', status:'pending', dims:{
+      L:d('רוחב L', 28, 'verified', 'MFR p.18'), P:d('עומק P', 49, 'verified', 'MFR p.18'), plan:d('תפיסה בתכנון', 29, 'verified', 'MFR p.18 (הערה *)'),
+      H:d('גובה', 2000, 'verified', 'MFR p.19 / LOC p.67'), slot:d('אורך חריץ', 16, 'verified', 'MFR p.18'), gap:d('גשר בין חריצים', 9, 'verified', 'MFR p.18'), pitch:d('צעד חריצים', 25, 'verified', 'MFR p.18'),
+      shape:d('צורת החתך: U עם 2 חריצים מקופלים בכל דופן ושפה כפולה בצד הפתוח', 'U + V×2 + lip', 'provisional', 'MFR p.18 – שרטוט ללא מידות'),
+      grooves:d('מיקום החריצים המקופלים מהגב (מ"מ)', [15, 37], 'provisional', 'נמדד מהשרטוט p.18 בקנה מידה, לא מסומן'),
+      slotFace:d('החריצים נמצאים בתוך החריצים המקופלים, בשתי הדפנות של 49', 'בדפנות 49', 'provisional', 'פרשנות: יחס הרוחב בתצוגת "Tracce" (0.30 / 0.72) תואם למיקום החריצים המקופלים'),
+      orient:d('כיוון החתך בהרכבה (גב החוצה / פנימה)', 'גב החוצה', 'pending', 'לא מופיע במקור'),
+      t:d('עובי פח', 1.5, 'pending', 'לא מסומן'), slotW:d('רוחב חריץ', 4, 'pending', 'לא מסומן'), slot0:d('מרכז החריץ הראשון מתחתית העמוד', 12.5, 'pending', 'לא מסומן') },
+    note:'הפרופיל אינו מאושר: כיוון החתך וצד החריצים טעונים אימות מול השרטוט המקורי או דגימה.' },
+  shelf:{ he:'מדף מלא N (ללא חיזוק)', sku:'33530400', status:'provisional', dims:{
+      L:d('אורך', 970, 'verified', 'LOC p.66'), P:d('עומק', 400, 'verified', 'LOC p.66'), edge:d('גובה שוליים', 33, 'verified', 'MFR p.43'), ribs:d('חיזוקים', 0, 'verified', 'LOC p.66: ללא חיזוקים'),
+      t:d('עובי פח', 0.8, 'pending', 'לא מסומן'), ret:d('קיפול תחתון בשוליים', 10, 'provisional', 'נקרא מ־p.43, לא מסומן'),
+      fit:d('970 = אורך המדף בפועל או מידת מודול (מרכז–מרכז)?', 'אורך בפועל', 'pending', 'משפיע על המרווח בין העמודים ועל מקום הקליפ') },
+    note:'שיוך המק"ט המקומי למק"ט יצרן לא הוכח.' },
+  clip:{ he:'קליפ מדף (מודול זמני)', sku:'33530020', status:'pending', temp:true, dims:{
+      shape:d('צורה: לוח גב + לשונית לחריץ + מדף J', 'J-hook', 'pending', 'LOC p.68 – איור בלבד; MFR p.47 – אין שרטוט'),
+      size:d('מידות (רוחב × גובה × בליטה)', '18 × 48 × 14', 'pending', 'ערך מקום בלבד'), plate:d('עובי לוח הגב', 2, 'pending', 'ערך מקום בלבד'),
+      perShelf:d('קליפים למדף', 4, 'verified', 'נתון יצרן (MFR 2A04: 4 clips)'),
+      inSku:d('כלולים במק"ט המדף 33530400?', '?', 'pending', 'לא מופיע ב־LOC') },
+    note:'רכיב זמני. הגיאומטריה אינה מאומתת. מוחלף דרך המודול בלבד (אותן נקודות חיבור).' },
+  tie:{ he:'קושרת צד 400 (traverse)', sku:'33540604', status:'provisional', temp:true, dims:{
+      P:d('אורך', 400, 'verified', 'MFR p.21 / LOC p.68'), hook:d('חיבור: וו בקצה נכנס לחריצי העמוד', 'וו לחריץ', 'provisional', 'MFR p.21 – שרטוט ללא מידות'),
+      sec:d('חתך', 'L 30 × 20', 'pending', 'לא מסומן'), n:d('כמות לכל מסגרת', 2, 'pending', 'זמני – המקור לא נותן ספירה לגובה 2000'),
+      y:d('גובה הווים (מ"מ)', [150, 1975], 'pending', 'זמני – מוצמד לצעד החריצים') },
+    note:'שתי קושרות לכל מסגרת זמנית בלבד. כמות ומיקומים טעונים אימות.' },
+  brace:{ he:'אלכסוני ייצוב (חובה)', sku:'33510010', status:'provisional', must:true, temp:true, dims:{
+      strap:d('חתך הרצועה', '50 × 1.5', 'verified', 'MFR p.33 (פרט)'), mat:d('חומר', 'פח מגולוון', 'verified', 'MFR p.33'),
+      L:d('L 970 = אורך השדה שאליו הצלב מתאים', 970, 'provisional', 'MFR p.33: קודים לפי L 770–1270; הפרשנות כאורך שדה – לא כתובה'),
+      fix:d('חיבור: בורג + אום דרך העמוד', 'בורג + אום', 'provisional', 'MFR p.33 – שרטוט ללא מידות'),
+      dir:d('כיוון הבורג ופאת העמוד שאליה מתחברים', '?', 'pending', 'לא ברור מהשרטוט'),
+      qty:d('כמות לגובה', '2 צלבים (עד H 3000)', 'provisional', 'MFR p.33: "Up to H 3000 mm = 2 braces, in height" – פרשנות: 2 צלבים זה מעל זה'),
+      every:d('תדירות', 'כל 8 שדות + רגלי עיגון 8723874', 'verified', 'MFR p.33'),
+      ends:d('גובהי נקודות החיבור (מ"מ)', [150, 1000, 1850], 'pending', 'ערך מקום'),
+      set:d('תכולת סט 33510010', '?', 'pending', 'LOC p.68 – ללא פירוט') },
+    note:'מדיניות HISTORGIC: חובה בכל מערכת, נכלל ב־BOM ובתמחור. שיוך 33510010 ל־8717540 לא הוכח.' },
+  footA:{ he:'רגל עם עיגון', sku:'33520550', status:'provisional', temp:true, dims:{
+      plate:d('פלטה', '50 × 76', 'verified', 'MFR 8723874 p.21'), H:d('גובה', 25, 'verified', 'MFR p.21'), bolts:d('עיגון', '2 ברגים + בורג קידוח', 'verified', 'MFR p.21'),
+      axis:d('יישור: ציר הרגל = ציר העמוד, העמוד בתוך תושבת U', 'מיושר', 'provisional', 'MFR p.21 – שרטוט'),
+      holes:d('מיקום חורי העיגון (מ"מ ממרכז)', '±31 בעומק', 'pending', 'לא מסומן'), tp:d('עובי פלטה', 3, 'pending', 'לא מסומן') },
+    note:'חובה כאן: H/P = 2000/400 = 5 > 4 (MFR p.21). שיוך 33520550 ↔ 8723874 לא הוכח.' },
+  footP:{ he:'רגל פלסטיק', sku:'33520560', status:'provisional', dims:{ size:d('מידות', '35 × 54 × 6', 'verified', 'MFR 2192 p.21 (שיוך לא מאומת)') }, note:'לא בשימוש בהרכבה הזו (נדרש עיגון).' },
 };
-// ---- ValidationRule ----
 const RULES = [
-  { id:'R1', he:'עיגון לרצפה כשהיחס H:P גדול מ־4:1', src:'MFR p.21 (2A01-5), foot 8723874', status:'verified', test:(a) => a.H / a.P > 4, result:(a) => `H/P = ${a.H}/${a.P} = ${(a.H / a.P).toFixed(1)} → רגלי עיגון` },
-  { id:'R2', he:'סט אלכסוני ייצוב בכל מערכת', src:'HISTORGIC product policy (not a manufacturer requirement)', status:'policy', test:() => true, result:() => 'נכלל' },
-  { id:'R3', he:'קיבולת מסגרת לפי מרווח מדפים ומספר שדות', src:'MFR p.24', status:'requires_review', test:() => null, result:() => 'לא הוחל – דורש בדיקה' },
-  { id:'R4', he:'עומס מדף – עומס מפולג אחיד, שקיעה ≤ 1/200', src:'MFR p.42; LOC p.66 (105 ק"ג)', status:'verified', test:() => true, result:() => '105 ק"ג למדף (עומס מפולג)' },
+  { id:'R1', he:'עיגון לרצפה כשהיחס H:P גדול מ־4:1', src:'MFR p.21', status:'verified', result:(a) => `H/P = ${a.H}/${a.P} = ${(a.H / a.P).toFixed(1)} → רגלי עיגון` },
+  { id:'R2', he:'אלכסוני ייצוב בכל מערכת', src:'מדיניות HISTORGIC', status:'policy', result:() => 'נכלל – חובה' },
+  { id:'R3', he:'צלבי יצרן: עד H 3000 – 2 לגובה, כל 8 שדות, עם רגלי עיגון', src:'MFR p.33', status:'provisional', result:() => '2 צלבים לשדה הבודד (פרשנות)' },
+  { id:'R4', he:'מדף על צעד החריצים (25 מ"מ)', src:'MFR p.18', status:'provisional', result:(a, chk) => chk.every(c => c.ok) ? 'כל המיקומים על הצעד' : 'יש התנגשות – ראו טבלה' },
+  { id:'R5', he:'קיבולת מסגרת / עומס לתצורה', src:'MFR p.24, p.42', status:'pending', result:() => 'לא מוצג – אין אישור הנדסי' },
+  { id:'R6', he:'מוט חיבור עליון 8742435 רק במסגרות עם צלב', src:'MFR p.33', status:'pending', result:() => 'לא נכלל – רלוונטיות לשדה בודד לבירור' },
 ];
 const UNKNOWN = [
-  'הקליפ: אין שרטוט בעמוד 47 של היצרן (העמוד ריק מתחת לכותרת) – רק איור בקטלוג המקומי. מידות, עובי וצורת ה"לשון" שנכנסת לחריץ – PENDING VERIFICATION.',
-  'האם הקליפים כלולים במדף המקומי 33530400 (כמו "4 clips included" אצל היצרן), או נמכרים בנפרד כ־33530020? משפיע על ה־BOM.',
-  'כיוון העמוד: הצד הפתוח של החתך (פנימה/החוצה) ועל אילו פאות יש חריצים – השרטוט מראה חתך ופאה אחת.',
-  'מספר הקושרות לכל מסגרת בגובה 200 (המקור נותן ספירה רק מ־2750 ומעלה) ומיקום הקושרת העליונה.',
-  'נקודות החיבור של האלכסונים, מידות הרצועה, והאם סט 33510010 = צלב 8717540 של היצרן.',
-  'מספר המדפים וגובהם בהרכבת הייחוס (נבחר: 5 מדפים, צעד 25 מ"מ) – החלטת תצורה, לא מהמקור.',
-  'עובי פח, רוחב החריץ, מיקום עמודות החריצים, וקפל התחתון של שולי המדף – לא מוצגים במידות.',
+  'עמוד: כיוון החתך (גב החוצה או פנימה), ובאיזו פאה נמצאים החריצים. הקריאה "חריצים בתוך החריצים המקופלים" היא פרשנות של השרטוט.',
+  'עמוד: עובי פח, רוחב חריץ, ומרחק החריץ הראשון מתחתית העמוד.',
+  'מדף: האם 970 הוא אורך המדף או מידת מודול. משפיע על המרווח לעמוד ועל מקום הקליפ.',
+  'קליפ: צורה ומידות (אין שרטוט ב־MFR p.47), ואם 4 הקליפים כלולים במק"ט המדף 33530400.',
+  'אלכסון: מה כלול בסט 33510010, אם הוא זהה לצלב 8717540, כיוון הבורג, נקודות החיבור והכמות (1 או 2 צלבים לגובה 2000).',
+  'קושרת: כמה לכל מסגרת בגובה 2000, ובאילו גבהים.',
+  'רגל עיגון: מיקום החורים ועובי הפלטה.',
+  'מוט החיבור העליון 8742435: נדרש גם בשדה בודד?',
 ];
 
 // ======================================================================================================
 // GEOMETRY – millimetres, Y up, X = width (along the shelf), Z = depth (+Z = front)
 // ======================================================================================================
-const COL = { status:false };
+const V = (k) => PC[k.split('.')[0]].dims[k.split('.')[1]].v;
+const COMP_COL = { upright:0x6f8fb8, shelf:0xe9e4d8, clip:0xffb020, tie:0x39b98a, brace:0xe0605a, footA:0xa77ee8, footP:0x666 };
+const STATUS_COL = { verified:0x3cb371, provisional:0xf0b429, pending:0xe25543, policy:0x5c7cfa };
 const MAT = {
-  paint: new THREE.MeshStandardMaterial({ color:0xd7dadc, roughness:0.55, metalness:0.25 }),         // RAL 7035-like painted steel
-  galv:  new THREE.MeshStandardMaterial({ color:0xb9c0c6, roughness:0.35, metalness:0.85 }),
-  dark:  new THREE.MeshStandardMaterial({ color:0x2a2f33, roughness:0.7 }),
+  paint: new THREE.MeshStandardMaterial({ color:0xc9cdd1, roughness:0.5, metalness:0.2 }),          // RAL 7035-like painted steel
+  shelf: new THREE.MeshStandardMaterial({ color:0xd6d2c9, roughness:0.6, metalness:0.1 }),
+  galv:  new THREE.MeshStandardMaterial({ color:0xbfc7ce, roughness:0.35, metalness:0.6 }),
+  dark:  new THREE.MeshStandardMaterial({ color:0x24292e, roughness:0.6, metalness:0.3 }),
+  slot:  new THREE.MeshBasicMaterial({ color:0x0b0d0f }),
 };
-const STATUS_MAT = { verified:new THREE.MeshStandardMaterial({ color:0x3cb371, roughness:.6 }), provisional:new THREE.MeshStandardMaterial({ color:0xf0b429, roughness:.6 }),
-  pending:new THREE.MeshStandardMaterial({ color:0xe25543, roughness:.6 }), policy:new THREE.MeshStandardMaterial({ color:0x5c7cfa, roughness:.6 }) };
-const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-// a perforated face: alpha texture one pitch high, repeated
-function slotTex() {
-  const d = PC.upright.dims, P = d.pitch.v, W = d.P.v, S = 6, c = document.createElement('canvas'); c.width = W * S; c.height = P * S;
-  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#000';
-  for (const cx of d.cols.v) { x.beginPath(); x.roundRect((cx - d.slotW.v / 2) * S, ((P - d.slot.v) / 2) * S, d.slotW.v * S, d.slot.v * S, d.slotW.v / 2 * S); x.fill(); }
-  const t = new THREE.CanvasTexture(c); t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.NoColorSpace; return t;
+const EDGE = new THREE.LineBasicMaterial({ color:0x14181c, transparent:true, opacity:0.55 });
+function mesh(geo, mat, edges = true) { const m = new THREE.Mesh(geo, mat); m.castShadow = m.receiveShadow = true; if (edges) { const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), EDGE); e.userData.edge = true; m.add(e); } return m; }
+const box = (w, h, dd, m, e) => mesh(new THREE.BoxGeometry(w, h, dd), m, e);
+// a sheet of thickness t along an open centre-line (x, z) – mitred offset both sides
+function sheetShape(pts, t) {
+  const n = pts.length, A = [], B = [], nrm = (u, v) => { const dx = v[0] - u[0], dz = v[1] - u[1], l = Math.hypot(dx, dz) || 1; return [-dz / l, dx / l]; };
+  for (let i = 0; i < n; i++) {
+    const p = pts[i]; let nx, nz;
+    if (i === 0) [nx, nz] = nrm(p, pts[1]); else if (i === n - 1) [nx, nz] = nrm(pts[i - 1], p);
+    else { const a = nrm(pts[i - 1], p), b = nrm(p, pts[i + 1]); let mx = a[0] + b[0], mz = a[1] + b[1]; const ml = Math.hypot(mx, mz) || 1; mx /= ml; mz /= ml; const k = 1 / Math.max(0.35, mx * a[0] + mz * a[1]); nx = mx * k; nz = mz * k; }
+    A.push([p[0] + nx * t / 2, -(p[1] + nz * t / 2)]); B.push([p[0] - nx * t / 2, -(p[1] - nz * t / 2)]);           // shape y = -z (see the rotation below)
+  }
+  const s = new THREE.Shape(); s.moveTo(...A[0]); A.slice(1).forEach(q => s.lineTo(...q)); B.reverse().forEach(q => s.lineTo(...q)); s.closePath(); return s;
 }
-const TEX = slotTex();
-// UPRIGHT: an open C – a 28 mm web and two 49 mm slotted flanges with inward lips (corrugation simplified)
+// ---------- UPRIGHT (status: pending) – the section of MFR p.18: a U, two V grooves in each 49 mm wall, folded lips at the open side ----------
+// local: centred on its axis, web (closed side) at -Z, open side at +Z, bottom at y = 0
+function uprightSection() {
+  const L = V('upright.L'), P = V('upright.P'), t = V('upright.t'), c = L / 2 - t / 2, zw = -P / 2 + t / 2, zo = P / 2 - t / 2, nd = 2.5, lip = c - 3;
+  const [g1, g2] = V('upright.grooves').map(g => -P / 2 + g);
+  const side = [[-lip, zo - 8], [-lip, zo], [-c, zo], [-c, g2 + 3], [-(c - nd), g2], [-c, g2 - 3], [-c, g1 + 3], [-(c - nd), g1], [-c, g1 - 3], [-c, zw]];
+  const web = [[-4, zw], [-2, zw + 1.5], [2, zw + 1.5], [4, zw]];
+  return { pts:[...side, ...web, ...side.slice().reverse().map(([x, z]) => [-x, z])], grooves:[g1, g2], apex:c - nd };
+}
 function buildUpright(H) {
-  const d = PC.upright.dims, L = d.L.v, P = d.P.v, t = d.t.v, g = new THREE.Group();
-  const tx = TEX.clone(); tx.needsUpdate = true; tx.repeat.set(1, H / d.pitch.v);
-  const fm = new THREE.MeshStandardMaterial({ color:MAT.paint.color, roughness:.55, metalness:.25, alphaMap:tx, alphaTest:.5, side:THREE.DoubleSide });
-  const fl = (sx) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(P, H), fm); m.rotation.y = Math.PI / 2; m.position.set(sx * (L / 2 - t / 2), H / 2, 0); return m; };
-  g.add(fl(-1), fl(1));
-  const web = box(L, H, t, MAT.paint); web.position.set(0, H / 2, -P / 2 + t / 2); g.add(web);            // the closed side (back of the C)
-  for (const sx of [-1, 1]) { const lip = box(6, H, t, MAT.paint); lip.position.set(sx * (L / 2 - 3), H / 2, P / 2 - t / 2); g.add(lip); }
-  g.userData.comp = 'upright'; return g;
+  const sec = uprightSection(), t = V('upright.t'), g = new THREE.Group();
+  const geo = new THREE.ExtrudeGeometry(sheetShape(sec.pts, t), { depth:H, bevelEnabled:false, curveSegments:1 }); geo.rotateX(-Math.PI / 2);
+  g.add(mesh(geo, MAT.paint));
+  // the slots: 16 long, 9 apart (pitch 25), in both grooves of both 49 mm walls
+  const p = V('upright.pitch'), s0 = V('upright.slot0'), n = Math.floor((H - s0 - 8) / p) + 1;
+  const im = new THREE.InstancedMesh(new THREE.BoxGeometry(t + 0.8, V('upright.slot'), V('upright.slotW')), MAT.slot, 4 * n), m = new THREE.Matrix4(); let i = 0;
+  for (const sx of [-1, 1]) for (const z of sec.grooves) for (let k = 0; k < n; k++) { m.makeTranslation(sx * sec.apex, s0 + k * p, z); im.setMatrixAt(i++, m); }
+  im.userData.noTint = true; g.add(im);
+  g.userData = { comp:'upright', grooves:sec.grooves }; return g;
 }
-// SHELF N: top sheet, 33 mm edges on all four sides, a short return under the edge; reinforcement ribs if any
-function buildShelf(ribs = 0) {
-  const d = PC.shelf.dims, L = d.L.v, P = d.P.v, e = d.edge.v, t = d.t.v, r = d.ret.v, g = new THREE.Group();
-  const top = box(L, t, P, MAT.paint); top.position.y = -t / 2; g.add(top);
-  for (const sz of [-1, 1]) { const f = box(L, e, t, MAT.paint); f.position.set(0, -e / 2, sz * (P / 2 - t / 2)); g.add(f);
-    const rt = box(L - 2 * r, t, r, MAT.paint); rt.position.set(0, -e + t / 2, sz * (P / 2 - r / 2)); g.add(rt); }
-  for (const sx of [-1, 1]) { const f = box(t, e, P, MAT.paint); f.position.set(sx * (L / 2 - t / 2), -e / 2, 0); g.add(f); }
-  for (let i = 1; i <= ribs; i++) { const rib = box(L - 4, 20, 30, MAT.paint); rib.position.set(0, -10, -P / 2 + P * i / (ribs + 1)); g.add(rib); }
+const slotY = (k) => V('footA.tp') + V('upright.slot0') + k * V('upright.pitch');                 // world height of slot k's centre
+const slotK = (y) => Math.round((y - V('footA.tp') - V('upright.slot0')) / V('upright.pitch'));
+// ---------- SHELF N: top at y = 0, 33 mm edges, return under the long edges ----------
+function buildShelf() {
+  const L = V('shelf.L'), P = V('shelf.P'), e = V('shelf.edge'), t = V('shelf.t'), r = V('shelf.ret'), g = new THREE.Group();
+  const top = box(L, t, P, MAT.shelf); top.position.y = -t / 2; g.add(top);
+  for (const sz of [-1, 1]) { const f = box(L, e, t, MAT.shelf); f.position.set(0, -e / 2, sz * (P / 2 - t / 2)); g.add(f);
+    const rt = box(L - 2 * r, t, r, MAT.shelf); rt.position.set(0, -e + t / 2, sz * (P / 2 - r / 2)); g.add(rt); }
+  for (const sx of [-1, 1]) { const f = box(t, e, P, MAT.shelf); f.position.set(sx * (L / 2 - t / 2), -e / 2, 0); g.add(f); }
   g.userData.comp = 'shelf'; return g;
 }
-// CLIP (PENDING VERIFICATION): a J-hook – back plate with a tongue into the slot, a cup that takes the shelf edge
-function buildClip() {
-  const s = new THREE.Shape(); const w = 18;                                        // side profile (Z,Y), extruded along X
-  s.moveTo(0, 0); s.lineTo(2, 0); s.lineTo(2, 40); s.lineTo(0, 40); s.lineTo(0, 0);
-  const cup = new THREE.Shape(); cup.moveTo(2, 4); cup.lineTo(14, 4); cup.lineTo(14, 22); cup.lineTo(12, 22); cup.lineTo(12, 6); cup.lineTo(2, 6);
-  const tongue = new THREE.Shape(); tongue.moveTo(-6, 30); tongue.lineTo(0, 30); tongue.lineTo(0, 32); tongue.lineTo(-4, 32); tongue.lineTo(-4, 38); tongue.lineTo(-6, 38);
-  const g = new THREE.Group();
-  for (const sh of [s, cup, tongue]) { const m = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth:w, bevelEnabled:false }), MAT.galv); m.rotation.y = -Math.PI / 2; m.position.x = w / 2; g.add(m); }
-  g.userData.comp = 'clip'; return g;
-}
-// SIDE TIE: an L angle across the frame with bent end tabs
-function buildTie(P) {
-  const g = new THREE.Group(), a = box(1.5, 30, P - 10, MAT.paint), b = box(20, 1.5, P - 10, MAT.paint);
-  a.position.y = 15; b.position.set(10, 0.75, 0); g.add(a, b);
-  for (const sz of [-1, 1]) { const tab = box(1.5, 40, 20, MAT.paint); tab.position.set(0, 10, sz * (P / 2 - 10)); g.add(tab); }
-  g.userData.comp = 'tie'; return g;
-}
-// DIAGONAL STRAP between two points (in the X–Y plane)
-function buildStrap(x0, y0, x1, y1) {
-  const len = Math.hypot(x1 - x0, y1 - y0), m = box(len, 25, 1.5, MAT.galv);
-  const g = new THREE.Group(); m.rotation.z = Math.atan2(y1 - y0, x1 - x0); g.add(m); g.position.set((x0 + x1) / 2, (y0 + y1) / 2, 0);
-  for (const [x, y] of [[x0, y0], [x1, y1]]) { const bolt = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 6, 16), MAT.dark); bolt.rotation.x = Math.PI / 2; bolt.position.set(x - g.position.x, y - g.position.y, 0); g.add(bolt); }
-  g.userData.comp = 'brace'; return g;
-}
-// ANCHOR FOOT: 50 × 76 plate, a U bracket round the upright, two bolt holes + a drive screw
-function buildFootA() {
-  const g = new THREE.Group(), pl = box(50, 3, 76, MAT.galv); pl.position.y = 1.5; g.add(pl);
-  for (const sx of [-1, 1]) { const w = box(1.5, 25, 49, MAT.galv); w.position.set(sx * 15, 12.5, 0); g.add(w); }
-  for (const sz of [-1, 1]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 6, 16), MAT.dark); b.position.set(0, 4, sz * 31); g.add(b); }
-  g.userData.comp = 'footA'; return g;
-}
-function buildFootP() { const g = new THREE.Group(), b = box(35, 6, 54, MAT.dark); b.position.y = 3; g.add(b); const k = box(20, 8, 30, MAT.dark); k.position.y = 10; g.add(k); g.userData.comp = 'footP'; return g; }
 
 // ======================================================================================================
-// ASSEMBLY – AssemblyInstance graph: every part an instance with an ID, its parent, its SKU and where it sits
+// MODULES – temporary components behind a fixed interface: build() in a local frame + named ports.
+// The assembly only ever uses the ports, so new geometry can replace build() without touching the assembly.
+// Local frame of every wall-mounted module: origin = its port on the upright face, +X = away from the upright, Y up.
 // ======================================================================================================
-const CFG = { W:970, P:400, H:2000, shelves:[150, 600, 1050, 1500, 1950], ribs:0 };      // shelf heights: configuration choice, snapped to the 25 mm pitch
+const MODULES = {
+  clip:{ status:'pending', ports:{ slot:[0, 0, 0], seat:[V('clip.plate'), -38.5, 0] },           // seat = where the shelf's end flange rests
+    build() { const g = new THREE.Group(), pl = V('clip.plate'), W = 18;
+      const plate = box(pl, 48, W, MAT.galv); plate.position.set(pl / 2, -16, 0);
+      const tongue = box(5, 3, 3.5, MAT.galv); tongue.position.set(-2.5, 2, 0);                   // into the slot …
+      const hook = box(1.5, 6, 3.5, MAT.galv); hook.position.set(-4.25, -0.5, 0);                // … and down behind the wall
+      const ledge = box(12, 1.5, W, MAT.galv); ledge.position.set(pl + 6, -39.25, 0);
+      const lip = box(1.5, 7, W, MAT.galv); lip.position.set(pl + 11.25, -35, 0);
+      g.add(plate, tongue, hook, ledge, lip); g.userData.comp = 'clip'; return g; } },
+  tie:{ status:'provisional', ports:{ hookF:[0, 0, 1], hookB:[0, 0, -1] },                           // z scaled by the groove offset at build time
+    build(P, zh) { const g = new THREE.Group(), len = P - 4;
+      const web = box(1.5, 30, len, MAT.paint); web.position.set(2.25, -17, 0);
+      const fl = box(20, 1.5, len, MAT.paint); fl.position.set(12, -31.25, 0);
+      for (const sz of [-1, 1]) { const end = box(1.5, 40, 22, MAT.paint); end.position.set(1.5, -14, sz * zh);
+        const h1 = box(4, 3, 3.5, MAT.paint); h1.position.set(-1.25, 2, sz * zh); const h2 = box(1.5, 6, 3.5, MAT.paint); h2.position.set(-3.25, -0.5, sz * zh); g.add(end, h1, h2); }
+      g.add(web, fl); g.userData.comp = 'tie'; return g; } },
+  brace:{ status:'provisional', ports:{ bolt0:'a', bolt1:'b' },
+    build(a, b) {                                                                                    // a, b = bolt points (x, y) in the back plane
+      const g = new THREE.Group(), len = Math.hypot(b[0] - a[0], b[1] - a[1]), [w, t] = [50, 1.5];
+      const s = box(len + 40, w, t, MAT.galv); s.rotation.z = Math.atan2(b[1] - a[1], b[0] - a[0]); g.add(s);
+      g.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0);
+      for (const [x, y] of [a, b]) { const bolt = mesh(new THREE.CylinderGeometry(6.5, 6.5, 6, 6), MAT.dark); bolt.rotation.x = Math.PI / 2; bolt.position.set(x - g.position.x, y - g.position.y, -3); g.add(bolt); }
+      g.userData.comp = 'brace'; return g; } },
+  footA:{ status:'provisional', ports:{ upright:[0, 3, 0], anchor0:[0, 0, 31], anchor1:[0, 0, -31] },
+    build() { const g = new THREE.Group(), tp = V('footA.tp'), pl = box(50, tp, 76, MAT.galv); pl.position.y = tp / 2; g.add(pl);
+      for (const sx of [-1, 1]) { const w = box(1.5, 25 - tp, 46, MAT.galv); w.position.set(sx * (V('upright.L') / 2 + 0.9), tp + (25 - tp) / 2, 0); g.add(w); }
+      for (const sz of [-1, 1]) { const b = mesh(new THREE.CylinderGeometry(6, 6, 5, 6), MAT.dark); b.position.set(0, tp + 2.5, sz * 31); g.add(b); }
+      g.userData.comp = 'footA'; return g; } },
+  footP:{ status:'provisional', ports:{}, build() { const g = new THREE.Group(), b = box(35, 6, 54, MAT.dark); b.position.y = 3; g.add(b); g.userData.comp = 'footP'; return g; } },
+};
+
+// ======================================================================================================
+// ASSEMBLY – every part an instance (ID, parent, SKU) placed through the module ports
+// ======================================================================================================
+const CFG = { W:970, P:400, H:2000, shelfTargets:[150, 600, 1050, 1500, 1950], tieTargets:V('tie.y') };   // shelf heights: demo only, snapped to the slots
 function assemble(c = CFG) {
-  const root = new THREE.Group(), inst = [], d = PC.upright.dims;
-  const ux = c.W / 2 + d.plan.v / 2, uz = c.P / 2 - d.P.v / 2;                     // upright centres: outside the shelf ends, inside the frame depth
+  const root = new THREE.Group(), inst = [], joints = {}, L = V('upright.L'), P49 = V('upright.P'), base = V('footA.tp');
+  const ux = c.W / 2 + V('clip.plate') + L / 2;                  // inner face of the upright = shelf end + clip plate (970 taken as shelf length – pending)
+  const uz = c.P / 2 - P49 / 2;
   const add = (obj, comp, parent, explode, extra = {}) => { const id = comp + '-' + (inst.filter(i => i.comp === comp).length + 1);
     obj.userData = { ...obj.userData, iid:id, comp, base:obj.position.clone(), explode:explode || new THREE.Vector3() };
-    obj.traverse(o => { if (o.isMesh) o.userData.iid = id; }); inst.push({ id, comp, sku:PC[comp].sku, parent, ...extra }); root.add(obj); return id; };
-  const ups = [];
+    obj.traverse(o => { o.userData.iid = id; }); inst.push({ id, comp, sku:PC[comp].sku, parent, ...extra }); root.add(obj); return id; };
+  // uprights + anchor feet (feet first: the upright stands on the foot's port)
+  const U = {};
   for (const [sx, sz, nm] of [[-1, 1, 'FL'], [-1, -1, 'BL'], [1, 1, 'FR'], [1, -1, 'BR']]) {
-    const u = buildUpright(c.H); u.position.set(sx * ux, 25, sz * uz); if (sz < 0) u.rotation.y = Math.PI;          // web outward
-    ups.push(add(u, 'upright', 'frame-' + (sx < 0 ? 'L' : 'R'), new THREE.Vector3(sx * 260, 0, sz * 160), { at:nm }));
-    const f = buildFootA(); f.position.set(sx * ux, 0, sz * uz); add(f, 'footA', ups.at(-1), new THREE.Vector3(sx * 260, -140, sz * 160), { at:nm });
+    const f = MODULES.footA.build(); f.position.set(sx * ux, 0, sz * uz);
+    const u = buildUpright(c.H); u.position.set(sx * ux, base, sz * uz); if (sz > 0) u.rotation.y = Math.PI;   // web outward (orientation pending)
+    const uid = add(u, 'upright', 'frame-' + (sx < 0 ? 'L' : 'R'), new THREE.Vector3(sx * 260, 0, sz * 160), { at:nm });
+    add(f, 'footA', uid, new THREE.Vector3(sx * 260, -160, sz * 160), { at:nm });
+    // the two groove planes of this upright in world z (local z flips when the upright is turned)
+    U[nm] = { x:sx * ux, z:sz * uz, id:uid, grooves:u.userData.grooves.map(g => sz * uz + (sz > 0 ? -g : g)) };
   }
-  for (const sx of [-1, 1]) for (const y of PC.tie.dims.y.v) { const t = buildTie(c.P); t.position.set(sx * (ux + 16), y + 25, 0); if (sx > 0) t.rotation.y = Math.PI; add(t, 'tie', 'frame-' + (sx < 0 ? 'L' : 'R'), new THREE.Vector3(sx * 420, 0, 0), { y }); }
-  const [y0, y1] = PC.brace.dims.ends.v, bz = -c.P / 2 - 2;
-  for (const [a, b] of [[-1, 1], [1, -1]]) { const s = buildStrap(a * ux, y0 + 25, b * ux, y1 + 25); s.position.z = bz; add(s, 'brace', 'back-plane', new THREE.Vector3(0, 0, -320)); }
-  c.shelves.forEach((y, i) => {
-    const sh = buildShelf(c.ribs); sh.position.set(0, y + 25, 0); const sid = add(sh, 'shelf', 'bay-1', new THREE.Vector3(0, 0, 360 + i * 0), { level:i + 1, y });
-    for (const [sx, sz] of [[-1, 1], [-1, -1], [1, 1], [1, -1]]) { const cl = buildClip(); cl.position.set(sx * (c.W / 2 + 1), y + 25 - 34, sz * (c.P / 2 - 40)); cl.rotation.y = sx < 0 ? 0 : Math.PI;
-      add(cl, 'clip', sid, new THREE.Vector3(sx * 140, 0, 360)); }
+  joints.foot = { p:new THREE.Vector3(ux, base, uz), id:inst.find(i => i.comp === 'footA' && i.at === 'FR').id };
+  // side ties: on the outer 49 face of each side frame, hooks in the groove nearer each end
+  const ties = [];
+  for (const sx of [-1, 1]) for (const ty of c.tieTargets) {
+    const k = slotK(ty), y = slotY(k), F = U[sx < 0 ? 'FL' : 'FR'], zh = Math.max(...F.grooves.map(Math.abs));
+    const t = MODULES.tie.build(c.P, zh); t.position.set(sx * (ux + L / 2), y, 0); if (sx < 0) t.rotation.y = Math.PI;
+    const id = add(t, 'tie', 'frame-' + (sx < 0 ? 'L' : 'R'), new THREE.Vector3(sx * 380, 0, 0), { y, k });
+    ties.push({ id, y, k, side:sx }); if (sx > 0 && !joints.tie) joints.tie = { p:new THREE.Vector3(ux + L / 2, y, zh), id, k, y };
+  }
+  // bracing crosses (mandatory): back plane, bolt points at the given heights; 2 crosses stacked (manufacturer, interpretation)
+  const ends = V('brace.ends'), bz = -(uz + P49 / 2) - 1, braces = [];
+  for (let j = 0; j + 1 < ends.length; j++) for (const [a, b] of [[-1, 1], [1, -1]]) {
+    const s = MODULES.brace.build([a * ux, ends[j] + base], [b * ux, ends[j + 1] + base]); s.position.z = bz;
+    const id = add(s, 'brace', 'back-plane', new THREE.Vector3(0, 0, -300), { cross:j + 1 }); braces.push(id);
+  }
+  joints.brace = { p:new THREE.Vector3(ux, ends[1] + base, bz), id:braces[0] };
+  // shelves on clips: each clip's slot port in a slot, the shelf's end flange on the clips' seats
+  const shelves = [], seat = MODULES.clip.ports.seat;
+  c.shelfTargets.forEach((target, i) => {
+    const k = slotK(target + 38.5 - 33), y = slotY(k), top = y + seat[1] + V('shelf.edge');
+    const sh = buildShelf(); sh.position.set(0, top, 0); const sid = add(sh, 'shelf', 'bay-1', new THREE.Vector3(0, 0, 380), { level:i + 1, y:top, k });
+    for (const nm of ['FL', 'BL', 'FR', 'BR']) {
+      const Up = U[nm], sx = Math.sign(Up.x), gz = Up.grooves.reduce((m, z) => Math.abs(z) < Math.abs(m) ? z : m);       // the groove nearer the bay centre
+      const cl = MODULES.clip.build(); cl.position.set(sx * (ux - L / 2), y, gz); if (sx > 0) cl.rotation.y = Math.PI;
+      const cid = add(cl, 'clip', sid, new THREE.Vector3(sx * 120, 0, 380), { k });
+      if (i === 2 && nm === 'FR') joints.clip = { p:new THREE.Vector3(ux - L / 2, y, gz), id:cid, sid, k, top };
+    }
+    shelves.push({ id:sid, target, k, slot:y, top, clipBottom:y - 40, clipTop:y + 8 });
   });
-  return { root, inst };
+  // mounting checks: on the pitch, above the foot bracket, below the upright top, no clash with a tie on the same slot row (other face – noted)
+  const chk = shelves.map(s => ({ ...s, ok:s.clipBottom > base + 25 && s.clipTop < base + c.H, why:s.clipBottom <= base + 25 ? 'מתנגש בתושבת הרגל' : s.clipTop >= base + c.H ? 'מעל ראש העמוד' : '' }));
+  return { root, inst, joints, chk, ties, U, ux, uz };
 }
-// BOM: physical quantities from the instances; commercial quantities only where packaging is evidenced
+// BOM – physical quantities from the instances; commercial quantities only where packaging is evidenced
 function bom(inst) {
   const q = {}; for (const i of inst) q[i.comp] = (q[i.comp] || 0) + 1;
   return Object.entries(q).map(([comp, n]) => { const p = PC[comp], s = SKU[p.sku];
     let buy = n, note = '';
-    if (comp === 'clip') { buy = null; note = 'לבירור: כלולים במדף (4 למדף אצל היצרן) או נמכרים בנפרד'; }
-    if (comp === 'tie') note = '2 לכל מסגרת צד – לבירור';
-    if (comp === 'brace') { buy = 1; note = 'סט אחד לשדה בודד (מדיניות HISTORGIC); מספר הרצועות בסט – לבירור'; }
-    return { comp, he:p.he, sku:p.sku, skuHe:s ? s.he : '', mfr:s ? s.mfr : '', map:s ? s.map : '', n, buy, note, status:p.status }; });
+    if (comp === 'clip') { buy = null; note = '4 למדף (נתון יצרן). כלולים במדף או נמכרים בנפרד – לבירור'; }
+    if (comp === 'tie') note = '2 למסגרת – זמני, לאימות';
+    if (comp === 'brace') { buy = null; note = `חובה. ${n} רצועות = ${n / 2} צלבים (פרשנות MFR p.33). כמות סטים 33510010 – לבירור`; }
+    return { comp, he:p.he, sku:p.sku, mfr:s ? s.mfr : '', map:s ? s.map : '', n, buy, note, status:p.status, must:!!p.must, price:s ? s.price : null }; });
 }
 
 // ======================================================================================================
-// VIEWER
+// VIEWER – dark studio background, key + fill + rim lights, outlines, colour by material / component / status
 // ======================================================================================================
 const cv = document.getElementById('c'), renderer = new THREE.WebGLRenderer({ canvas:cv, antialias:true, preserveDrawingBuffer:true });
-renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.shadowMap.enabled = true;
-const scene = new THREE.Scene(); scene.background = new THREE.Color('#eef0f1');
+renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#2a2f35'); scene.fog = new THREE.Fog('#2a2f35', 9000, 22000);
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(renderer), 0.04).texture;
-const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(1500, 3000, 2200); scene.add(sun, new THREE.HemisphereLight(0xffffff, 0xd0d4d8, 0.6));
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshStandardMaterial({ color:0xe3e1dc, roughness:.95 })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
+const key = new THREE.DirectionalLight(0xfff4e6, 2.2); key.position.set(-1800, 3200, 2600); key.castShadow = true;
+Object.assign(key.shadow.camera, { left:-1600, right:1600, top:2600, bottom:-600, near:100, far:9000 }); key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0004;
+const fill = new THREE.DirectionalLight(0xdfe8ff, 0.55); fill.position.set(2600, 1200, 1800);
+const rim = new THREE.DirectionalLight(0xffffff, 1.6); rim.position.set(600, 2400, -3200);
+scene.add(key, fill, rim, new THREE.HemisphereLight(0xdde4ea, 0x30353b, 0.45));
+const floor = new THREE.Mesh(new THREE.CircleGeometry(6000, 64), new THREE.MeshStandardMaterial({ color:0x3a4047, roughness:0.9 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+const grid = new THREE.GridHelper(4000, 40, 0x4a525b, 0x40474f); grid.position.y = 0.5; scene.add(grid);
 const camera = new THREE.PerspectiveCamera(30, 1, 5, 40000), controls = new OrbitControls(camera, cv); controls.enableDamping = true;
-let A = null, VIEW = 'assembly', SEL = null;
+let A = null, VIEW = 'assembly', SEL = null, MODE = 'material', LABELS = true, CLOSE = null, JX = false;
 const stage = new THREE.Group(); scene.add(stage);
 function resize() { const r = cv.parentElement.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize);
 function frame(obj, dir = [1, 0.55, 1.25], pad = 1.25) {
   const b = new THREE.Box3().setFromObject(obj), c = b.getCenter(new THREE.Vector3()), s = b.getSize(new THREE.Vector3()), r = s.length() / 2;
   const dist = r * pad / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)), v = new THREE.Vector3(...dir).normalize();
-  camera.position.copy(c).addScaledVector(v, dist); controls.target.copy(c); camera.near = dist / 100; camera.far = dist * 10; camera.updateProjectionMatrix(); controls.update();
+  camera.position.copy(c).addScaledVector(v, dist); controls.target.copy(c); camera.near = dist / 200; camera.far = dist * 20; camera.updateProjectionMatrix(); controls.update();
 }
+// colours: material (realistic, separated), by component, by status; close-ups fade what is not part of the joint
+const TINT = {};
+const tint = (hex) => TINT[hex] || (TINT[hex] = new THREE.MeshStandardMaterial({ color:hex, roughness:0.5, metalness:0.15 }));
 function applyColours() {
-  stage.traverse(o => { if (!o.isMesh) return; if (!o.userData.m0) o.userData.m0 = o.material;
-    const inst = A && A.inst.find(i => i.id === o.userData.iid), comp = inst ? inst.comp : o.parent && o.parent.userData.comp;
-    o.material = COL.status && comp ? STATUS_MAT[PC[comp].status] : o.userData.m0;
-    if (SEL && o.userData.iid === SEL) o.material = new THREE.MeshStandardMaterial({ color:0x1971c2, roughness:.5 }); });
+  const focus = CLOSE ? CLOSES[CLOSE].focus : null;
+  stage.traverse(o => {
+    if (o.userData.edge) { o.visible = !focus || focus.includes(compOf(o)); return; }
+    if (!o.isMesh || o.userData.noTint) return; if (!o.userData.m0) o.userData.m0 = o.material;
+    const comp = compOf(o); let m = o.userData.m0;
+    if (MODE === 'component' && comp) m = tint(COMP_COL[comp]);
+    if (MODE === 'status' && comp) m = tint(STATUS_COL[PC[comp].status]);
+    if (SEL && o.userData.iid === SEL) m = tint(0x1971c2);
+    if (focus && comp === focus[0] && MODE === 'material') m = tint(COMP_COL[comp]);           // the module in the close-up stands out
+    if (focus && !focus.includes(comp)) { m = m.clone(); m.transparent = true; m.opacity = CLOSES[CLOSE].fade[comp] ?? 0.12; m.depthWrite = false; }
+    o.material = m; });
 }
-function show(view, opt = {}) {
-  VIEW = view; stage.clear(); floor.visible = true;
-  if (view === 'assembly' || view === 'exploded') {
-    A = assemble(); stage.add(A.root);
-    if (view === 'exploded') A.root.children.forEach(o => o.position.copy(o.userData.base).add(o.userData.explode));
-    frame(A.root, opt.dir || [1, 0.5, 1.3], opt.pad || 1.0);
-    if (opt.closeup) { const b = new THREE.Box3().setFromObject(A.root); const t = opt.closeup(b); controls.target.copy(t.target); camera.position.copy(t.pos); controls.update(); }
-  } else {
-    const make = { upright:() => buildUpright(400), shelf:() => buildShelf(0), clip:buildClip, tie:() => buildTie(400), brace:() => buildStrap(0, 0, 500, 300), footA:buildFootA, footP:buildFootP }[view];
-    const o = make(); stage.add(o); floor.visible = false; A = null; frame(o, opt.dir || [1, 0.6, 1.2], 1.1);
-  }
-  applyColours(); bar(); side();
-}
-// the 4 inspection views and close-ups
-const VIEWS = {
-  front:{ dir:[0, 0.05, 1] }, side:{ dir:[1, 0.05, 0] }, top:{ dir:[0.0001, 1, 0.0001] }, iso:{ dir:[1, 0.5, 1.3] }, back:{ dir:[-0.6, 0.35, -1] },
-  under:{ dir:[0.8, -0.35, 1.2], pad:0.75 },
-  joint:{ closeup:(b) => ({ target:new THREE.Vector3(b.max.x - 40, 1500 + 25 - 20, 120), pos:new THREE.Vector3(b.max.x + 380, 1640, 520) }) },
-  foot:{ closeup:(b) => ({ target:new THREE.Vector3(b.max.x - 30, 40, b.max.z - 40), pos:new THREE.Vector3(b.max.x + 300, 260, b.max.z + 360) }) },
+function compOf(o) { const inst = A && A.inst.find(i => i.id === o.userData.iid); if (inst) return inst.comp; let p = o; while (p) { if (p.userData && p.userData.comp) return p.userData.comp; p = p.parent; } return null; }
+// ---- close-ups of the three critical joints (+ the foot) ----
+const CLOSES = {
+  clip:{ he:'קליפ ↔ עמוד ↔ מדף', focus:['clip', 'upright', 'shelf'], fade:{ shelf:0.45 }, move:[-1, 0, 0],
+    cam:(j) => ({ t:j.p.clone().add(new THREE.Vector3(-6, -22, 0)), pos:j.p.clone().add(new THREE.Vector3(-230, -120, -70)) }),
+    labels:(j) => [
+      { p:j.p.clone().add(new THREE.Vector3(-1, 1, 0)), st:'pending', t:'לשונית הקליפ → חריץ 16 × 4 · צורה ומידות PENDING' },
+      { p:j.p.clone().add(new THREE.Vector3(-8, -38.5, 0)), st:'pending', t:'מושב המדף (שוליים 33) · PENDING' },
+      { p:j.p.clone().add(new THREE.Vector3(14, 60, 0)), st:'verified', t:'חריצים 16 / 9 · צעד 25 (MFR p.18)' },
+      { p:j.p.clone().add(new THREE.Vector3(-60, 6, -60)), st:'pending', t:'970 = אורך מדף או מודול? · PENDING' } ] },
+  brace:{ he:'אלכסון ↔ עמוד', focus:['brace', 'upright'], fade:{}, move:[0, 0, -1],
+    cam:(j) => ({ t:j.p.clone(), pos:j.p.clone().add(new THREE.Vector3(260, 160, -520)) }),
+    labels:(j) => [
+      { p:j.p.clone().add(new THREE.Vector3(-90, -40, -2)), st:'verified', t:'רצועה 50 × 1.5 מגולוונת (MFR p.33)' },
+      { p:j.p.clone().add(new THREE.Vector3(0, 8, -6)), st:'pending', t:'בורג + אום · כיוון ופאת חיבור PENDING' },
+      { p:j.p.clone().add(new THREE.Vector3(0, 140, 30)), st:'pending', t:'גובה נקודת החיבור · PENDING' },
+      { p:j.p.clone().add(new THREE.Vector3(-200, 220, -2)), st:'policy', t:'חובה בכל מערכת (HISTORGIC)' } ] },
+  tie:{ he:'קושרת ↔ עמוד', focus:['tie', 'upright'], fade:{}, move:[1, 0, 0],
+    cam:(j) => ({ t:j.p.clone().add(new THREE.Vector3(0, -10, -30)), pos:j.p.clone().add(new THREE.Vector3(340, 170, 300)) }),
+    labels:(j) => [
+      { p:j.p.clone().add(new THREE.Vector3(-1, 3, 0)), st:'provisional', t:'וו בקצה → חריץ העמוד (MFR p.21, ללא מידות)' },
+      { p:j.p.clone().add(new THREE.Vector3(14, -32, -120)), st:'pending', t:'חתך L 30 × 20 · PENDING' },
+      { p:j.p.clone().add(new THREE.Vector3(10, 50, -260)), st:'pending', t:'2 למסגרת, גבהים זמניים · PENDING' } ] },
+  foot:{ he:'רגל ↔ עמוד', focus:['footA', 'upright'], fade:{}, move:[0, -1, 0],
+    cam:(j) => ({ t:j.p.clone().add(new THREE.Vector3(0, 20, 0)), pos:j.p.clone().add(new THREE.Vector3(260, 170, 300)) }),
+    labels:(j) => [
+      { p:j.p.clone().add(new THREE.Vector3(0, 26, 0)), st:'provisional', t:'ציר הרגל = ציר העמוד (תושבת U)' },
+      { p:j.p.clone().add(new THREE.Vector3(0, 0, 31)), st:'pending', t:'חור עיגון ±31 · PENDING' },
+      { p:j.p.clone().add(new THREE.Vector3(25, -2, -38)), st:'verified', t:'פלטה 50 × 76, גובה 25 (MFR p.21)' } ] },
 };
+let LBL = []; const lblEl = document.getElementById('lbl');
+function show(view, opt = {}) {
+  VIEW = view; CLOSE = opt.close || null; stage.clear(); LBL = []; lblEl.innerHTML = '';
+  A = assemble(); stage.add(A.root);
+  if (view === 'exploded') A.root.children.forEach(o => o.position.copy(o.userData.base).add(o.userData.explode));
+  if (CLOSE) {
+    const C = CLOSES[CLOSE], j = A.joints[CLOSE], cam = C.cam(j);
+    if (JX) { const part = A.root.children.find(o => o.userData.iid === j.id); if (part) part.position.add(new THREE.Vector3(...C.move).multiplyScalar(35)); }
+    controls.target.copy(cam.t); camera.position.copy(cam.pos); camera.near = 2; camera.far = 20000; camera.updateProjectionMatrix(); controls.update();
+    LBL = C.labels(j);
+  } else frame(A.root, opt.dir || [1, 0.5, 1.3], opt.pad || 1.0);
+  applyColours(); bar(); side(); legend();
+}
+const VIEWS = { front:{ dir:[0, 0.05, 1] }, side:{ dir:[1, 0.05, 0] }, back:{ dir:[-0.6, 0.35, -1] }, iso:{ dir:[1, 0.5, 1.3] }, under:{ dir:[0.8, -0.35, 1.2], pad:0.75 } };
 function bar() {
-  const B = document.getElementById('bar'), on = (v) => (VIEW === v ? 'on' : '');
-  B.innerHTML = `<button data-v="assembly" class="${on('assembly')}">הרכבה</button><button data-v="exploded" class="${on('exploded')}">מפורק</button><span class="sep"></span>
-    ${['front:חזית', 'side:צד', 'top:מלמעלה', 'back:אחור', 'iso:איזומטרי', 'under:מלמטה', 'joint:חיבור מדף', 'foot:רגל'].map(x => { const [k, l] = x.split(':'); return `<button data-cam="${k}">${l}</button>`; }).join('')}
-    <span class="sep"></span><button id="colBtn" class="${COL.status ? 'on' : ''}">צבע לפי סטטוס</button>`;
+  const B = document.getElementById('bar'), on = (c) => (c ? 'on' : '');
+  B.innerHTML = `<button data-v="assembly" class="${on(VIEW === 'assembly' && !CLOSE)}">הרכבה</button><button data-v="exploded" class="${on(VIEW === 'exploded')}">מפורק</button><span class="sep"></span>
+    ${['front:חזית', 'side:צד', 'back:אחור', 'iso:איזומטרי', 'under:מלמטה'].map(x => { const [k, l] = x.split(':'); return `<button data-cam="${k}">${l}</button>`; }).join('')}
+    <span class="sep"></span><span class="lab">תקריב:</span>${Object.entries(CLOSES).map(([k, c]) => `<button data-close="${k}" class="${on(CLOSE === k)}">${c.he}</button>`).join('')}
+    ${CLOSE ? `<button id="jx" class="${on(JX)}">פירוק החיבור</button>` : ''}
+    <span class="sep"></span><span class="lab">צבע:</span>${[['material', 'חומר'], ['component', 'רכיב'], ['status', 'סטטוס']].map(([k, l]) => `<button data-mode="${k}" class="${on(MODE === k)}">${l}</button>`).join('')}
+    <button id="lb" class="${on(LABELS)}">תוויות</button>`;
   B.querySelectorAll('[data-v]').forEach(b => b.onclick = () => show(b.dataset.v));
   B.querySelectorAll('[data-cam]').forEach(b => b.onclick = () => show(VIEW === 'exploded' ? 'exploded' : 'assembly', VIEWS[b.dataset.cam]));
-  B.querySelector('#colBtn').onclick = () => { COL.status = !COL.status; applyColours(); bar(); };
+  B.querySelectorAll('[data-close]').forEach(b => b.onclick = () => { JX = false; show('assembly', { close:b.dataset.close }); });
+  B.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { MODE = b.dataset.mode; applyColours(); bar(); legend(); });
+  const jx = B.querySelector('#jx'); if (jx) jx.onclick = () => { JX = !JX; show('assembly', { close:CLOSE }); };
+  B.querySelector('#lb').onclick = () => { LABELS = !LABELS; bar(); };
 }
-const stTag = (s) => `<span class="st ${s === 'requires_review' ? 'provisional' : s}">${{ verified:'מאומת', provisional:'זמני', pending:'PENDING VERIFICATION', policy:'מדיניות', requires_review:'לבדיקה' }[s] || s}</span>`;
+function legend() {
+  const L = document.getElementById('legend'), hex = (n) => '#' + n.toString(16).padStart(6, '0');
+  const items = MODE === 'component' ? Object.entries(COMP_COL).filter(([k]) => k !== 'footP').map(([k, c]) => [PC[k].he, c])
+    : MODE === 'status' ? [['מאומת', STATUS_COL.verified], ['זמני', STATUS_COL.provisional], ['PENDING', STATUS_COL.pending], ['מדיניות', STATUS_COL.policy]] : [];
+  L.innerHTML = items.map(([t, c]) => `<span><i style="background:${hex(c)}"></i>${t}</span>`).join('');
+}
+const ST_HE = { verified:'מאומת', provisional:'זמני', pending:'PENDING VERIFICATION', policy:'מדיניות' };
+const stTag = (s) => `<span class="st ${s}">${ST_HE[s] || s}</span>`;
+const fmt = (v) => Array.isArray(v) ? v.join(', ') : v;
 function side() {
   const S = document.getElementById('side'), a = A || assemble(), B = bom(a.inst);
-  S.innerHTML = `<h2>רכיבים</h2><div class="legend">${stTag('verified')} ${stTag('provisional')} ${stTag('pending')} ${stTag('policy')}</div>
-    ${Object.entries(PC).map(([k, p]) => `<div class="comp ${VIEW === k ? 'sel' : ''}" data-c="${k}"><b>${p.he}</b> ${stTag(p.status)} <code>${p.sku}</code><p>${p.note}</p>
-      ${VIEW === k ? `<table>${Object.entries(p.dims).map(([n, d]) => `<tr><td><code>${n}</code></td><td>${Array.isArray(d.v) ? d.v.join(', ') : d.v}</td><td>${stTag(d.st)}</td><td>${d.src}</td></tr>`).join('')}</table>` : ''}</div>`).join('')}
-    <h2>BOM – הרכבת ייחוס</h2><table><tr><th>רכיב</th><th>מק"ט חוליות</th><th>יצרן</th><th class="n">פיזי</th><th class="n">לרכישה</th></tr>
-    ${B.map(r => `<tr><td>${r.he} ${stTag(r.status)}${r.note ? `<br><small style="color:var(--muted)">${r.note}</small>` : ''}</td><td><code>${r.sku}</code></td><td><code>${r.mfr || '—'}</code><br><small>${r.map === 'unverified' ? 'מיפוי לא מאומת' : ''}</small></td><td class="n">${r.n}</td><td class="n">${r.buy == null ? '?' : r.buy}</td></tr>`).join('')}</table>
-    <h2>כללים</h2><table>${RULES.map(r => `<tr><td><b>${r.id}</b> ${r.he}<br><small>${r.src}</small></td><td>${stTag(r.status)}</td><td>${r.result(CFG)}</td></tr>`).join('')}</table>
+  const rows = Object.entries(PC).filter(([k]) => k !== 'footP').flatMap(([k, p]) => Object.values(p.dims).map(x => ({ comp:p.he, ...x })));
+  const cnt = (s) => rows.filter(r => r.st === s).length;
+  const grp = (s) => { const r = rows.filter(x => x.st === s); return r.length ? `<tr class="grp"><td colspan="4">${stTag(s)} ${r.length}</td></tr>` + r.map(x => `<tr><td>${x.comp}</td><td>${x.he}</td><td>${fmt(x.v)}</td><td><small>${x.src}</small></td></tr>`).join('') : ''; };
+  S.innerHTML = `<div class="eng"><b>סטטוס: לא מאושר הנדסית</b><ul><li>אין הצגת עומס מותר או בטיחות לתצורה.</li><li>רכיבים זמניים: קליפ, קושרת, אלכסון, רגל – מודולים להחלפה.</li><li>גובהי המדפים להדגמה בלבד.</li></ul></div>
+    <h2>נתונים: מאומת מול זמני</h2><div class="sum">${['verified', 'provisional', 'pending'].map(s => `${stTag(s)} ${cnt(s)}`).join(' ')}</div>
+    <table><tr><th>רכיב</th><th>נתון</th><th>ערך</th><th>מקור</th></tr>${grp('verified')}${grp('provisional')}${grp('pending')}</table>
+    <h2>רכיבים</h2>${Object.entries(PC).map(([k, p]) => `<div class="comp"><b>${p.he}</b> ${stTag(p.status)}${p.must ? ' <span class="st must">חובה</span>' : ''}${p.temp ? ' <span class="st provisional">מודול זמני</span>' : ''} <code>${p.sku}</code><p>${p.note}</p></div>`).join('')}
+    <h2>מיקומי מדפים (להדגמה) ובדיקת הרכבה</h2><table><tr><th>מדף</th><th class="n">יעד</th><th class="n">חריץ #</th><th class="n">גובה מדף</th><th>בדיקה</th></tr>
+    ${a.chk.map((c, i) => `<tr><td>${i + 1}</td><td class="n">${c.target}</td><td class="n">${c.k}</td><td class="n">${c.top.toFixed(1)}</td><td>${c.ok ? 'על הצעד, בלי התנגשות' : c.why}</td></tr>`).join('')}</table>
+    <small>הגבהים נגזרים מהחריץ: מרכז החריץ − 38.5 (מושב הקליפ, PENDING) + 33. מיקום החריץ הראשון PENDING, כך שכל הגבהים יזוזו יחד כשיאומת.</small>
+    <h2>BOM – הרכבת ייחוס</h2><table><tr><th>רכיב</th><th>מק"ט חוליות</th><th>יצרן</th><th class="n">פיזי</th><th class="n">לרכישה</th><th>מחיר</th></tr>
+    ${B.map(r => `<tr><td>${r.he} ${stTag(r.status)}${r.must ? ' <span class="st must">חובה</span>' : ''}${r.note ? `<br><small>${r.note}</small>` : ''}</td><td><code>${r.sku}</code></td><td><code>${r.mfr || '—'}</code><br><small>שיוך לא מאומת</small></td><td class="n">${r.n}</td><td class="n">${r.buy == null ? '?' : r.buy}</td><td>${r.price == null ? '<span style="color:var(--pend)">חסר מחיר</span>' : r.price}</td></tr>`).join('')}</table>
+    <h2>כללים</h2><table>${RULES.map(r => `<tr><td><b>${r.id}</b> ${r.he}<br><small>${r.src}</small></td><td>${stTag(r.status)}</td><td>${r.result(CFG, a.chk)}</td></tr>`).join('')}</table>
     <h2>שאלות פתוחות</h2><ul>${UNKNOWN.map(u => `<li>${u}</li>`).join('')}</ul>
     <h2>מקורות</h2><ul>${Object.values(SRC).map(s => `<li>${s}</li>`).join('')}</ul>`;
-  S.querySelectorAll('.comp').forEach(el => el.onclick = () => show(VIEW === el.dataset.c ? 'assembly' : el.dataset.c));
 }
 // hover: what each part is
 const ray = new THREE.Raycaster(), tip = document.getElementById('tip');
 cv.addEventListener('pointermove', (e) => {
   if (!A) { tip.style.display = 'none'; return; }
   const r = cv.getBoundingClientRect(); ray.setFromCamera({ x:(e.clientX - r.left) / r.width * 2 - 1, y:-(e.clientY - r.top) / r.height * 2 + 1 }, camera);
-  const h = ray.intersectObjects(A.root.children, true)[0], i = h && A.inst.find(x => x.id === h.object.userData.iid);
+  const h = ray.intersectObjects(A.root.children, true).find(x => x.object.isMesh && !(x.object.material && x.object.material.transparent && x.object.material.opacity < 0.3));
+  const i = h && A.inst.find(x => x.id === h.object.userData.iid);
   if (!i) { tip.style.display = 'none'; return; }
-  const p = PC[i.comp]; tip.innerHTML = `<b>${i.id}</b> · ${p.he}<br>מק"ט ${p.sku} · הורה: ${i.parent}<br>סטטוס: ${p.status}`; tip.style.display = 'block';
+  const p = PC[i.comp]; tip.innerHTML = `<b>${i.id}</b> · ${p.he}<br>מק"ט ${p.sku} · הורה: ${i.parent}<br>סטטוס: ${ST_HE[p.status]}${p.temp ? ' · מודול זמני' : ''}`; tip.style.display = 'block';
   tip.style.left = (e.clientX - r.left + 14) + 'px'; tip.style.top = (e.clientY - r.top + 14) + 'px';
 });
 cv.addEventListener('click', () => { const t = tip.style.display === 'block' && tip.querySelector('b'); SEL = t ? (SEL === t.textContent ? null : t.textContent) : null; applyColours(); });
-window.__LF = { show, VIEWS, assemble, bom, PC, renderer };
-resize(); show(new URLSearchParams(location.search).get('v') || 'assembly');
-renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+// labels follow their 3D points
+const tmp = new THREE.Vector3();
+function drawLabels() {
+  if (!LABELS || !LBL.length) { if (lblEl.childElementCount) lblEl.innerHTML = ''; return; }
+  if (lblEl.childElementCount !== LBL.length) lblEl.innerHTML = LBL.map(l => `<div class="l ${l.st}">${l.t}</div>`).join('');
+  const r = cv.getBoundingClientRect();
+  LBL.forEach((l, i) => { tmp.copy(l.p).project(camera); const el = lblEl.children[i];
+    el.style.display = tmp.z > 1 ? 'none' : ''; el.style.left = ((tmp.x + 1) / 2 * r.width) + 'px'; el.style.top = ((1 - tmp.y) / 2 * r.height - 4) + 'px'; });
+}
+window.__LF = { show, VIEWS, CLOSES, assemble, bom, PC, MODULES, renderer, setMode:(m) => { MODE = m; applyColours(); bar(); legend(); }, setJX:(v) => { JX = v; } };
+resize(); const q = new URLSearchParams(location.search); show(q.get('v') || 'assembly', q.get('close') ? { close:q.get('close') } : {});
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); drawLabels(); });
 </script>
 </body>
 </html>
