@@ -7,7 +7,7 @@ import { isAdmin } from './_auth.js';
 export const config = { maxDuration: 60 };
 const TEXT_MODEL = process.env.OPENAI_SCENE_MODEL || 'gpt-4.1';      // voice / text commands: the full model understands free Hebrew much better than mini
 
-const TYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn', 'lock', 'wb', 'shelf'];
+const TYPES = ['unit', 'stand', 'excl', 'part', 'quad', 'wall', 'tena', 'smart', 'tamb', 'mtamb', 'mdoor', 'tech', 'arc', 'furn', 'lock', 'wb', 'shelf', 'lf'];
 const OPS = ['add', 'move', 'move_to', 'rotate', 'rotate_to', 'delete', 'duplicate', 'set', 'bins', 'doors', 'tambour', 'contents', 'labels', 'select', 'room', 'light', 'opening', 'obstacle', 'photo', 'clear', 'commit', 'design'];
 
 const CATALOGUE = `
@@ -29,6 +29,7 @@ Product types (type key – Hebrew name – footprint width x depth in cm with r
 - lock – "לוקר 6 דלתות" – staff locker 90 x 45 x 195, light grey body, 6 blue lockable doors (3 columns x 2 rows), shelf + hanging rod in each compartment. Doors: op doors with door = 1–6 (1 = top-left, 2 = top-middle, 3 = top-right, 4 = bottom-left, 5 = bottom-middle, 6 = bottom-right) or door null = all. Names: "לוקר", "לוקרים", "ארון לוקרים", "ארון הלבשה", "ארון עובדים".
 - wb – "שולחן עבודה מאסיבי" – heavy-duty workbench 150 x 75, green anti-static top at 84 cm; wb_variant 1 = hanging 2-drawer unit, 2 = 2 drawers + blue perforated back with 2 shelves (170 high), 3 = 4-drawer floor cabinet + the back; wb_tools true = tools hanging on the back; wb_top green (anti-static, default) or white. Names: "שולחן עבודה", "שולחן עבודה טכני", "שולחן מאסיבי", "שולחן אנטי סטטי". (furn bench is only a generic prop.)
 - shelf – "מידוף לעומס בינוני" / "מדפים" / "מדף מחסן" (MEDIKUP medium-duty shelving): blue perforated uprights, orange beams, galvanised decks; bays 120 / 150 / 180 / 210 / 240 cm clear (a run of bays shares frames), depth 50 / 60 / 80, height 200 / 250, 4 levels by default; back_to_back = double-depth block. THE product for cartons, boxed goods, long items and general warehouse storage.
+- lf – "LA FORTEZZA" / "לה פורטצה" / "מערכת מדפים LA FORTEZZA" (Huliot boltless steel shelving, light grey): shelves 97 or 117 cm wide (catalogue width), depth 30 / 40 / 50 / 60, uprights 200 / 225 / 250 high, 2–8 shelves per bay, a row of bays shares uprights; diagonal bracing is always included. Only when the user names it (or 'מדפי פח' / 'מדף משרדי' clearly meaning it); NOT engineering-approved – never state loads or prices for it.
 - furn – generic furniture / props (not catalogue products): furn_kind station ("עמדת מחשב": desk + pedestal + monitor + chair, 160 x 128), desk ("שולחן"), chair ("כיסא"), plant ("עציץ", "צמח"); furn_w_cm = width (desk 120 / 150 / 160 / 200, station 120 or 160). "שולחן עבודה" / workbench = wb (the real product), never furn.
 comp = how many tilt-bin units of each model, e.g. [{model:4,count:9}] (model = number of bins in the unit: 2,3,4,5,6,9; bigger ones at the bottom automatically). For "add one more level of #5" give the FULL new comp.
 The context room.obstacles lists columns, pipes and gypsum walls as boxes (cm from the left / back wall, from_floor_cm..to_cm). Never place or move a product into one (the app also refuses it); place products next to them instead. Obstacles are set by the user in the scene settings, not by ops.
@@ -67,7 +68,7 @@ export default async function handler(req, res) {
 
   const settings = nul({
     type:'object', additionalProperties:false,
-    required:['stand_type', 'base', 'height_cm', 'comp', 'arc', 'bin_layout', 'shelf_bins', 'fill_model', 'fill_to_cm', 'wings', 'cols', 'top', 'tena_size', 'doors', 'unit_bins', 'md_color', 'align', 'tech_variant', 'door_bins', 'door_acc', 'furn_kind', 'furn_w_cm', 'wb_variant', 'wb_tools', 'wb_top', 'shelving'],
+    required:['stand_type', 'base', 'height_cm', 'comp', 'arc', 'bin_layout', 'shelf_bins', 'fill_model', 'fill_to_cm', 'wings', 'cols', 'top', 'tena_size', 'doors', 'unit_bins', 'md_color', 'align', 'tech_variant', 'door_bins', 'door_acc', 'furn_kind', 'furn_w_cm', 'wb_variant', 'wb_tools', 'wb_top', 'shelving', 'lafortezza'],
     properties:{
       stand_type:nul({ type:'string', enum:['single', 'double'] }),
       base:nul({ type:'string', enum:['wheels', 'legs'] }),
@@ -105,6 +106,10 @@ export default async function handler(req, res) {
         levels:nul({ type:'integer', description:'number of shelf levels (default 4), spread evenly' }),
         back_to_back:nul({ type:'boolean', description:'a second identical run back to back behind it (double depth) – very common' }),
         corner:nul({ type:'string', enum:['none', 'left', 'right'], description:'a second run turning 90° toward the front at that end (L shape); its bays = the first bay' }) } }),
+      lafortezza:nul({ type:'object', additionalProperties:false, required:['bays_cm', 'depth_cm', 'height_cm', 'shelves'], description:'lf (LA FORTEZZA) only', properties:{
+        bays_cm:{ type:'array', items:{ type:'integer', enum:[97, 117] }, description:'the bays of the row, left to right (shelf width); [] = keep' },
+        depth_cm:nul({ type:'integer', enum:[30, 40, 50, 60] }), height_cm:nul({ type:'integer', enum:[200, 225, 250] }),
+        shelves:nul({ type:'integer', description:'shelves per bay, 2–8 (default 5)' }) } }),
     },
   });
   const bins = nul({ type:'object', additionalProperties:false, required:['face', 'rows', 'cols', 'random', 'all'], properties:{

@@ -86,3 +86,18 @@ Status: **NOT engineering-approved. No load or safety rating is shown for any co
 See the "שאלות פתוחות" list in the viewer. Prices: none supplied – every BOM row shows "חסר מחיר".
 
 QA images: `qa/assembly-material.webp`, `qa/assembly-components.webp`, `qa/joints-closeups.webp`.
+
+---
+
+# Round 3 (HISTORGIC v011) – integrated in the scene builder
+
+V010 approved as a visual / functional base (not an engineering approval). `lf.html` is frozen as the V010 reference; the live model is product type `lf` in `index.html`, built on the existing product architecture (capCfg / applyCfg / rebuild / panel / HEADS / PRODUCT_OPTS / library / AI ops) – no second display model, no rewrite.
+
+- **Data:** `LFX` – every value with status + source. Widths kept apart (`lfWidths`): `moduleNominalWidth` (verified, catalogue), `shelfPhysicalWidth` (pending – assumed = catalogue), `clipClearance` (pending placeholder, 2 mm), `uprightCenterDistance` and `assemblyOuterWidth` (derived, pending).
+- **Supported SKUs only** (LOC p.65–68): shelves 97/117 × 30/40/50/60 (8 SKUs, with their reinforcement), uprights 200/225/250, ties 300–600.
+- **Editable in the scene:** depth, height, bays (97/117 each, shared uprights), shelves per bay (3–8, demo heights snapped to the slot pitch), bracing crosses (1/2/3 – parameter, not verified) and braced-bay interval (every 8 = MFR / every bay), ties per frame (2/3 – not verified), status colours, level of detail.
+- **Bracing:** always present – there is no control that removes it.
+- **BOM:** recomputed on every change: uprights 2(N+1), shelves per SKU, clips 4 per shelf (purchase "?"), ties per frame, anchor feet 2(N+1), bracing straps (sets 33510010 "?"); price column "חסר מחיר"; no loads.
+- **Adjacent units:** the existing snapping prevents overlaps; two LA FORTEZZA units standing flush (same turn, depth, height) get a "join into one row with a shared upright" button.
+- **Not included yet (deliberately):** catalogue studio and hero shots (unverified product), the automatic space planner (`api/design.js`), back-to-back and corners (no connection rules in the sources). The voice / text assistant knows the product (`api/scene.js`, type `lf`, settings `lafortezza`).
+- **Regression:** v010 vs v011 with all 17 existing product types in one scene – identical sizes, positions and mesh count; studio variants identical (334); screenshot identical except the animated logo; hero-shot flow (gauge, lock, result, re-render, voice) passes.
