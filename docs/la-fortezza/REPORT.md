@@ -101,3 +101,17 @@ V010 approved as a visual / functional base (not an engineering approval). `lf.h
 - **Adjacent units:** the existing snapping prevents overlaps; two LA FORTEZZA units standing flush (same turn, depth, height) get a "join into one row with a shared upright" button.
 - **Not included yet (deliberately):** catalogue studio and hero shots (unverified product), the automatic space planner (`api/design.js`), back-to-back and corners (no connection rules in the sources). The voice / text assistant knows the product (`api/scene.js`, type `lf`, settings `lafortezza`).
 - **Regression:** v010 vs v011 with all 17 existing product types in one scene – identical sizes, positions and mesh count; studio variants identical (334); screenshot identical except the animated logo; hero-shot flow (gauge, lock, result, re-render, voice) passes.
+
+---
+
+# Round 4 (HISTORGIC v012) – shelf editing, rule-based structure, merge / split, studio
+
+V011 approved as a functional base (no engineering approval).
+
+- **Individual shelves:** `lv[bay]` = the slot numbers of that bay's shelves (null = even). Click a shelf in the model (or pick it in the "גובה מדפים" list) → ▲ / ▼ or the arrow keys move it one slot (25 mm). Bays can differ. Limits: above the foot bracket, below the upright top, 2 slots apart (geometry of the temporary clip – not verified). Add a shelf (into the largest gap), remove one, back to even.
+- **Structural components by rules (`lfRules`):** anchor feet (verified when H/P > 4, MFR p.21; otherwise provisional with the bracing, MFR p.33), a braced bay every 8 bays (MFR p.33), 2 crosses in height up to H 3000 (provisional interpretation), 2 ties per frame (pending). Regular users cannot change them; admins can override (marked "עקיפה ידנית – לא כלל", status pending). Bracing cannot be removed.
+- **Row operations:** add a bay left / right (the other end stays put), remove a bay, change one bay's width, split after any bay into two independent units (flush, each with its own uprights), join (shared upright – marked "טעון אימות הנדסי"). Geometry and BOM follow every change.
+- **Undo:** every LA FORTEZZA change pushes a scene snapshot onto the existing Ctrl+Z stack (positions undo unchanged for every other product).
+- **Studio & hero shots:** 24 studio variants (width × depth × height, one bay); hero shots by family. The render brief states the exact shelves per bay and their heights, the braced bays and crosses, the ties and the feet. Images of LA FORTEZZA (studio, hero, final scene renders) get a corner mark "הדמיה – LA FORTEZZA – לא מאושר הנדסית", and the gallery / hero cards say so.
+- **Tests (mock):** 31 / 31 – shelf moves and limits, per-bay heights, add left / right with anchoring, width, remove, BOM, split, join, undo of each, rotate, duplicate, save / load, rules, admin-only overrides, studio count, brief, stamp; shelf click + arrow key; non-admin cannot see overrides. Regression v011 → v012: all 17 other products identical (sizes, positions, meshes, 334 studio keys); hero flow passes.
+- **Not yet:** the automatic space planner (by decision).
