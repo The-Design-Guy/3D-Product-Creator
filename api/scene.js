@@ -63,6 +63,7 @@ export default async function handler(req, res) {
   const selected = req.body?.selected ?? null;
   const light = req.body?.light || null;
   const editor = req.body?.context === 'product_editor';
+  if (req.body?.context === 'hero') return heroShot(req, res, text);
 
   const settings = nul({
     type:'object', additionalProperties:false,
@@ -221,4 +222,42 @@ export default async function handler(req, res) {
   } catch (e) {
     return res.status(500).json({ error:e.message });
   }
+}
+
+// ---- צילומי תדמית: a spoken request for a hero shot → the drawer's choices (and whether to render now) ----
+// The app sends the families with their variants and the current choices; the model only picks from those lists.
+async function heroShot(req, res, text) {
+  const fams = Array.isArray(req.body?.families) ? req.body.families.slice(0, 40) : [], cur = req.body?.current || {};
+  const famNames = fams.map(f => String(f.name)), allVars = [...new Set(fams.flatMap(f => (f.variants || []).map(String)))];
+  if (!famNames.length) return res.status(400).json({ error:'אין משפחות' });
+  const schema = { type:'object', additionalProperties:false, required:['understood', 'family', 'variants', 'layout', 'ratio', 'angle', 'contents', 'name', 'notes', 'render'],
+    properties:{
+      understood:{ type:'string', description:'one short Hebrew sentence: what will be staged (and rendered)' },
+      family:nul({ type:'string', enum:famNames }),
+      variants:nul({ type:'array', items:{ type:'string', enum:allVars.length ? allVars : ['-'] }, description:'which variants of the family are in the shot (full names from the list); null = keep the current / all' }),
+      layout:nul({ type:'string', enum:['row', 'steps', 'group'], description:'row = side by side; steps = on steps poured from the floor (tall ones at the back, higher); group = some in front, some behind' }),
+      ratio:nul({ type:'string', enum:['4:5', '1:1', '3:2', '16:9', '9:16'] }),
+      angle:nul({ type:'string', enum:['tq', 'low', 'front'], description:'tq = three-quarter, low = low hero angle, front = straight on' }),
+      contents:nul({ type:'string', enum:['empty', 'med', 'ind', 'tech'], description:'what is in the bins: empty, med = medical, ind = industrial, tech = electronics / hi-tech' }),
+      name:nul({ type:'string', description:'a short Hebrew name for the shot if one was said or is obvious' }),
+      notes:nul({ type:'string', description:'everything else for the render, in English: arrangement wishes (e.g. "the 9-bin unit in the centre"), mood, light. null if nothing' }),
+      render:{ type:'boolean', description:'true ONLY when the user clearly asks to render / shoot now: "תרנדר", "לך על זה", "תצלם", "go for it", "render it". Otherwise false.' },
+    } };
+  const system = [
+    'You set up a catalogue hero photo (צילום תדמית) of one MEDIKUP product family from a spoken request (usually Hebrew, may have transcription mistakes).',
+    'Pick only from the families and variants listed. "כל הגדלים" / "all sizes" = all the variants of the family. A number after רב תא = that variant (רב תא 6 = "רב תא – 6").',
+    'Fields the user did not mention are null (the app keeps the current choice). "מדרגות" = steps, "שורה" = row, "קבוצה" / "בעומק" = group. "אנכי" / "לאורך" usually 4:5, "רוחבי" 16:9, "ריבוע" 1:1, "סטורי" 9:16.',
+    '"נמוכה" / "גיבורית" = low, "חזית" = front, "שלושה רבעים" / "באלכסון" = tq. "רפואי" = med, "תעשייתי" = ind, "הייטקי" / "אלקטרוניקה" = tech, "ריק" = empty.',
+    'render is true only for an explicit request to render now.',
+  ].join('\n');
+  const user = `Families and their variants: ${JSON.stringify(fams)}\nCurrent choices: ${JSON.stringify(cur)}\nRequest: ${text}`;
+  try {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', { method:'POST',
+      headers:{ Authorization:`Bearer ${process.env.OPENAI_API_KEY}`, 'content-type':'application/json' },
+      body:JSON.stringify({ model:TEXT_MODEL, temperature:0, response_format:{ type:'json_schema', json_schema:{ name:'hero_shot', strict:true, schema } },
+        messages:[{ role:'system', content:system }, { role:'user', content:user }] }) });
+    const j = await r.json();
+    if (!r.ok) return res.status(502).json({ error:j.error?.message || `OpenAI error ${r.status}` });
+    return res.status(200).json({ hero:JSON.parse(j.choices?.[0]?.message?.content || '{}') });
+  } catch (e) { return res.status(500).json({ error:e.message }); }
 }
