@@ -82,7 +82,7 @@ export default async function handler(req, res) {
   // stage: 'base' = photo from the 3D view with the room but EMPTY bins, 'edit' = the approved base gets the bin contents, none = one stage
   const stage = ['base', 'edit'].includes(req.body?.stage) ? req.body.stage : '';
   const txt = (k, n = 1500) => String(req.body?.[k] || '').replace(/[<>]/g, '').trim().slice(0, n);
-  let contents = txt('contents'), bg = txt('backdrop'), extra = txt('extra');
+  let contents = txt('contents'), bg = txt('backdrop'), extra = txt('extra', 3000);
   if (!contents && !bg && !extra) extra = txt('notes', 1200);               // older pages: free notes only
   // which part of the brief goes into which stage: the room in stage 1, the bin contents in stage 2, "extra" in both
   const useContents = stage !== 'base', useBg = stage !== 'edit';
