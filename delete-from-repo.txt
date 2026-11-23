@@ -1,7 +1,0 @@
-קבצים למחיקה מהריפו:
-img/tb2.webp
-img/tb3.webp
-img/tb4.webp
-img/tb5.webp
-img/tb6.webp
-img/tb9.webp
