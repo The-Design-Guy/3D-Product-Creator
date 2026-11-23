@@ -161,7 +161,7 @@ export default async function handler(req, res) {
     if (!b64) return res.status(502).json({ error: 'OpenAI returned no image' });
     const out = `data:image/webp;base64,${b64}`;
     // count check: compare the bins in the result with the 3D view (skipped when time is short)
-    const check = Date.now() - t0 < 220000 ? await checkCount(image, out, structure, productRef ? TILTBIN_REF : null, stage === 'edit') : { ok:null, detail:'time' };
+    const check = Date.now() - t0 < 220000 ? await checkCount(image, out, structure, productRef ? TILTBIN_REF : null, stage === 'edit', !!req.body?.frame) : { ok:null, detail:'time' };
     return res.status(200).json({ image: out, check });
   } catch (e) {
     return res.status(500).json({ error: e.message });
@@ -171,10 +171,10 @@ export default async function handler(req, res) {
 // ---- bin count check ----
 // Reads the 3D view and the result, counts the bins in both, and says whether they match.
 // ok: true (match) | false (mismatch) | null (the check could not run – never blocks the render)
-async function checkCount(view, result, structure, ref, fromPhoto) {
+async function checkCount(view, result, structure, ref, fromPhoto, frame) {
   const schema = {
     type:'object', additionalProperties:false,
-    required:['view_counts', 'result_counts', 'match', 'problem', 'parts_ok', 'parts_problem'],
+    required:['view_counts', 'result_counts', 'match', 'problem', 'parts_ok', 'parts_problem', 'frame_ok', 'frame_problem'],
     properties:{
       view_counts:{ type:'string', description:'bins in each row, top to bottom, per column left to right, in the 3D view, e.g. "col1: 9,6,6,5 | col2: ..."' },
       result_counts:{ type:'string', description:'the same, row by row, counted in the realistic result' },
@@ -182,6 +182,8 @@ async function checkCount(view, result, structure, ref, fromPhoto) {
       problem:{ type:'string', description:'empty if they match; otherwise a short Hebrew description of the difference, naming the column and the row from the top' },
       parts_ok:{ type:'boolean', description:'true if the profiles/rails/frames in B keep the shape, width and colour of A and B adds no screws, bolts, brackets, connectors or other hardware that A does not have' },
       parts_problem:{ type:'string', description:'empty if parts_ok; otherwise a short Hebrew description of what changed or was added' },
+      frame_ok:{ type:'boolean', description:'true if B keeps the camera of A: the same viewpoint and angle, and every product at about the same place and size in the frame (not zoomed in or out, not shifted or re-cropped by more than a few percent)' },
+      frame_problem:{ type:'string', description:'empty if frame_ok; otherwise a short Hebrew description (e.g. "התמונה התקרבה", "המוצרים זזו שמאלה")' },
     },
   };
   const instructions = [
@@ -192,6 +194,7 @@ async function checkCount(view, result, structure, ref, fromPhoto) {
     structure ? `The CAD data gives this layout (some bins may be hidden from this camera angle):\n${structure}\nIn image B, count the bins in EVERY horizontal row of EVERY column separately and compare each row with the layout and with image A. A single row with one bin more or less is a mismatch.` : '',
     'Items placed inside the bins, props, background and lighting do not matter. Only the number and arrangement of bins, units, columns, rows and shelves matter.',
     'match = true only if every count in B equals the count in A. If anything differs, match = false and describe it in Hebrew in "problem".',
+    frame ? 'Also compare the framing: B must keep the camera of A – same viewpoint, same angle, every product at the same place and size in the frame. A zoom, a re-crop, a shift or a different viewpoint = frame_ok false.' : 'frame_ok: always true here.',
     ref ? 'Image C is an official photo of one real tilt-bin unit. Every unit in B must be built like C: flat solid grey side walls over the full depth, clear bins sitting INSIDE the housing between the side walls (never sticking out past them, their clear sides hidden). If units in B are built differently (e.g. bins protruding past the side walls with visible clear sides, shortened side walls), parts_ok = false. The number of bins in C is irrelevant.' : '',
     'Also compare the construction: the tilt-bin housings (side walls over the full depth, bins inside them) and the stand, cabinet, rack or frame they sit on – its profiles, rails, bands, uprights, panels, base and feet – must have the same shape, width, slots and colour in B as in A, and B must not add screws, bolts, rivets, brackets, connectors, end caps or other hardware that A does not show. If B changes them or adds any, parts_ok = false and describe it in Hebrew in "parts_problem".',
   ].filter(Boolean).join('\n');
@@ -215,8 +218,8 @@ async function checkCount(view, result, structure, ref, fromPhoto) {
     const j = await r.json();
     if (!r.ok) return { ok:null, detail:j.error?.message || `check error ${r.status}` };
     const v = JSON.parse(j.choices?.[0]?.message?.content || '{}');
-    const ok = !!v.match && v.parts_ok !== false;
-    return { ok, detail:[v.problem, v.parts_ok === false ? v.parts_problem : ''].filter(Boolean).join(' · '), view:v.view_counts || '', result:v.result_counts || '' };
+    const ok = !!v.match && v.parts_ok !== false && (!frame || v.frame_ok !== false);
+    return { ok, frameOk:frame ? v.frame_ok !== false : null, detail:[v.problem, v.parts_ok === false ? v.parts_problem : '', frame && v.frame_ok === false ? v.frame_problem : ''].filter(Boolean).join(' · '), view:v.view_counts || '', result:v.result_counts || '' };
   } catch (e) {
     return { ok:null, detail:e.name === 'AbortError' ? 'timeout' : e.message };
   }

@@ -229,33 +229,51 @@ export default async function handler(req, res) {
   }
 }
 
-// ---- צילומי תדמית: a spoken request for a hero shot → the drawer's choices (and whether to render now) ----
-// The app sends the families with their variants and the current choices; the model only picks from those lists.
+// ---- צילומי תדמית: a spoken request in the hero-shots drawer → a few clear actions on the shot that is on screen ----
+// The app sends the shot as it is now (products with numbers, which step each stands on, left → right), the steps, the current
+// choices and the families. The model only picks from those lists; it never swaps the whole family unless asked to in so many words.
 async function heroShot(req, res, text) {
   const fams = Array.isArray(req.body?.families) ? req.body.families.slice(0, 40) : [], cur = req.body?.current || {};
+  const shot = req.body?.shot || { products:[], steps:[] };
   const famNames = fams.map(f => String(f.name)), allVars = [...new Set(fams.flatMap(f => (f.variants || []).map(String)))];
   if (!famNames.length) return res.status(400).json({ error:'אין משפחות' });
-  const schema = { type:'object', additionalProperties:false, required:['understood', 'family', 'variants', 'layout', 'ratio', 'angle', 'contents', 'name', 'notes', 'render'],
+  const PH = ['frame', 'motion', 'depth', 'street', 'light'];
+  const op = { type:'object', additionalProperties:false, required:['op', 'product', 'product2', 'step', 'side', 'variant', 'camera', 'height_cm'], properties:{
+    op:{ type:'string', enum:['move', 'swap', 'remove', 'add', 'step_add', 'step_remove', 'step_height', 'camera'],
+      description:'move = put product N on step S (0 = the floor) and/or to a side; swap = product N and product2 change places; remove = take product N out of the shot; add = put a variant (from the CURRENT family) into the shot, on step S; step_add = one more step at the back; step_remove = remove step S (what stood on it goes to the floor); step_height = step S to height_cm; camera = move the camera' },
+    product:nul({ type:'integer', description:'the number of a product in the shot (from the list)' }),
+    product2:nul({ type:'integer' }),
+    step:nul({ type:'integer', description:'0 = the floor, 1… = the steps from the front' }),
+    side:nul({ type:'string', enum:['left', 'center', 'right'], description:'where on that step / floor, as seen from the camera' }),
+    variant:nul({ type:'string', enum:allVars.length ? allVars : ['-'] }),
+    camera:nul({ type:'string', enum:['closer', 'farther', 'left', 'right', 'higher', 'lower', 'auto'], description:'closer / farther, orbit left / right, higher / lower; auto = the automatic framing' }),
+    height_cm:nul({ type:'integer' }) } };
+  const schema = { type:'object', additionalProperties:false, required:['understood', 'question', 'ops', 'set', 'render'],
     properties:{
-      understood:{ type:'string', description:'one short Hebrew sentence: what will be staged (and rendered)' },
-      family:nul({ type:'string', enum:famNames }),
-      variants:nul({ type:'array', items:{ type:'string', enum:allVars.length ? allVars : ['-'] }, description:'which variants of the family are in the shot (full names from the list); null = keep the current / all' }),
-      layout:nul({ type:'string', enum:['row', 'steps', 'group'], description:'row = side by side; steps = on steps poured from the floor (tall ones at the back, higher); group = some in front, some behind' }),
-      ratio:nul({ type:'string', enum:['4:5', '1:1', '3:2', '16:9', '9:16'] }),
-      angle:nul({ type:'string', enum:['tq', 'low', 'front'], description:'tq = three-quarter, low = low hero angle, front = straight on' }),
-      contents:nul({ type:'string', enum:['empty', 'med', 'ind', 'tech'], description:'what is in the bins: empty, med = medical, ind = industrial, tech = electronics / hi-tech' }),
-      name:nul({ type:'string', description:'a short Hebrew name for the shot if one was said or is obvious' }),
-      notes:nul({ type:'string', description:'everything else for the render, in English: arrangement wishes (e.g. "the 9-bin unit in the centre"), mood, light. null if nothing' }),
-      render:{ type:'boolean', description:'true ONLY when the user clearly asks to render / shoot now: "תרנדר", "לך על זה", "תצלם", "go for it", "render it". Otherwise false.' },
+      understood:{ type:'string', description:'one short Hebrew sentence: what will be done' },
+      question:nul({ type:'string', description:'ONLY when the request cannot be done with the lists given or is truly ambiguous (which product?): one short Hebrew question; then ops = [] and set all null' }),
+      ops:{ type:'array', items:op },
+      set:{ type:'object', additionalProperties:false, required:['family', 'variants', 'layout', 'ratio', 'angle', 'contents', 'photographer', 'name', 'notes'], properties:{
+        family:nul({ type:'string', enum:famNames, description:'ONLY when the user explicitly asks for a different product family / a new shot of another family ("תחליף ל…", "צילום חדש של…"). Putting or moving a product is NEVER a family change.' }),
+        variants:nul({ type:'array', items:{ type:'string', enum:allVars.length ? allVars : ['-'] }, description:'only with family, or "only these products" – rebuilds the shot' }),
+        layout:nul({ type:'string', enum:['row', 'steps', 'group'], description:'only to rebuild the whole arrangement' }),
+        ratio:nul({ type:'string', enum:['4:5', '1:1', '3:2', '16:9', '9:16'] }),
+        angle:nul({ type:'string', enum:['tq', 'low', 'front'] }),
+        contents:nul({ type:'string', enum:['empty', 'med', 'ind', 'tech'] }),
+        photographer:nul({ type:'string', enum:PH, description:'frame = Noah Vale (symmetric, eye level, soft warm), motion = Kai Nakamura (low diagonal, dynamic), depth = Amara Diallo (close detail, shallow focus), street = Omar Khalil (low angle, real industrial space, hard daylight), light = Lena Vasquez (backlight, glow, haze)' }),
+        name:nul({ type:'string' }), notes:nul({ type:'string', description:'wishes for the render that are not actions above, in English' }) } },
+      render:{ type:'boolean', description:'true ONLY for an explicit request to render / shoot now: "תרנדר", "לך על זה", "תצלם", "go for it"' },
     } };
   const system = [
-    'You set up a catalogue hero photo (צילום תדמית) of one MEDIKUP product family from a spoken request (usually Hebrew, may have transcription mistakes).',
-    'Pick only from the families and variants listed. "כל הגדלים" / "all sizes" = all the variants of the family. A number after רב תא = that variant (רב תא 6 = "רב תא – 6").',
-    'Fields the user did not mention are null (the app keeps the current choice). "מדרגות" = steps, "שורה" = row, "קבוצה" / "בעומק" = group. "אנכי" / "לאורך" usually 4:5, "רוחבי" 16:9, "ריבוע" 1:1, "סטורי" 9:16.',
-    '"נמוכה" / "גיבורית" = low, "חזית" = front, "שלושה רבעים" / "באלכסון" = tq. "רפואי" = med, "תעשייתי" = ind, "הייטקי" / "אלקטרוניקה" = tech, "ריק" = empty.',
-    'render is true only for an explicit request to render now.',
+    'You edit a catalogue hero photo (צילום תדמית) that is already set up on screen, from a spoken request (usually Hebrew, may have transcription mistakes).',
+    'The shot lists its products with numbers (left → right as seen from the camera, front step first) and which step each stands on (0 = floor), and the steps.',
+    'Turn the request into ops on THAT shot. "שים את X על המדרגה" / "תעלה את X" / "תוריד את X" = move. "תחליף בין X ל-Y" = swap. "תוציא את X" = remove. "תוסיף עוד X" = add (a variant of the current family). "עוד מדרגה" = step_add. "תתקרב / תתרחק / מלמעלה / סובב שמאלה" = camera.',
+    'Identify products by their label in the list ("רב תא 6" = the product whose label says 6; "הגדול" = the tallest; "השמאלי" = the first). If two fit equally, ask.',
+    'NEVER change the family because a product name was said – a product name means a product IN the shot. Change family only when explicitly asked for another family or a new shot.',
+    'Use set only for what was asked; everything else null. Photographers: "נוח" / Noah / "סימטרי קלאסי" = frame; "קאי" / Kai / "דינמי" = motion; "אמארה" / Amara / "תקריב" = depth; "עומר" / Omar / "במחסן אמיתי" = street; "לנה" / Lena / "אור אחורי" = light.',
+    'render = true only for an explicit request to render now.',
   ].join('\n');
-  const user = `Families and their variants: ${JSON.stringify(fams)}\nCurrent choices: ${JSON.stringify(cur)}\nRequest: ${text}`;
+  const user = `The shot now: ${JSON.stringify(shot)}\nCurrent choices: ${JSON.stringify(cur)}\nFamilies and their variants: ${JSON.stringify(fams)}\nRequest: ${text}`;
   try {
     const r = await fetch('https://api.openai.com/v1/chat/completions', { method:'POST',
       headers:{ Authorization:`Bearer ${process.env.OPENAI_API_KEY}`, 'content-type':'application/json' },
