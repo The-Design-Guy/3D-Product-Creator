@@ -7198,6 +7198,7 @@ async function catCapture(v) {
 // "דלתות פתוחות" / "תריס פתוח" are only words in the variant's settings: the doors themselves open by animation, so the studio opens them
 // (or closes them) at once – otherwise every cabinet is photographed closed and its contents never show
 function catOpenUp(v) {
+  if (isCab() && SLD && slideOn()) { tena.slide.open = [1, 0, 1, 0]; SLD.st = tena.slide; for (let i = 0; i < 4; i++) stepSlide(1); }   // תא נע with sliding doors: the doors slide aside
   const S = metalState(); if (!S || mode === 'lock') return;
   const c = v.cfg || {}, shut = !!((c.md && c.md.shut) || (c.mt && c.mt.shut) || (c.tb && c.tb.shut));
   if (S.doors) S.doors = S.doors.map(() => shut ? 0 : 1);
