@@ -96,7 +96,7 @@ function editPrompt(description, background, brief, labels, structure, masked, i
     'New items get the same lighting as the photograph, with natural contact shadows.',
     masked ? 'Only the inside of the bins may change (the masked area): fill it with the contents, sitting naturally inside each bin behind its clear front; everything outside stays exactly as it is.' : '',
     // items only (ארקליות): the page lays the items on the approved empty photo itself, so nothing of the bin can change
-    itemsOnly ? 'OUTPUT ONLY THE ITEMS – this overrides everything above: draw ONLY the contents (the items), exactly where they lie inside the bin of the input photograph, at the same scale, perspective and light. EVERYTHING ELSE MUST BE FULLY TRANSPARENT in the output: do NOT draw the bin itself – no walls, no inner walls, no floor, no rim, no dividers, no label, no background, no shadow outside the items. The result is a cut-out layer of the items alone that will be placed on the input photograph.' : '',
+    itemsOnly ? 'OUTPUT ONLY THE ITEMS – this overrides everything above: draw ONLY the contents (the items), exactly where they lie inside the bin(s) of the input photograph – behind a clear front they are seen through it, with its slight tint and reflections – at the same scale, perspective and light. EVERYTHING ELSE MUST BE FULLY TRANSPARENT in the output: do NOT draw the bin itself – no walls, no inner walls, no floor, no rim, no dividers, no label, no background, no shadow outside the items. The result is a cut-out layer of the items alone that will be placed on the input photograph.' : '',
   ].filter(Boolean).join('\n');
 }
 
