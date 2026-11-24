@@ -9,6 +9,31 @@ const MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-sunburst';
 const QUALITY = process.env.OPENAI_IMAGE_QUALITY || 'high';
 // model that checks the bin count of the result against the 3D view (any OpenAI model that reads images)
 const CHECK_MODEL = process.env.OPENAI_CHECK_MODEL || 'gpt-4.1';
+// second engine: Google Gemini image (Nano Banana) – used for shots it draws better (e.g. many steps). Key: GEMINI_API_KEY
+const GEMINI_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-nano-banana-2.1';
+const G_RATIOS = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'];
+const gRatio = (w, h) => G_RATIOS.reduce((b, r) => { const [a, c] = r.split(':').map(Number); return Math.abs(Math.log(a / c / (w / h))) < Math.abs(Math.log(b.split(':')[0] / b.split(':')[1] / (w / h))) ? r : b; }, '1:1');
+// the first inline image found anywhere in the response (the REST layout differs between API versions)
+function gFindImage(o, depth = 0) {
+  if (!o || typeof o !== 'object' || depth > 12) return null;
+  const d = o.inlineData || o.inline_data;
+  if (d && d.data && /^image\//.test(d.mimeType || d.mime_type || '')) return { data:d.data, mime:d.mimeType || d.mime_type };
+  if (o.type === 'image' && typeof o.data === 'string' && o.data.length > 1000) return { data:o.data, mime:o.mime_type || o.mimeType || 'image/png' };
+  for (const v of Array.isArray(o) ? o : Object.values(o)) { const f = gFindImage(v, depth + 1); if (f) return f; }
+  return null;
+}
+async function geminiImage(text, images, w, h) {
+  const parts = [{ text }, ...images.map(([mime, b64]) => ({ inline_data:{ mime_type:mime, data:b64 } }))];
+  const big = Math.max(w || 0, h || 0);
+  const body = { contents:[{ role:'user', parts }], generationConfig:{ responseModalities:['IMAGE'], imageConfig:{ aspectRatio:gRatio(w || 1, h || 1), imageSize:big > 2400 ? '4K' : '2K' } } };
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+    method:'POST', headers:{ 'x-goog-api-key':process.env.GEMINI_API_KEY, 'content-type':'application/json' }, body:JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error('Gemini: ' + (j.error?.message || `error ${r.status}`));
+  const img = gFindImage(j);
+  if (!img) throw new Error('Gemini לא החזיר תמונה' + (j.candidates?.[0]?.finishReason ? ' (' + j.candidates[0].finishReason + ')' : ''));
+  return `data:${img.mime};base64,${img.data}`;
+}
 
 // numbered list of the extra images after the first one: "image 2 = bin contents reference …"
 const refLines = (labels, offset = 2) => labels.map((l, i) => `image ${i + offset} = ${l}`).join(', ');
@@ -141,9 +166,15 @@ export default async function handler(req, res) {
   // a mask (PNG, same size as the first image): only its transparent part may change – the rest of the photo stays pixel for pixel
   const mk = /^data:image\/png;base64,(.+)$/.exec(String(req.body?.mask || ''));
   if (mk) form.append('mask', new Blob([Buffer.from(mk[1], 'base64')], { type:'image/png' }), 'mask.png');
-  form.append('prompt', stage === 'edit'
+  const promptText = stage === 'edit'
     ? editPrompt(String(description).slice(0, 2000), background, brief, labels, structure, !!mk)
-    : prompt(String(description).slice(0, 2000), background, lighting, brief, labels, structure, productRef, stage, !!req.body?.shadow));
+    : prompt(String(description).slice(0, 2000), background, lighting, brief, labels, structure, productRef, stage, !!req.body?.shadow);
+  form.append('prompt', promptText);
+  const gImages = [[`image/${m[1]}`, m[2]], ...refs.map(rm => [`image/${rm[1]}`, rm[2]]), ...(productRef ? [[`image/${pm[1]}`, pm[2]]] : [])];
+  // engine: 'gemini' (asked for) or 'auto-gemini' (the page's default for shots on steps: OpenAI when there is no Gemini key)
+  const eng = String(req.body?.engine || '');
+  const useGemini = (eng === 'gemini' || eng === 'auto-gemini') && background !== 'transparent' && !mk && (process.env.GEMINI_API_KEY || eng === 'gemini');
+  if (useGemini && !process.env.GEMINI_API_KEY) return res.status(400).json({ error:'חסר מפתח GEMINI_API_KEY ב-Vercel – אי אפשר לרנדר עם Gemini' });
   form.append('background', background === 'transparent' ? 'transparent' : 'opaque');
   form.append('output_format', 'webp');          // smaller response than PNG, keeps transparency
   form.append('output_compression', '95');
@@ -152,13 +183,19 @@ export default async function handler(req, res) {
   form.append('input_fidelity', 'high');          // stay as close as possible to the input image (a model that does not know it: sent again without it)
 
   try {
-    const call = () => fetch('https://api.openai.com/v1/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` }, body: form });
-    let r = await call(), j = await r.json();
-    if (!r.ok && /input_fidelity/i.test(j.error?.message || '')) { form.delete('input_fidelity'); r = await call(); j = await r.json(); }
-    if (!r.ok) return res.status(502).json({ error: j.error?.message || `OpenAI error ${r.status}` });
-    const b64 = j.data?.[0]?.b64_json;
-    if (!b64) return res.status(502).json({ error: 'OpenAI returned no image' });
-    const out = `data:image/webp;base64,${b64}`;
+    let out;
+    if (useGemini) {
+      const [zw, zh] = size === 'auto' ? [0, 0] : size.split('x').map(Number);
+      out = await geminiImage(promptText, gImages, zw, zh);
+    } else {
+      const call = () => fetch('https://api.openai.com/v1/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` }, body: form });
+      let r = await call(), j = await r.json();
+      if (!r.ok && /input_fidelity/i.test(j.error?.message || '')) { form.delete('input_fidelity'); r = await call(); j = await r.json(); }
+      if (!r.ok) return res.status(502).json({ error: j.error?.message || `OpenAI error ${r.status}` });
+      const b64 = j.data?.[0]?.b64_json;
+      if (!b64) return res.status(502).json({ error: 'OpenAI returned no image' });
+      out = `data:image/webp;base64,${b64}`;
+    }
     // count check: compare the bins in the result with the 3D view (skipped when time is short)
     // with a list of the units expected (shots on steps): a second, BLIND count – it does not see the expected layout, so it cannot just repeat it
     const expect = Array.isArray(req.body?.expect) ? req.body.expect.map(n => Math.round(+n)).filter(n => n > 0 && n < 100).slice(0, 30) : [];
@@ -172,7 +209,13 @@ export default async function handler(req, res) {
       check.blind = blind.units;
       if (!same) { check.ok = false; check.detail = [`בספירה עיוורת נמצאו ${b.length} יחידות (${blind.units.join(', ')}) במקום ${a.length} (${expect.join(', ')})`, check.ok === false ? check.detail : ''].filter(Boolean).join(' · '); }
     }
-    return res.status(200).json({ image: out, check });
+    // a big image (Gemini returns PNG) would pass Vercel's response limit: it goes to Blob storage and the page fetches it from there
+    let outImg = out;
+    if (out.length > 3_200_000 && (process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID)) {
+      try { const mm = /^data:(image\/[a-z]+);base64,(.+)$/.exec(out); const { put } = await import('@vercel/blob');
+        const b = await put(`scenes/render-${Date.now()}.${mm[1].split('/')[1]}`, Buffer.from(mm[2], 'base64'), { access:'public', contentType:mm[1], addRandomSuffix:true }); outImg = b.url; } catch (e) {}
+    }
+    return res.status(200).json({ image:outImg, check, engine: useGemini ? 'gemini' : 'openai' });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
