@@ -2016,7 +2016,7 @@ function buildDrawer(w, h, d) {
   }
   // opens until the top-back corner of the bin reaches the front edge of the top panel
   g.name = 'drawer';
-  g.userData = { labelSize:[lw, lhh], P, open: a1 - Math.PI/2 - 0.1, cell:true };
+  g.userData = { labelSize:[lw, lhh], P, open: a1 - Math.PI/2 - 0.1, cell:true, binW:w };
   bake(g, (c) => c.name === 'label');
   return g;
 }
@@ -2036,7 +2036,7 @@ function makeUnit(n) {
   group.traverse(o => { if (o.name === 'drawer') list.push(o); if (o.name === 'rod') rod = o; });
   list.forEach(d => {
     const s = d.userData;
-    d.userData = { P:s.P, open:s.open, labelSize:s.labelSize, angle:0, target:0, pending:false, label:d.getObjectByName('label'), rod, cell:true };
+    d.userData = { P:s.P, open:s.open, labelSize:s.labelSize, angle:0, target:0, pending:false, label:d.getObjectByName('label'), rod, cell:true, binW:s.binW };
     d.rotation.x = 0;
   });
   rod.userData = { angle:0, target:0, lift:rod.userData.lift, drawers:list }; rod.rotation.x = 0;
@@ -7691,7 +7691,7 @@ async function catShoot(v, onStep = () => {}) {
   { const host = document.getElementById('stuGauge'); if (host) setTimeout(() => { host.hidden = true; host.innerHTML = ''; }, 900); }
   let out = await catFit(r.image);                                        // exactly 1024 × 1280, transparent PNG
   const keepOut = (v.t === 'arc' || v.t === 'unit') && fromBase && body.mask;                 // ארקלית from its empty photo: the bin itself is pasted back exactly
-  if (keepOut) out = await catKeepOutside(out, image, body.mask, v.t === 'unit' ? 0.35 : 0);
+  if (keepOut) out = await catKeepOutside(out, image, body.mask, v.t === 'unit' ? 0.35 : 0, v.t === 'unit' ? cv._seen : null);
   // the AI moves, resizes and stretches the product a little each time: put it back exactly where (and as big as) the 3D model is
   let ref = keepOut ? null : alphaBox(cv); if (ref && ref.w > CAT_SIZE.w * 0.97 && ref.h > CAT_SIZE.h * 0.97) ref = null;   // no transparent background to measure: leave it (pasted back: already in place)
   const al = ref ? await catAlign(out, ref) : null;
@@ -7721,6 +7721,7 @@ async function catCapture(v) {
   catOpenUp(v); await nextFrames(4);
   const raw = captureCanvas(1536), cv = padToRatio(raw, CAT_SIZE.w, CAT_SIZE.h);
   if (v.set && !v.set.empty) try { cv._mask = catMask(raw._box, v.t === 'arc'); } catch (e) { cv._mask = null; }
+  if (v.t === 'unit' && v.set && !v.set.empty) try { cv._seen = catSeen(raw._box); } catch (e) { cv._seen = null; }
   return cv;
 }
 // "דלתות פתוחות" / "תריס פתוח" are only words in the variant's settings: the doors themselves open by animation, so the studio opens them
@@ -7853,7 +7854,31 @@ async function catRealign(keys) {
 }
 // the render back to the exact catalogue size, keeping it transparent
 // the result inside the opening, the approved empty photo everywhere else (a soft edge between them)
-async function catKeepOutside(res, base, mask, veil = 0) {
+// רב תא: a block standing for the contents inside every bin, drawn white with the bins themselves black (and in the way). Where the block shows,
+// nothing is in front of the contents (an open bin, seen from above); where it is hidden, the clear front stands in front of them.
+function catSeen(box) {
+  const white = new THREE.MeshBasicMaterial({ color:0xffffff, toneMapped:false, fog:false }), black = new THREE.MeshBasicMaterial({ color:0x000000, toneMapped:false, fog:false, side:THREE.DoubleSide });
+  const lineB = new THREE.LineBasicMaterial({ color:0x000000, toneMapped:false, fog:false }), vols = [];
+  const paint = () => { const keep = [];
+    scene.traverse(o => { const P = o.userData && o.userData.P; if (o.name !== 'drawer' || !P || !o.userData.binW) return;
+      const w = o.userData.binW - 4 * T_CLEAR, h = 0.6 * P.R - 2 * T_CLEAR, d = P.dd - 3 * T_CLEAR;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), white); m.position.set(0, T_CLEAR + h / 2, -T_CLEAR - d / 2); m.userData.vol = true; vols.push([o, m]); });
+    vols.forEach(([o, m]) => o.add(m));
+    scene.traverse(o => { if (!o.visible || !(o.isMesh || o.isLine || o.isLineSegments || o.isPoints) || o.userData.vol) return;
+      const m0 = Array.isArray(o.material) ? o.material[0] : o.material;
+      if (m0 && m0.isShadowMaterial) { keep.push([o, o.material, true]); o.visible = false; return; }
+      keep.push([o, o.material, false]); o.material = o.isMesh ? black : lineB; });
+    const bg = scene.background; scene.background = null;
+    return () => { keep.forEach(([o, m, hid]) => { o.material = m; if (hid) o.visible = true; }); vols.forEach(([o, m]) => { o.remove(m); m.geometry.dispose(); }); scene.background = bg; }; };
+  const shot = padToRatio(captureCanvas(1536, box, paint), CAT_SIZE.w, CAT_SIZE.h);
+  white.dispose(); black.dispose(); lineB.dispose();
+  const W = CAT_SIZE.w, H = CAT_SIZE.h, a = document.createElement('canvas'); a.width = W; a.height = H;
+  const ag = a.getContext('2d'); ag.drawImage(shot, 0, 0, W, H);
+  const id = ag.getImageData(0, 0, W, H), px = id.data;
+  for (let i = 0; i < px.length; i += 4) { const on = px[i + 3] > 40 && px[i] > 128; px[i] = px[i + 1] = px[i + 2] = 255; px[i + 3] = on ? 255 : 0; }
+  ag.putImageData(id, 0, 0); return a.toDataURL('image/png');          // opaque where the contents are seen directly
+}
+async function catKeepOutside(res, base, mask, veil = 0, seen = null) {
   const [a, b, m] = await Promise.all([loadImgX(res), loadImgX(base), loadImgX(mask)]), W = CAT_SIZE.w, H = CAT_SIZE.h;
   const k = document.createElement('canvas'); k.width = W; k.height = H; const kg = k.getContext('2d'); kg.filter = 'blur(5px)'; kg.drawImage(m, 0, 0, W, H);
   const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
@@ -7862,6 +7887,7 @@ async function catKeepOutside(res, base, mask, veil = 0) {
   if (veil > 0) {                                  // רב תא: the clear bins of the empty photo laid back OVER the items, half-transparent – the items sit behind the clear front
     const t = document.createElement('canvas'); t.width = W; t.height = H; const tg = t.getContext('2d');
     tg.drawImage(b, 0, 0, W, H); tg.globalCompositeOperation = 'destination-out'; tg.drawImage(k, 0, 0);
+    if (seen) { const sv = await loadImgX(seen); tg.filter = 'blur(3px)'; tg.drawImage(sv, 0, 0, W, H); tg.filter = 'none'; }   // no veil where you look straight into a bin
     g.globalCompositeOperation = 'source-over'; g.globalAlpha = veil; g.drawImage(t, 0, 0); g.globalAlpha = 1;
   }
   return c.toDataURL('image/png');
