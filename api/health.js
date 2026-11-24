@@ -9,6 +9,8 @@ export default async function handler(req, res) {
     OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
     ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD,
     OPENAI_IMAGE_MODEL: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-sunburst (ברירת מחדל)',
+    GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
+    GEMINI_IMAGE_MODEL: process.env.GEMINI_IMAGE_MODEL || 'gemini-nano-banana-2.1 (ברירת מחדל)',
     redis_url_var: names.url || 'לא נמצא',
     redis_token_var: names.token || 'לא נמצא',
     redis_connected: false,
