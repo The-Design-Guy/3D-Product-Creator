@@ -21,7 +21,7 @@ const REF_TEXT = {
 
 const HOLES = 'BACK WALL: the back wall of every tilt-bin housing is SOLID, smooth grey plastic – no keyhole hanging slots, no holes, no openings, no screws, no rivets, no metal studs or circles anywhere on it. Keep the side walls as in the model.';
 // stage 1 (or the single-stage render): photorealistic photo from the 3D view
-function prompt(description, background, lighting, brief, labels, structure, productRef, stage) {
+function prompt(description, background, lighting, brief, labels, structure, productRef, stage, shadow) {
   const n = 1 + labels.length + (productRef ? 1 : 0);
   return [
     `You receive ${n} image${n > 1 ? 's' : ''}. The FIRST image is the 3D viewport render of the product: turn it into a photorealistic photograph of the exact same object.`,
@@ -44,7 +44,8 @@ function prompt(description, background, lighting, brief, labels, structure, pro
     brief && stage !== 'base' ? 'Anything the brief puts "in the bins" goes INSIDE the bins that already exist, behind their clear fronts; it never creates new bins or changes how many there are. If something cannot be done without changing the count, leave it out.' : '',
     'Make the materials real: matte powder-coated / injection-moulded light grey RAL 7035 plastic, crystal-clear polystyrene bins with real refraction, subtle reflections and slightly brighter edges where the plastic is thick, brushed metal where there is metal.',
     background === 'transparent'
-      ? 'Isolated product on a fully transparent background with a soft, natural, semi-transparent contact shadow on the ground directly under and just around it, cast from the light described (the shadow stays; no floor, no background – everything else fully transparent).'
+      ? (shadow ? 'Isolated product on a fully transparent background with a soft, natural, semi-transparent contact shadow on the ground directly under and just around it, cast from the light described (the shadow stays; no floor, no background – everything else fully transparent).'
+        : 'Isolated product with a fully transparent background, no floor and no shadow outside the object.')
       : /BACKGROUND/.test(brief) ? 'Build the background and surroundings as the brief describes, around the product exactly where it stands, with natural contact shadows.'
       : 'Seamless light grey-white studio background with a soft natural contact shadow under the product.',
     `Lighting: ${lighting || 'soft, even professional catalogue lighting.'}`,
@@ -142,7 +143,7 @@ export default async function handler(req, res) {
   if (mk) form.append('mask', new Blob([Buffer.from(mk[1], 'base64')], { type:'image/png' }), 'mask.png');
   form.append('prompt', stage === 'edit'
     ? editPrompt(String(description).slice(0, 2000), background, brief, labels, structure, !!mk)
-    : prompt(String(description).slice(0, 2000), background, lighting, brief, labels, structure, productRef, stage));
+    : prompt(String(description).slice(0, 2000), background, lighting, brief, labels, structure, productRef, stage, !!req.body?.shadow));
   form.append('background', background === 'transparent' ? 'transparent' : 'opaque');
   form.append('output_format', 'webp');          // smaller response than PNG, keeps transparency
   form.append('output_compression', '95');
