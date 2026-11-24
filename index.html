@@ -1526,6 +1526,8 @@
       <div class="seg2" id="lfDepth"><button data-v="300">30 ס"מ</button><button data-v="400" class="on">40 ס"מ</button><button data-v="500">50 ס"מ</button><button data-v="600">60 ס"מ</button></div>
       <div class="lbl">גובה העמודים</div>
       <div class="seg2" id="lfHeight"><button data-v="2000" class="on">200</button><button data-v="2250">225</button><button data-v="2500">250</button></div>
+      <div class="lbl">גב אל גב <span class="lfst pending">לא מאומת</span></div>
+      <div class="seg2" id="lfB2b"><button data-v="0" class="on">בלי</button><button data-v="1">עם שורה נוספת מאחור</button></div>
       <div class="lbl">שדות בשורה (רוחב המדף בקטלוג; עמוד משותף בין שדות – טעון אימות)</div>
       <div class="shl" id="lfBays"></div>
       <div class="seg2" id="lfBayOps"><button data-v="L">+ שדה משמאל</button><button data-v="R">+ שדה מימין</button></div>
@@ -4648,11 +4650,12 @@ const LF_UP = { 2000:'33540612', 2250:'33540613', 2500:'33540609' }, LF_TIE = { 
 const LF_SKU = { clip:'33530020', footA:'33520550', footP:'33520560', brace:'33510010' };
 // component status (what the status colours show)
 const LF_ST = { upright:'pending', shelf:'provisional', clip:'pending', tie:'pending', brace:'provisional', footA:'provisional' };
-const LF0 = { bays:[970], depth:400, height:2000, shelves:5, lv:null, ovr:{}, lod:'auto', stc:false };   // lv[bay] = slot numbers of its shelves (null = even); ovr = admin overrides of the structural rules
+const LF0 = { bays:[970], depth:400, height:2000, shelves:5, lv:null, ovr:{}, lod:'auto', stc:false, b2b:false };
+const LF_B2B = 20;                                    // back to back: the gap between the two rows – only the bracing straps sit in it, mm – estimate, not verified   // lv[bay] = slot numbers of its shelves (null = even); ovr = admin overrides of the structural rules
 const LF = deep(LF0);
 const lfFix = (c) => { c.bays = (Array.isArray(c.bays) && c.bays.length ? c.bays : [970]).map(w => LF_W.includes(w) ? w : 970).slice(0, 12);
   if (!LF_D.includes(c.depth)) c.depth = 400; if (!LF_H.includes(c.height)) c.height = 2000;
-  c.shelves = Math.max(2, Math.min(8, c.shelves | 0 || 5));
+  c.shelves = Math.max(2, Math.min(8, c.shelves | 0 || 5)); c.b2b = !!c.b2b;
   delete c.ties; delete c.crosses; delete c.braceEvery;                                 // v011 kept these on the unit – now the rules decide (admin: c.ovr)
   const o = c.ovr && typeof c.ovr === 'object' ? c.ovr : {}; c.ovr = {};
   if ([2, 3].includes(o.ties)) c.ovr.ties = o.ties; if ([1, 2, 3].includes(o.crosses)) c.ovr.crosses = o.crosses; if ([1, 8].includes(o.braceEvery)) c.ovr.braceEvery = o.braceEvery;
@@ -4815,7 +4818,11 @@ function buildLF(c = LF) {
   lfFix(c);
   const g = new THREE.Group(), root = new THREE.Group(); root.scale.setScalar(0.001); g.add(root);
   const r = lfRun(c); root.add(r.root);
-  return { group:g, drawers:[], rods:[], W:Math.round(r.outer), D:c.depth, H:c.height, shelves:{ lf:true, meshes:r.shelves } };
+  if (c.b2b) {                                                       // back to back: a second identical row behind, turned round; only the bracing between them
+    const off = (c.depth + LF_B2B) / 2, b = lfRun(c); b.root.rotation.y = Math.PI; b.root.position.z = -off; r.root.position.z = off; root.add(b.root);
+    b.shelves.forEach(m => delete m.userData.lfShelf);                // the shelves are set on the front row – the back one follows it
+  }
+  return { group:g, drawers:[], rods:[], W:Math.round(r.outer), D:c.b2b ? 2 * c.depth + LF_B2B : c.depth, H:c.height, shelves:{ lf:true, meshes:r.shelves } };
 }
 // the parts list – counted from the same rules as the geometry; quantities that depend on unverified packaging are left open
 function lfBOM(c = LF) {
@@ -4830,6 +4837,7 @@ function lfBOM(c = LF) {
   rows.push({ he:'רגל עם עיגון', sku:LF_SKU.footA, n:2 * F, buy:2 * F, st:R.feet.st, note:'יחס H/P ' + (c.height / c.depth).toFixed(1) + (c.height / c.depth > 4 ? ' > 4 – חובה (MFR p.21)' : ' – עם האלכסונים (MFR p.33)') });
   rows.push({ he:'סט אלכסוני ייצוב', sku:LF_SKU.brace, n:braced * crosses * 2, buy:null, st:R.crosses.st, must:true, unit:'רצועות',
     note:`חובה. ${braced} שדות מחוזקים × ${crosses} צלבים = ${braced * crosses * 2} רצועות (לפי כלל, לא מאומת). כמות סטים 33510010 – לבירור` });
+  if (c.b2b) rows.forEach(r => { r.n *= 2; if (r.buy != null) r.buy *= 2; r.note = (r.note ? r.note + '. ' : '') + 'גב אל גב: ×2 (שתי שורות נפרדות)'; });
   return rows;
 }
 const LF_STHE = { verified:'מאומת', provisional:'זמני', pending:'לא מאומת', policy:'מדיניות' };
@@ -4845,7 +4853,7 @@ function lfInfoHtml(c = LF) {
 function describeLF(c = LF) {
   const W = lfWidths(c).assemblyOuterWidth.v, R = lfRules(c), braced = lfBraced(c).map((b, i) => b ? i + 1 : 0).filter(Boolean);
   const bays = c.bays.map((w, i) => `bay ${i + 1}: ${w / 10} cm shelves, ${lfBayKs(c, i).length} shelves with tops at ${lfLevels(c, i).map(l => Math.round(l.top / 10)).join(', ')} cm`).join('; ');
-  return `LA FORTEZZA boltless steel shelving (a visualisation, not an engineering-approved configuration): ${c.bays.length} bay${c.bays.length > 1 ? 's' : ''} in one row sharing uprights (${c.bays.length + 1} side frames, ${2 * (c.bays.length + 1)} uprights), about ${Math.round(W / 10)} cm wide overall, ${c.depth / 10} cm deep, ${c.height / 10} cm high. Slim light-grey (RAL 7035) slotted steel uprights with folded grooves; flat light-grey steel shelves with folded edges hung on small galvanised clips – ${bays}. Exactly these shelves at exactly these heights, no others. Galvanised flat diagonal bracing straps (50 mm wide) crossing in X shapes on the BACK of bay${braced.length > 1 ? 's' : ''} ${braced.join(', ')}: ${R.crosses.v} X${R.crosses.v > 1 ? 's stacked one above the other' : ''} per braced bay. ${R.ties.v} horizontal side ties on every side frame (low and high). A small galvanised anchor foot under every upright.`;
+  return `LA FORTEZZA boltless steel shelving (a visualisation, not an engineering-approved configuration): ${c.bays.length} bay${c.bays.length > 1 ? 's' : ''} in one row sharing uprights (${c.bays.length + 1} side frames, ${2 * (c.bays.length + 1)} uprights), about ${Math.round(W / 10)} cm wide overall, ${c.depth / 10} cm deep, ${c.height / 10} cm high. Slim light-grey (RAL 7035) slotted steel uprights with folded grooves; flat light-grey steel shelves with folded edges hung on small galvanised clips – ${bays}. Exactly these shelves at exactly these heights, no others. Galvanised flat diagonal bracing straps (50 mm wide) crossing in X shapes on the BACK of bay${braced.length > 1 ? 's' : ''} ${braced.join(', ')}: ${R.crosses.v} X${R.crosses.v > 1 ? 's stacked one above the other' : ''} per braced bay. ${R.ties.v} horizontal side ties on every side frame (low and high). A small galvanised anchor foot under every upright.${c.b2b ? ` BACK TO BACK: a second identical row stands directly behind it, turned to face the other way, only about ${LF_B2B / 10} cm apart – just the bracing straps between the two rows – making one double-depth block (${(2 * c.depth + LF_B2B) / 10} cm deep overall).` : ''}`;
 }
 // renders that show LA FORTEZZA carry a small mark in the corner: a visualisation, not an engineering approval
 const lfInView = () => mode === 'lf' || (mode === 'scene' && SCN.items.some(i => i.type === 'lf' && !i.hidden));
@@ -5703,7 +5711,7 @@ canvas.addEventListener('pointerdown', (e) => {
 let LF_SINGLE = null;
 function renderLfUI() {
   if (!$('lfBays')) return; lfFix(LF);
-  setSeg('lfDepth', String(LF.depth)); setSeg('lfHeight', String(LF.height)); setSeg('lfShelves', LF.lv ? '' : String(LF.shelves)); setSeg('lfStc', LF.stc ? '1' : '0'); setSeg('lfLod', LF.lod || 'auto');
+  setSeg('lfDepth', String(LF.depth)); setSeg('lfHeight', String(LF.height)); setSeg('lfShelves', LF.lv ? '' : String(LF.shelves)); setSeg('lfStc', LF.stc ? '1' : '0'); setSeg('lfLod', LF.lod || 'auto'); setSeg('lfB2b', LF.b2b ? '1' : '0');
   const o = LF.ovr || {}; setSeg('lfCross', String(o.crosses ?? 'auto')); setSeg('lfEvery', String(o.braceEvery ?? 'auto')); setSeg('lfTies', String(o.ties ?? 'auto'));
   document.querySelectorAll('.lfadm').forEach(el => el.hidden = !isAdmin());
   lfBayRows(); lfJoinUI(); lfLvUI(); $('lfInfo').innerHTML = lfInfoHtml();
@@ -5712,6 +5720,7 @@ segGroup('lfBayOps', (v) => { if (LF.bays.length >= 12) { toast('עד 12 שדו�
   lfDo(() => { const lv = lfLvAll(); if (v === 'L') { LF.bays.unshift(LF.bays[0]); lv.unshift(null); if (LF._sel) LF._sel[0]++; } else { LF.bays.push(LF.bays[LF.bays.length - 1]); lv.push(null); } LF.lv = lv; }, v === 'L' ? 'R' : 'L'); });
 segGroup('lfDepth', (v) => lfDo(() => { LF.depth = +v; }));
 segGroup('lfHeight', (v) => lfDo(() => { LF.height = +v; }));
+segGroup('lfB2b', (v) => lfDo(() => { LF.b2b = v === '1'; }));
 segGroup('lfShelves', (v) => lfDo(() => { LF.shelves = +v; LF.lv = null; LF._sel = null; }));
 const lfOvr = (k) => (v) => { if (!isAdmin()) return; lfDo(() => { LF.ovr = { ...(LF.ovr || {}) }; if (v === 'auto') delete LF.ovr[k]; else LF.ovr[k] = +v; }); };
 segGroup('lfCross', lfOvr('crosses')); segGroup('lfEvery', lfOvr('braceEvery')); segGroup('lfTies', lfOvr('ties'));
@@ -8201,6 +8210,7 @@ async function heroBuild(meta) {
   const set = CAT_SETS.find(x => x.id === meta.set && !x.empty) || null;
   const items = vs.map((v, i) => ({ id:i + 1, type:v.t, cfg:deep(v.cfg), rot:0, name:v.name, x:i * 5 - vs.length * 2.5, z:0, contents:set ? set.txt : '' }));
   const nb = Math.max(1, Math.min(6, +meta.bays || 1));             // LA FORTEZZA / medium-duty shelving: several connected bays in one run (1 = the type as it is)
+  if (meta.b2b) items.forEach(it => { const c = it.type === 'lf' ? it.cfg.lf : it.type === 'shelf' ? it.cfg.sh : null; if (c) c.b2b = true; });   // back to back
   if (nb > 1) items.forEach(it => { const c = it.type === 'lf' ? it.cfg.lf : it.type === 'shelf' ? it.cfg.sh : null;
     if (c && Array.isArray(c.bays) && c.bays.length) { c.bays = Array.from({ length:nb }, (_, k) => c.bays[k] || c.bays[0]);
       if (it.type === 'lf' && Array.isArray(c.lv)) c.lv = Array.from({ length:nb }, (_, k) => c.lv[k] || c.lv[0] || null); } });   // LA FORTEZZA: the shelves of bay 1 in every bay
@@ -8311,7 +8321,7 @@ async function heroShoot(meta, onStep = () => {}) {
   // hero shots carry no LA FORTEZZA caption (Royi: a finished product from Italy – nobody cuts to a plan from these photos)
   const url = await uploadImage(r.image, 'catalog'); if (!url) throw new Error('אין חיבור לאחסון התמונות');
   let ref = null; try { let d = cv.toDataURL('image/webp', 0.85); if (!d.startsWith('data:image/webp')) d = cv.toDataURL('image/png'); ref = await uploadImage(d, 'catref'); } catch {}
-  const m = { prod:meta.prod, names:meta.names, bays:meta.bays || 1, layout:meta.layout, ratio:meta.ratio, angle:meta.angle, ph:meta.ph || '', set:meta.set || '', notes:meta.notes || '', cam:meta.cam, pos:meta.pos, steps:meta.steps };
+  const m = { prod:meta.prod, names:meta.names, bays:meta.bays || 1, b2b:!!meta.b2b, layout:meta.layout, ratio:meta.ratio, angle:meta.angle, ph:meta.ph || '', set:meta.set || '', notes:meta.notes || '', cam:meta.cam, pos:meta.pos, steps:meta.steps };
   await api('/api/catalog', { action:'set', key:HERO_PFX + meta.name, url, name:meta.name, set:'hero', ref:ref || undefined, meta:m });
   return { url, check:r.check || null, refData:cv.toDataURL('image/jpeg', 0.85) };
 }
@@ -8443,14 +8453,14 @@ async function openHeroDrawer(tab, prefill) {
 // a new shot: the family on a wheel (the centred one is staged in the 3D view), its products, and the shot's choices
 function heroNewTab(host, prefill) {
   const fams = [...new Set(catVariants().map(v => v.prod))], m0 = prefill || HERO.last || {};
-  const st = { prod:m0.prod && fams.includes(m0.prod) ? m0.prod : fams[0], bays:String(m0.bays || 1), layout:m0.layout || 'steps', ratio:m0.ratio || '4:5', angle:m0.angle || 'tq', set:m0.set || '', ph:m0.ph || '',
+  const st = { prod:m0.prod && fams.includes(m0.prod) ? m0.prod : fams[0], bays:String(m0.bays || 1), b2b:m0.b2b ? '1' : '0', layout:m0.layout || 'steps', ratio:m0.ratio || '4:5', angle:m0.angle || 'tq', set:m0.set || '', ph:m0.ph || '',
     names:m0.names ? [...m0.names] : null, name:m0.name || '', notes:m0.notes || '', keep:prefill && prefill.cam ? { cam:prefill.cam, pos:prefill.pos, steps:prefill.steps } : null };
   const row = (l, key, opts) => `<div class="adopt"><div class="adol">${l}</div><div class="adoc">${Object.entries(opts).map(([k, t]) => `<span class="adch"><button data-k="${key}" data-v="${k}" class="${st[key] === k ? 'on' : ''}">${adEsc(t)}</button></span>`).join('')}</div></div>`;
   const STEPS = ['מוצר', 'קונפיגורציה', 'יחס וצלם', 'אור ותכולה'];
   host.innerHTML = `<div id="hdForm"><div class="hdsteps">${STEPS.map((t, k) => `<button data-st="${k}"><i>${k + 1}</i>${t}</button>`).join('')}</div>
     <section class="hdstep" data-st="0"><div class="adol">בחרו משפחת מוצרים</div><div class="adwh"></div></section>
     <section class="hdstep" data-st="1"><div id="hdVars" class="hdvars"></div>
-    <div id="hdBays" hidden>${row('שדות מחוברים', 'bays', { 1:'1', 2:'2', 3:'3', 4:'4', 5:'5' })}</div>
+    <div id="hdBays" hidden>${row('שדות מחוברים', 'bays', { 1:'1', 2:'2', 3:'3', 4:'4', 5:'5' })}${row('גב אל גב', 'b2b', { 0:'בלי', 1:'שורה נוספת מאחור' })}</div>
     <div id="hdLayout">${row('סידור', 'layout', HERO_LAYOUTS)}</div></section>
     <section class="hdstep" data-st="2">${row('יחס', 'ratio', Object.fromEntries(Object.keys(HERO_RATIOS).map(k => [k, k])))}${row('זווית', 'angle', HERO_ANGLES)}
     <div class="adopt"><div class="adol">צלם</div><div class="hdph">${Object.entries(HERO_PH).map(([k, p]) => `<button data-ph="${k}" class="${st.ph === k ? 'on' : ''}" title="${adEsc(p.he)}"><img src="img/ph/${k}.webp" alt=""><span>${adEsc(p.name.split(' ')[0])}</span></button>`).join('')}</div>
@@ -8470,7 +8480,7 @@ function heroNewTab(host, prefill) {
   host.querySelector('#hdLight').onclick = () => toggleLightPop(true);
   goStep(prefill && prefill.cam ? 3 : 0);
   const q = (x) => host.querySelector(x), msg = (t) => { q('#hdMsg').innerHTML = t; };
-  const meta = () => ({ prod:st.prod, names:st.names || [], bays:+st.bays || 1, layout:st.layout, ratio:st.ratio, angle:st.angle, ph:st.ph, set:st.set, name:q('#hdName').value.trim(), notes:q('#hdNotes').value.trim() });
+  const meta = () => ({ prod:st.prod, names:st.names || [], bays:+st.bays || 1, b2b:st.b2b === '1', layout:st.layout, ratio:st.ratio, angle:st.angle, ph:st.ph, set:st.set, name:q('#hdName').value.trim(), notes:q('#hdNotes').value.trim() });
   // רב תא and ארקליות: all their sizes in one shot. Any other family: ONE product – more than one is already a scene.
   const vars = () => { const vs = heroVars(st.prod), multi = heroMulti(st.prod);
     if (!st.names || !st.names.every(n => vs.some(v => v.name === n))) st.names = multi ? vs.slice(0, 8).map(v => v.name) : vs.slice(0, 1).map(v => v.name);
@@ -10099,7 +10109,7 @@ const HEADS = {
     open:() => { const S = METAL.mtamb, was = S.target; S.target = TBX.MAXO * 0.9; return () => { S.target = was; }; } }, { seg:'lblMode', l:'תוויות', if:() => !!((MT.arc && MT.arc.length) || MT.arcFloor) }],
   mdoor:[{ seg:'lblMode', l:'תוויות', if:() => !!((MD.arc && MD.arc.length) || MD.arcFloor) }],
   shelf:[{ l:'מידות ורכיבים', panel:['shInfo'] }, { seg:'shDepth', l:'עומק' }, { seg:'shHeight', l:'גובה' }, { l:'יחידות', panel:['shBays', 'shBayAdd'] }, { seg:'shB2b', l:'גב אל גב' }, { l:'פינה 90°', panel:['shCorner', 'shCornerSec'] }, { seg:'shLod', l:'פירוט' }, { l:'מפלסים', panel:['shLvMode', 'shLevels', 'shLvAdd'], val:() => shLevels().length + (SH.lv ? ' · ידני' : '') }],
-  lf:[{ l:'מידות, BOM ואימות', panel:['lfInfo'] }, { seg:'lfDepth', l:'עומק' }, { seg:'lfHeight', l:'גובה' }, { l:'שדות', panel:['lfBays', 'lfBayOps', 'lfJoin'] }, { seg:'lfShelves', l:'מדפים (אחיד)' },
+  lf:[{ l:'מידות, BOM ואימות', panel:['lfInfo'] }, { seg:'lfDepth', l:'עומק' }, { seg:'lfHeight', l:'גובה' }, { seg:'lfB2b', l:'גב אל גב' }, { l:'שדות', panel:['lfBays', 'lfBayOps', 'lfJoin'] }, { seg:'lfShelves', l:'מדפים (אחיד)' },
     { l:'גובה מדפים', panel:['lfLv'] }, { l:'עקיפה מבנית (מנהל)', panel:['lfCross', 'lfEvery', 'lfTies'], if:() => isAdmin() }, { seg:'lfStc', l:'צבע' }, { seg:'lfLod', l:'פירוט' }],
   wb:[{ seg:'wbVar', l:'גרסה' }, { seg:'wbTop', l:'משטח' }, { seg:'wbBr', l:'משולשים', if:() => WB.variant > 1 }, { seg:'wbTools', l:'על הלוח', if:() => WB.variant > 1 }, { seg:'lblMode', l:'תוויות' }],
   furn:[{ seg:'fuW', l:'רוחב', if:() => ['station', 'desk', 'bench'].includes(FU.kind) }, { seg:'fuPlant', l:'סוג העציץ', if:() => FU.kind === 'plant' }],
