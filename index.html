@@ -1526,7 +1526,7 @@
       <div class="seg2" id="lfDepth"><button data-v="300">30 ס"מ</button><button data-v="400" class="on">40 ס"מ</button><button data-v="500">50 ס"מ</button><button data-v="600">60 ס"מ</button></div>
       <div class="lbl">גובה העמודים</div>
       <div class="seg2" id="lfHeight"><button data-v="2000" class="on">200</button><button data-v="2250">225</button><button data-v="2500">250</button></div>
-      <div class="lbl">גב אל גב <span class="lfst pending">לא מאומת</span></div>
+      <div class="lbl">גב אל גב <small>(2 ס"מ בין השורות)</small></div>
       <div class="seg2" id="lfB2b"><button data-v="0" class="on">בלי</button><button data-v="1">עם שורה נוספת מאחור</button></div>
       <div class="lbl">שדות בשורה (רוחב המדף בקטלוג; עמוד משותף בין שדות – טעון אימות)</div>
       <div class="shl" id="lfBays"></div>
@@ -4651,7 +4651,7 @@ const LF_SKU = { clip:'33530020', footA:'33520550', footP:'33520560', brace:'335
 // component status (what the status colours show)
 const LF_ST = { upright:'pending', shelf:'provisional', clip:'pending', tie:'pending', brace:'provisional', footA:'provisional' };
 const LF0 = { bays:[970], depth:400, height:2000, shelves:5, lv:null, ovr:{}, lod:'auto', stc:false, b2b:false };
-const LF_B2B = 20;                                    // back to back: the gap between the two rows – only the bracing straps sit in it, mm – estimate, not verified   // lv[bay] = slot numbers of its shelves (null = even); ovr = admin overrides of the structural rules
+const LF_B2B = 20;                                    // back to back: the gap between the two rows – only the bracing straps sit in it, mm (confirmed by Royi 24.11.2026)   // lv[bay] = slot numbers of its shelves (null = even); ovr = admin overrides of the structural rules
 const LF = deep(LF0);
 const lfFix = (c) => { c.bays = (Array.isArray(c.bays) && c.bays.length ? c.bays : [970]).map(w => LF_W.includes(w) ? w : 970).slice(0, 12);
   if (!LF_D.includes(c.depth)) c.depth = 400; if (!LF_H.includes(c.height)) c.height = 2000;
