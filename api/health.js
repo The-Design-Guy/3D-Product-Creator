@@ -8,9 +8,10 @@ export default async function handler(req, res) {
   const out = {
     OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
     ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD,
-    OPENAI_IMAGE_MODEL: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-sunburst (ברירת מחדל)',
+    OPENAI_IMAGE_MODEL: !process.env.OPENAI_IMAGE_MODEL ? 'gpt-image-2.5-sunburst (ברירת מחדל)' : /^[a-z0-9.\-]{2,60}$/i.test(process.env.OPENAI_IMAGE_MODEL) && !/^(sk-|AIza|AQ\.)/.test(process.env.OPENAI_IMAGE_MODEL) ? process.env.OPENAI_IMAGE_MODEL : '⚠ הערך כאן אינו שם מודל',
     GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
-    GEMINI_IMAGE_MODEL: process.env.GEMINI_IMAGE_MODEL || 'gemini-nano-banana-2.1 (ברירת מחדל)',
+    // never echo a value that is not plainly a model name (a key pasted into the wrong variable must not show here)
+    GEMINI_IMAGE_MODEL: !process.env.GEMINI_IMAGE_MODEL ? 'gemini-nano-banana-2.1 (ברירת מחדל)' : /^gemini-[a-z0-9.\-]{2,60}$/.test(process.env.GEMINI_IMAGE_MODEL) ? process.env.GEMINI_IMAGE_MODEL : '⚠ הערך כאן אינו שם מודל',
     redis_url_var: names.url || 'לא נמצא',
     redis_token_var: names.token || 'לא נמצא',
     redis_connected: false,
