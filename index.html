@@ -3858,7 +3858,7 @@ function describeScene() {
     applyCfg(it.type, it.id === SCN.sel ? capCfg(it.type) : it.cfg);
     mode = it.type; const d = describe(); mode = m;
     const tw = touchWall(it), facing = ({ 0:'facing the camera/room', 90:'turned 90 degrees, its long side running away from the back wall', 180:'facing the back wall', 270:'turned 90 degrees, its long side running away from the back wall' })[Math.round(((it.rot % 360) + 360) % 360 / 90) * 90 % 360];
-    lines.push(`${k + 1}. ${d}${it.contents ? ` INSIDE ITS BINS: ${it.contents}.` : ''}${labelBrief(it)} Position: ${Math.round((it.x + R.W/2000)*100)} cm from the left side, ${Math.round((it.z + R.D/2000)*100)} cm from the back; ${facing}${tw.length ? '; touching the ' + tw.join(' and ') + ' wall' : ''}${yOf(it) > 0.005 ? `; raised ${Math.round(yOf(it)*100)} cm above the floor${restsOn(it) ? ', resting on top of product ' + (SCN.items.filter(i => !i.hidden).indexOf(restsOn(it)) + 1) : ' (wall-mounted / floating exactly at that height)'}` : ''}.`);
+    lines.push(`${k + 1}. ${d}${it.contents ? ` INSIDE ITS BINS: ${sizedContents(it) || it.contents}.` : ''}${labelBrief(it)} Position: ${Math.round((it.x + R.W/2000)*100)} cm from the left side, ${Math.round((it.z + R.D/2000)*100)} cm from the back; ${facing}${tw.length ? '; touching the ' + tw.join(' and ') + ' wall' : ''}${yOf(it) > 0.005 ? `; raised ${Math.round(yOf(it)*100)} cm above the floor${restsOn(it) ? ', resting on top of product ' + (SCN.items.filter(i => !i.hidden).indexOf(restsOn(it)) + 1) : ' (wall-mounted / floating exactly at that height)'}` : ''}.`);
   });
   restoreAll(saved);
   const sel = SCN.items.find(i => i.id === SCN.sel); if (sel) applyCfg(sel.type, sel.cfg);
@@ -7820,6 +7820,23 @@ function pickKinds(setId, bins) {
     out.push({ k, txt:`${k.en} – each about ${k.s[0]} × ${k.s[1]} cm, at their REAL size (the bin is about ${Math.round(B[1])} × ${Math.round(B[0])} cm inside)` });
   });
   return out.map(x => x.txt);
+}
+// a product in a scene / hero shot with one of the sets inside: its bins measured from the model, and for each size of bin kinds that fit it
+//   (רב תא bins, ארקליות / אחסוניות; drawers will follow) – the scene and hero renders have no masks, so this is told in words only
+function sizedContents(it) {
+  const set = CAT_SETS.find(c => c.txt && c.txt === String(it.contents || '').trim()); if (!set || !ITEM_KINDS[set.id]) return null;
+  const g = ITEM_GROUPS.get(it.id); if (!g) return null;
+  const cls = new Map();
+  g.traverse(o => { const u = o.userData || {}; let d = null;
+    if (o.name === 'drawer' && u.binW && u.P) d = { w:u.binW - 2 * T_CLEAR, d:u.P.dd, h:BIN_CUT * u.P.R };
+    else if (u.arcModel) { const [l, w, h] = ARC_MODELS[u.arcModel].inner.split('x').map(Number); d = { w, d:l, h }; }
+    if (!d) return; const k = [d.w, d.d].map(x => Math.round(x / 10)).join('x'), c = cls.get(k) || { d, n:0 }; c.n++; cls.set(k, c); });
+  if (!cls.size) return null;
+  const parts = [...cls.values()].sort((a, b) => b.d.w * b.d.d - a.d.w * a.d.d).map(c => {
+    const ks = [...new Set(pickKinds(set.id, Array(Math.min(4, c.n)).fill(c.d)).map(t => t.split(' (the bin is')[0]))];
+    const B = [c.d.w, c.d.d].map(x => Math.round(x / 10)).sort((x, y) => x - y);
+    return `the ${c.n > 1 ? c.n + ' bins' : 'bin'} of about ${B[0]} × ${B[1]} cm inside hold ${ks.length > 1 ? 'one kind per bin, from: ' + ks.join('; ') : ks[0]}`; });
+  return `${set.txt.split(':')[0]} sized to the bins, at their REAL size – ${parts.join('; ')} (the smaller the bin, the smaller the items; never bigger than the bin)`;
 }
 // ארקליות / אחסוניות of several sizes in one photo: what goes into each size
 function arcContents(setId, models) {
