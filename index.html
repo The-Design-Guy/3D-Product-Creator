@@ -133,7 +133,7 @@
 .csn{font-size:11px;color:var(--muted);margin-top:4px}.galcs{padding:6px 10px;border-bottom:1px solid var(--line)}
 .hdstrip{display:flex;gap:6px;overflow-x:auto;margin:0 0 8px}.hdstrip button{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--muted)}
 .hdstrip img,.hdstrip i{width:56px;height:56px;object-fit:cover;border-radius:6px;border:2px solid transparent;display:flex;align-items:center;justify-content:center;background:#eef0f2}.hdstrip button.on img{border-color:var(--ink)}
-.hdsteps{display:flex;gap:4px;margin:2px 0 10px}.hdsteps button{flex:1;font:inherit;font-size:11.5px;padding:6px 2px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}.hdsteps i{font-style:normal;font-weight:700;width:20px;height:20px;line-height:20px;border-radius:50%;background:#eef0f2;font-size:11px}.hdsteps button.on{border-color:var(--ink);color:var(--ink);font-weight:600}.hdsteps button.on i{background:var(--ink);color:#fff}.hdsteps button.done i{background:#2e7d32;color:#fff}.hdstep[hidden]{display:none}
+.hdsteps{display:flex;gap:4px;margin:2px 0 10px}.hdsteps button{flex:1;font:inherit;font-size:11.5px;padding:6px 2px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}.hdsteps i{font-style:normal;font-weight:700;width:20px;height:20px;line-height:20px;border-radius:50%;background:#eef0f2;font-size:11px}.hdsteps button.on{border-color:var(--ink);color:var(--ink);font-weight:600}.hdsteps button.on i{background:var(--ink);color:#fff}.hdsteps button.done i{background:#2e7d32;color:#fff}.hdstep[hidden]{display:none}.wzhide{display:none!important}
 .hdph{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}.hdph0{margin-top:6px}.hdph0 button{font:inherit;font-size:12px;padding:4px 12px;border:1px solid var(--line);border-radius:20px;background:#fff;cursor:pointer;color:var(--muted)}.hdph0 button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .hdph button{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;font-size:11px;color:var(--muted);text-align:center}
 .hdph img,.hdph i{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid transparent;display:flex;align-items:center;justify-content:center;font-style:normal;background:#eef0f2}
@@ -6709,6 +6709,7 @@ $('renderBtn').onclick = () => {
     RWRAP._onClose = mountNotes(card);
     const st = { bg: mode === 'scene' ? 'studio' : 'transparent', ratio:PHOTO_PREF.ratio || '4:5', res: mode === 'scene' ? 'high' : 'std', dpi:300 };   // product photo: transparent 4:5; a scene: studio 4:5, high quality
     const q = (sel) => card.querySelector(sel);
+    if (mode === 'scene') setTimeout(() => renderWizard(card), 0);   // a scene: one choice at a time, until the first render
     const seg = (id, key, after) => card.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => {
       st[key] = key === 'dpi' ? +b.dataset.v : b.dataset.v;
       card.querySelectorAll(`#${id} button`).forEach(c => c.classList.toggle('on', c === b));
@@ -6948,6 +6949,37 @@ function openLightbox(src, actions = []) {
 // ---------- output size rules (GPT Image 2.5): edges multiple of 16, ≤ 3840, ratio ≤ 3:1, 655,360–8,294,400 px ----------
 const IMG_MIN_PX = 655360, IMG_MAX_PX = 8294400, IMG_EXPERIMENTAL_PX = 3686400;
 const r16 = (v) => Math.max(16, Math.round(v / 16) * 16);
+// the Render panel of a scene as 3 steps (configuration · ratio and photographer · light and contents) – until "רנדר"; then the panel is as it always was
+function renderWizard(card) {
+  const q = (x) => card.querySelector(x), setup = q('#rSetup');
+  if (!setup || setup.hidden || q('.hdsteps')) return;
+  const kids = [...card.children], sk = [...setup.children], at = (el) => kids.indexOf(el);
+  const tag = (el, k) => el && (el.dataset.wz = k);
+  kids.slice(at(card.querySelector(':scope > .lbl')), at(setup)).forEach(el => tag(el, 0));     // the flow and the base
+  sk.slice(0, 2).forEach(el => tag(el, 0)); tag(q('details.r-layout'), 0);                       // background · what goes into the render
+  sk.slice(2).forEach(el => tag(el, 1));                                                          // ratio, size, photographer, engine
+  kids.slice(at(setup) + 1).forEach(el => { if (!el.dataset.wz && !['rErr', 'rOut', 'rActs'].includes(el.id)) tag(el, 2); });
+  const lt = document.createElement('div'); lt.className = 'adopt'; lt.dataset.wz = 2;
+  lt.innerHTML = '<div class="lbl">מקור אור</div><button class="btn" type="button">כיוון, סוג ועוצמת האור…</button>';
+  lt.querySelector('button').onclick = () => toggleLightPop(true);
+  card.insertBefore(lt, kids.find(el => el.dataset.wz === '2'));
+  const bar = document.createElement('div'); bar.className = 'hdsteps';
+  bar.innerHTML = ['קונפיגורציה', 'יחס וצלם', 'אור ותכולה'].map((t, k) => `<button type="button" data-st="${k}"><i>${k + 1}</i>${t}</button>`).join('');
+  q('.dlg-sub').after(bar);
+  const acts = q('#rActs'), prev = document.createElement('button'), next = document.createElement('button');
+  prev.className = 'btn'; prev.type = 'button'; prev.textContent = 'חזרה'; next.className = 'btn primary'; next.type = 'button'; next.textContent = 'הבא';
+  acts.prepend(prev, next);
+  let cur = 0;
+  const go = (k) => { cur = Math.max(0, Math.min(2, k));
+    card.querySelectorAll('[data-wz]').forEach(el => el.classList.toggle('wzhide', +el.dataset.wz !== cur));
+    bar.querySelectorAll('button').forEach(b => { const n = +b.dataset.st; b.classList.toggle('on', n === cur); b.classList.toggle('done', n < cur); });
+    prev.hidden = cur === 0; next.hidden = cur === 2; q('#rGo').classList.toggle('wzhide', cur !== 2); };
+  bar.querySelectorAll('button').forEach(b => b.onclick = () => go(+b.dataset.st));
+  prev.onclick = () => go(cur - 1); next.onclick = () => go(cur + 1);
+  const off = () => { bar.remove(); prev.remove(); next.remove(); card.querySelectorAll('.wzhide').forEach(el => el.classList.remove('wzhide')); card.querySelectorAll('[data-wz]').forEach(el => delete el.dataset.wz); };
+  q('#rGo').addEventListener('click', off, { capture:true, once:true });
+  go(0);
+}
 function sizeForRatio(a, b, target) {
   let w = Math.sqrt(target * a / b), h = w * b / a;
   const k = Math.min(1, 3840 / Math.max(w, h)); w *= k; h *= k;
