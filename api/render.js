@@ -78,7 +78,7 @@ function prompt(description, background, lighting, brief, labels, structure, pro
 }
 
 // stage 2 of the two-stage render: the approved, empty base photo is edited – only additions from the brief
-function editPrompt(description, background, brief, labels, structure, masked) {
+function editPrompt(description, background, brief, labels, structure, masked, itemsOnly) {
   const n = 1 + labels.length;
   return [
     `You receive ${n} image${n > 1 ? 's' : ''}. The FIRST image is an approved photorealistic photograph of the product(s) with EMPTY bins. EDIT this photograph: keep every product, unit, bin, profile, frame, wall and floor, the materials, the lighting, the camera angle, perspective and framing exactly as they are – the result must look like the same photograph with things added.`,
@@ -95,6 +95,8 @@ function editPrompt(description, background, brief, labels, structure, masked) {
     brief ? 'Anything the brief puts "in the bins" goes INSIDE the bins that already exist, behind their clear fronts; it never creates new bins or changes how many there are. If something cannot be done without changing the products, leave it out.' : '',
     'New items get the same lighting as the photograph, with natural contact shadows.',
     masked ? 'Only the inside of the bins may change (the masked area): fill it with the contents, sitting naturally inside each bin behind its clear front; everything outside stays exactly as it is.' : '',
+    // items only (ארקליות): the page lays the items on the approved empty photo itself, so nothing of the bin can change
+    itemsOnly ? 'OUTPUT ONLY THE ITEMS – this overrides everything above: draw ONLY the contents (the items), exactly where they lie inside the bin of the input photograph, at the same scale, perspective and light. EVERYTHING ELSE MUST BE FULLY TRANSPARENT in the output: do NOT draw the bin itself – no walls, no inner walls, no floor, no rim, no dividers, no label, no background, no shadow outside the items. The result is a cut-out layer of the items alone that will be placed on the input photograph.' : '',
   ].filter(Boolean).join('\n');
 }
 
@@ -167,7 +169,7 @@ export default async function handler(req, res) {
   const mk = /^data:image\/png;base64,(.+)$/.exec(String(req.body?.mask || ''));
   if (mk) form.append('mask', new Blob([Buffer.from(mk[1], 'base64')], { type:'image/png' }), 'mask.png');
   const promptText = stage === 'edit'
-    ? editPrompt(String(description).slice(0, 2000), background, brief, labels, structure, !!mk)
+    ? editPrompt(String(description).slice(0, 2000), background, brief, labels, structure, !!mk, !!req.body?.itemsOnly)
     : prompt(String(description).slice(0, 2000), background, lighting, brief, labels, structure, productRef, stage, !!req.body?.shadow);
   form.append('prompt', promptText);
   const gImages = [[`image/${m[1]}`, m[2]], ...refs.map(rm => [`image/${rm[1]}`, rm[2]]), ...(productRef ? [[`image/${pm[1]}`, pm[2]]] : [])];
@@ -200,7 +202,7 @@ export default async function handler(req, res) {
     // with a list of the units expected (shots on steps): a second, BLIND count – it does not see the expected layout, so it cannot just repeat it
     const expect = Array.isArray(req.body?.expect) ? req.body.expect.map(n => Math.round(+n)).filter(n => n > 0 && n < 100).slice(0, 30) : [];
     const late = Date.now() - t0 >= 220000;
-    const [check, blind] = late ? [{ ok:null, detail:'time' }, null] : await Promise.all([
+    const [check, blind] = late || req.body?.itemsOnly ? [{ ok:null, detail:late ? 'time' : 'items only' }, null] : await Promise.all([
       checkCount(image, out, structure, productRef ? TILTBIN_REF : null, stage === 'edit', !!req.body?.frame),
       expect.length > 1 ? blindCount(out) : null]);
     if (blind && blind.units) {
