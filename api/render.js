@@ -44,7 +44,7 @@ function prompt(description, background, lighting, brief, labels, structure, pro
     brief && stage !== 'base' ? 'Anything the brief puts "in the bins" goes INSIDE the bins that already exist, behind their clear fronts; it never creates new bins or changes how many there are. If something cannot be done without changing the count, leave it out.' : '',
     'Make the materials real: matte powder-coated / injection-moulded light grey RAL 7035 plastic, crystal-clear polystyrene bins with real refraction, subtle reflections and slightly brighter edges where the plastic is thick, brushed metal where there is metal.',
     background === 'transparent'
-      ? 'Isolated product with a fully transparent background, no floor and no shadow outside the object.'
+      ? 'Isolated product on a fully transparent background with a soft, natural, semi-transparent contact shadow on the ground directly under and just around it, cast from the light described (the shadow stays; no floor, no background – everything else fully transparent).'
       : /BACKGROUND/.test(brief) ? 'Build the background and surroundings as the brief describes, around the product exactly where it stands, with natural contact shadows.'
       : 'Seamless light grey-white studio background with a soft natural contact shadow under the product.',
     `Lighting: ${lighting || 'soft, even professional catalogue lighting.'}`,

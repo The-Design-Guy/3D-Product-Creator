@@ -253,13 +253,14 @@ async function heroShot(req, res, text) {
       understood:{ type:'string', description:'one short Hebrew sentence: what will be done' },
       question:nul({ type:'string', description:'ONLY when the request cannot be done with the lists given or is truly ambiguous (which product?): one short Hebrew question; then ops = [] and set all null' }),
       ops:{ type:'array', items:op },
-      set:{ type:'object', additionalProperties:false, required:['family', 'variants', 'layout', 'ratio', 'angle', 'contents', 'photographer', 'name', 'notes'], properties:{
+      set:{ type:'object', additionalProperties:false, required:['family', 'variants', 'layout', 'ratio', 'angle', 'contents', 'contents_text', 'photographer', 'name', 'notes'], properties:{
         family:nul({ type:'string', enum:famNames, description:'ONLY when the user explicitly asks for a different product family / a new shot of another family ("תחליף ל…", "צילום חדש של…"). Putting or moving a product is NEVER a family change.' }),
         variants:nul({ type:'array', items:{ type:'string', enum:allVars.length ? allVars : ['-'] }, description:'only with family, or "only these products" – rebuilds the shot' }),
         layout:nul({ type:'string', enum:['row', 'steps', 'group'], description:'only to rebuild the whole arrangement' }),
         ratio:nul({ type:'string', enum:['4:5', '1:1', '3:2', '16:9', '9:16'] }),
         angle:nul({ type:'string', enum:['tq', 'low', 'front'] }),
-        contents:nul({ type:'string', enum:['empty', 'med', 'ind', 'tech'] }),
+        contents:nul({ type:'array', items:{ type:'string', enum:['empty', 'ind', 'med', 'tech'] }, description:'which contents to shoot (each one is a render): empty, ind = industrial, med = medical, tech = electronics. Only when asked.' }),
+        contents_text:nul({ type:'string', description:'a content the user describes that is not one of the four ("ברגים צבעוניים") – in their words' }),
         photographer:nul({ type:'string', enum:PH, description:'frame = Noah Vale (symmetric, eye level, soft warm), motion = Kai Nakamura (low diagonal, dynamic), depth = Amara Diallo (close detail, shallow focus), street = Omar Khalil (low angle, real industrial space, hard daylight), light = Lena Vasquez (backlight, glow, haze)' }),
         name:nul({ type:'string' }), notes:nul({ type:'string', description:'wishes for the render that are not actions above, in English' }) } },
       render:{ type:'boolean', description:'true ONLY for an explicit request to render / shoot now: "תרנדר", "לך על זה", "תצלם", "go for it"' },
@@ -271,6 +272,7 @@ async function heroShot(req, res, text) {
     'Identify products by their label in the list ("רב תא 6" = the product whose label says 6; "הגדול" = the tallest; "השמאלי" = the first). If two fit equally, ask.',
     'NEVER change the family because a product name was said – a product name means a product IN the shot. Change family only when explicitly asked for another family or a new shot.',
     'Use set only for what was asked; everything else null. Photographers: "נוח" / Noah / "סימטרי קלאסי" = frame; "קאי" / Kai / "דינמי" = motion; "אמארה" / Amara / "תקריב" = depth; "עומר" / Omar / "במחסן אמיתי" = street; "לנה" / Lena / "אור אחורי" = light.',
+    'If current.single_product is true the shot holds ONE product only (only tilt-bin units and pick bins are shot as a family): "add" / "another" means REPLACE it with that variant (op add); never put two products in it.',
     'render = true only for an explicit request to render now.',
   ].join('\n');
   const user = `The shot now: ${JSON.stringify(shot)}\nCurrent choices: ${JSON.stringify(cur)}\nFamilies and their variants: ${JSON.stringify(fams)}\nRequest: ${text}`;
