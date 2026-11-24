@@ -149,24 +149,53 @@ export default async function handler(req, res) {
   form.append('output_compression', '95');
   form.append('quality', QUALITY);
   form.append('size', size);
+  form.append('input_fidelity', 'high');          // stay as close as possible to the input image (a model that does not know it: sent again without it)
 
   try {
-    const r = await fetch('https://api.openai.com/v1/images/edits', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-      body: form,
-    });
-    const j = await r.json();
+    const call = () => fetch('https://api.openai.com/v1/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` }, body: form });
+    let r = await call(), j = await r.json();
+    if (!r.ok && /input_fidelity/i.test(j.error?.message || '')) { form.delete('input_fidelity'); r = await call(); j = await r.json(); }
     if (!r.ok) return res.status(502).json({ error: j.error?.message || `OpenAI error ${r.status}` });
     const b64 = j.data?.[0]?.b64_json;
     if (!b64) return res.status(502).json({ error: 'OpenAI returned no image' });
     const out = `data:image/webp;base64,${b64}`;
     // count check: compare the bins in the result with the 3D view (skipped when time is short)
-    const check = Date.now() - t0 < 220000 ? await checkCount(image, out, structure, productRef ? TILTBIN_REF : null, stage === 'edit', !!req.body?.frame) : { ok:null, detail:'time' };
+    // with a list of the units expected (shots on steps): a second, BLIND count – it does not see the expected layout, so it cannot just repeat it
+    const expect = Array.isArray(req.body?.expect) ? req.body.expect.map(n => Math.round(+n)).filter(n => n > 0 && n < 100).slice(0, 30) : [];
+    const late = Date.now() - t0 >= 220000;
+    const [check, blind] = late ? [{ ok:null, detail:'time' }, null] : await Promise.all([
+      checkCount(image, out, structure, productRef ? TILTBIN_REF : null, stage === 'edit', !!req.body?.frame),
+      expect.length > 1 ? blindCount(out) : null]);
+    if (blind && blind.units) {
+      const a = [...expect].sort((x, y) => x - y), b = [...blind.units].sort((x, y) => x - y);
+      const same = a.length === b.length && a.every((n, i) => Math.abs(n - b[i]) <= 1);
+      check.blind = blind.units;
+      if (!same) { check.ok = false; check.detail = [`בספירה עיוורת נמצאו ${b.length} יחידות (${blind.units.join(', ')}) במקום ${a.length} (${expect.join(', ')})`, check.ok === false ? check.detail : ''].filter(Boolean).join(' · '); }
+    }
     return res.status(200).json({ image: out, check });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
+}
+
+// ---- blind count: the result alone, no layout to lean on ----
+async function blindCount(result) {
+  const schema = { type:'object', additionalProperties:false, required:['units'], properties:{ units:{ type:'array', items:{ type:'object', additionalProperties:false, required:['where', 'bins'],
+    properties:{ where:{ type:'string', description:'where the unit is, e.g. "lowest step, front"' }, bins:{ type:'integer', description:'number of clear bins (drawers) side by side in this unit' } } } } } };
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 45000);
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST', signal:ctl.signal,
+      headers:{ Authorization:`Bearer ${process.env.OPENAI_API_KEY}`, 'content-type':'application/json' },
+      body:JSON.stringify({ model:CHECK_MODEL, temperature:0, response_format:{ type:'json_schema', json_schema:{ name:'blind_units', strict:true, schema } },
+        messages:[{ role:'user', content:[
+          { type:'text', text:'This photo shows storage units: each unit is one grey/white plastic housing with a single horizontal row of clear tilt-out bins (drawers). List EVERY unit you can see, from the lowest/front to the highest/back, and count the bins in each unit one by one, carefully. Do not guess and do not assume a pattern – count only what is actually in the photo.' },
+          { type:'image_url', image_url:{ url:result, detail:'high' } } ] }] }) });
+    clearTimeout(t);
+    const j = await r.json(); if (!r.ok) return null;
+    const v = JSON.parse(j.choices?.[0]?.message?.content || '{}');
+    return Array.isArray(v.units) ? { units:v.units.map(u => u.bins).filter(n => n > 0) } : null;
+  } catch (e) { return null; }
 }
 
 // ---- bin count check ----
