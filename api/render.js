@@ -202,7 +202,7 @@ export default async function handler(req, res) {
     // with a list of the units expected (shots on steps): a second, BLIND count – it does not see the expected layout, so it cannot just repeat it
     const expect = Array.isArray(req.body?.expect) ? req.body.expect.map(n => Math.round(+n)).filter(n => n > 0 && n < 100).slice(0, 30) : [];
     const late = Date.now() - t0 >= 220000;
-    const [check, blind] = late || req.body?.itemsOnly ? [{ ok:null, detail:late ? 'time' : 'items only' }, null] : await Promise.all([
+    const [check, blind] = late || req.body?.itemsOnly || req.body?.noCheck ? [{ ok:null, detail:late ? 'time' : 'items only' }, null] : await Promise.all([
       checkCount(image, out, structure, productRef ? TILTBIN_REF : null, stage === 'edit', !!req.body?.frame),
       expect.length > 1 ? blindCount(out) : null]);
     if (blind && blind.units) {
