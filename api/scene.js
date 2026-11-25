@@ -63,6 +63,7 @@ export default async function handler(req, res) {
   const models = req.body?.models && typeof req.body.models === 'object' ? req.body.models : {};
   const selected = req.body?.selected ?? null;
   const light = req.body?.light || null;
+  const looks = req.body?.looks && typeof req.body.looks === 'object' ? req.body.looks : null;   // the styles / finishes the app offers (from the client)
   const editor = req.body?.context === 'product_editor';
   if (req.body?.context === 'hero') return heroShot(req, res, text);
 
@@ -145,9 +146,16 @@ export default async function handler(req, res) {
         texts:{ type:'array', items:{ type:'string' }, description:'what to write, in the user\'s words (Hebrew as said), short (≤ 40 chars each); empty = keep the texts it has (with mode text and no texts the labels show the product\'s contents)' },
         per_label:{ type:'boolean', description:'true = texts[0] on label 1, texts[1] on label 2 … ("על התא הראשון…"); false = the texts are spread over all its labels, each over a run of neighbours' },
         clear_texts:{ type:'boolean', description:'true = erase the texts written before' } } }),
-      room:nul({ type:'object', additionalProperties:false, required:['width_m', 'depth_m', 'back', 'left', 'right', 'front'], properties:{
-        width_m:{ type:'number' }, depth_m:{ type:'number' }, back:{ type:'boolean' }, left:{ type:'boolean' }, right:{ type:'boolean' }, front:nul({ type:'boolean' }) } }),
-      opening:nul({ type:'object', additionalProperties:false, required:['action', 'index', 'kind', 'type', 'wall', 'width_cm', 'height_cm', 'offset_cm', 'sill_cm'], properties:{
+      room:nul({ type:'object', additionalProperties:false, required:['width_m', 'depth_m', 'back', 'left', 'right', 'front', 'height_m', 'floor', 'walls_look'], properties:{
+        width_m:{ type:'number' }, depth_m:{ type:'number' }, back:{ type:'boolean' }, left:{ type:'boolean' }, right:{ type:'boolean' }, front:nul({ type:'boolean' }),
+        height_m:nul({ type:'number', description:'ceiling height; null = keep' }),
+        floor:nul({ type:'string', description:'a floor key from Looks.floors; null = keep' }),
+        walls_look:nul({ type:'array', description:'the finish of walls (only the walls the user talked about)', items:{ type:'object', additionalProperties:false, required:['wall', 'kind', 'tint'], properties:{
+          wall:{ type:'string', enum:['back', 'left', 'right', 'front', 'all'] }, kind:{ type:'string', description:'a key from Looks.walls' }, tint:nul({ type:'string', description:'a tint key from that wall kind\'s tints; null = its first' }) } } }) } }),
+      opening:nul({ type:'object', additionalProperties:false, required:['action', 'index', 'kind', 'type', 'wall', 'width_cm', 'height_cm', 'offset_cm', 'sill_cm', 'style', 'tint', 'open'], properties:{
+        style:nul({ type:'string', description:'a style key from Looks.styles["<kind>.<type>"] (e.g. door.single → white / oak / charcoal / glazed); null = keep / plain' }),
+        tint:nul({ type:'string', description:'a colour key from Looks.tints (white, oak, walnut, anth, silver, black, grey…); null = keep' }),
+        open:nul({ type:'boolean', description:'show this door / window open (true) or closed (false) in the 3D view' }),
         action:{ type:'string', enum:['add', 'set', 'remove'] },
         index:nul({ type:'integer', description:'set / remove: the opening\'s index from room.openings (null = the last one of that kind / wall)' }),
         kind:nul({ type:'string', enum:['door', 'window'] }),
@@ -156,10 +164,13 @@ export default async function handler(req, res) {
         width_cm:nul({ type:'number' }), height_cm:nul({ type:'number' }),
         offset_cm:nul({ type:'number', description:'distance from the corner: on the back / front wall from the LEFT wall, on the side walls from the BACK wall; null = in the middle of the wall' }),
         sill_cm:nul({ type:'number', description:'window: height of its bottom above the floor' }) } }),
-      obstacle:nul({ type:'object', additionalProperties:false, required:['action', 'index', 'kind', 'x_cm', 'z_cm', 'width_cm', 'depth_cm', 'height_cm'], properties:{
+      obstacle:nul({ type:'object', additionalProperties:false, required:['action', 'index', 'kind', 'x_cm', 'z_cm', 'width_cm', 'depth_cm', 'height_cm', 'style', 'axis', 'from_floor_cm'], properties:{
+        style:nul({ type:'string', description:'a style key from Looks.styles["obst.<kind>"] (pipes: obst.pipeV for vertical, obst.pipeH for horizontal); null = plain' }),
+        axis:nul({ type:'string', enum:['y', 'x', 'z'], description:'pipe: y = vertical, x = horizontal across the room, z = horizontal along its depth; gypsum: x / z' }),
+        from_floor_cm:nul({ type:'number', description:'elec / fire / radiator / horizontal pipe / tap: height of its bottom (pipe / tap: its centre) above the floor' }),
         action:{ type:'string', enum:['add', 'set', 'remove', 'clear'], description:'clear = remove every obstacle of that kind (kind null = all)' },
         index:nul({ type:'integer', description:'set / remove: its index from room.obstacles (1-based; null = the last one of that kind)' }),
-        kind:nul({ type:'string', enum:['step', 'column', 'pipe', 'gypsum', 'tap'], description:'step = a floor-coloured display step / plinth (הגבהה, מדרגה, במה, פודסט) that products stand on; column = עמוד; pipe = vertical צינור; gypsum = new gypsum wall (קיר גבס); tap = ברז' }),
+        kind:nul({ type:'string', enum:['step', 'column', 'pipe', 'gypsum', 'tap', 'elec', 'fire', 'radiator'], description:'step = a display step / plinth or a short flight of stairs (הגבהה, מדרגה, במה, פודסט); column = עמוד; pipe = צינור (axis y vertical, x / z horizontal); gypsum = gypsum / drywall partition or half-wall (קיר גבס, חצי קיר); tap = ברז; elec = electrical / utility cabinet or panel (ארון חשמל, לוח חשמל); fire = fire-hose cabinet (עמדת כיבוי אש); radiator = רדיאטור' }),
         x_cm:nul({ type:'number', description:'its CENTRE from the left wall' }), z_cm:nul({ type:'number', description:'its CENTRE from the back wall' }),
         width_cm:nul({ type:'number', description:'size along x (gypsum: its length, running across the room)' }), depth_cm:nul({ type:'number', description:'size along z' }),
         height_cm:nul({ type:'number' }) } }),
@@ -195,6 +206,8 @@ export default async function handler(req, res) {
     '- Names: products, openings and obstacles may carry a name the user gave them (name). When the user refers to something by that name ("הדלת של המחסן", "העמדה של רוני"), act on that one.',
     '- opening: doors and windows in the walls (room.openings lists the ones there are). "תוסיף דלת כפולה ברוחב 1.6 בקיר השמאלי" → add, kind door, type double, wall left, width_cm 160. Sizes the user did not say stay null (the app uses the type\'s standard size). The app never places products in front of doors or windows.',
     '- obstacle: columns, pipes, gypsum walls, taps and display STEPS (room.obstacles lists them, 1-based). A step ("הגבהה", "מדרגה", "במה", "פודסט", "על הגבהה של הרצפה") is a box in the floor\'s own colour that products stand ON – for catalogue photos. To put a product on a step give its add / move_to x_cm, z_cm INSIDE the step (the app lifts it onto the top). "חלקן על הגבהה" → 2–3 steps of different heights (e.g. 10, 20, 35 cm), each a little wider / deeper than the products on it, some products on them and the rest on the floor next to / in front of them, all close together as one composition.',
+    '- LOOKS: the room\'s finishes and the look of each door, window and obstacle come from Looks (below): floors, wall kinds (with their tints), styles per "<kind>.<type>" (each with its Hebrew name), and colour tints. Match the user\'s words to the Hebrew names ("רצפת בטון" → floor concrete; "קיר לבנים" → walls_look kind brick; "חלון נטוי" → window std style tilt; "דלת אלון" → door single style oak; "צינור מיזוג לאורך התקרה" → pipe axis x style hvac; "ארון חשמל" → elec; "רדיאטור ישן" → radiator style iron). Use only keys that exist in Looks. When a whole space is described ("מחסן תעשייתי", "חנות בוטיק"), choose fitting finishes yourself: e.g. warehouse → floor epoxy or concrete, walls metal / blockframe, steel I-beam columns, horizontal galvanised pipes, a tall electrical cabinet, a fire-hose cabinet; boutique → floor deck / tiles, white plain walls, oak or glazed doors, a storefront with doors.',
+    '- Placement of fixed elements: cabinets, fire cabinets, radiators and taps stand AGAINST a wall (z_cm = half their depth for the back wall; x_cm near 0 / the room width for the side walls); keep them clear of doors and windows; horizontal pipes run high (from_floor_cm 240–300) close to a wall; columns stand in the room on a grid, not in front of doors.',
     '- photo: a catalogue / product picture ("תמונה לקטלוג", "בתמונה 4:5", "צילום מוצר") → photo with the ratio (default 4:5) and view (default front); it frames the camera on the products and presets the render ratio. Put it LAST, after the products. For a catalogue shot also clear the scene first if the user asks for only these products, keep the room with no side walls, and use light type studio.',
     '- light: the lighting of the scene (only the fields the user mentioned; the rest null). "תאורת סטודיו משעה 5" → type studio, clock 5. "פחות חזקה ב-20%" → power_change_pct -20. "צל רך יותר" / "צל רק יותר" (a common mis-hearing of רך) → soft softer.',
     '- design: planning a WHOLE space or AREAS / ZONES – "תיצור לי מרחב / אולם / חנות / מחסן…", "תעשה לי אזור של עמדות עם מחיצות", "תכנן לי את החדר", "תסדר את החדר", or changing such zones ("תזיז את אזור העמדות לקיר השמאלי", "עוד שתי עמדות", "בלי העגלות" when the products are in a zone). Then return ONE op design with text = the user\'s full request, and no other op. Single products ("תוסיף מחיצה", "תזיז את זה") are NOT design.',
@@ -207,7 +220,7 @@ export default async function handler(req, res) {
     ] : ['Never use commit.']),
     'Every field that is not used by an op is null. Use only the product ids listed. Do not invent things the user did not ask for.',
   ].join('\n');
-  const user = `Room now: ${JSON.stringify(room)}\nLighting now: ${JSON.stringify(light)}\nSelected product id: ${selected === null ? 'none' : selected}\nProducts in the scene: ${JSON.stringify(existing)}\nSaved models per type: ${JSON.stringify(models)}\n\nRequest:\n${text}`;
+  const user = `${looks ? `Looks: ${JSON.stringify(looks)}\n` : ''}Room now: ${JSON.stringify(room)}\nLighting now: ${JSON.stringify(light)}\nSelected product id: ${selected === null ? 'none' : selected}\nProducts in the scene: ${JSON.stringify(existing)}\nSaved models per type: ${JSON.stringify(models)}\n\nRequest:\n${text}`;
   try {
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method:'POST',
