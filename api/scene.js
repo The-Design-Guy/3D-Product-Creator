@@ -17,7 +17,7 @@ Product types (type key – Hebrew name – footprint width x depth in cm with r
 - excl – "עגלת רב-תא EXCLUSIVE" / "עגלת אקסקלוסיב" – double-sided closed cart, 66 x 39, 110–150 cm high – comp (models 4,5,6,9), top (black / white ABS).
 - part – "מחיצת EXCLUSIVE מודולרית" / "מחיצה" – double-sided room-divider, width 30 + cols x 63 cm (2 cols ≈ 129, 3 ≈ 192, 4 ≈ 255, 5 ≈ 318), depth ≈ 40–60, up to 215 cm high – cols (2,3,4,5), comp (models 3,4,5,6,9), top.
 - quad – "מעמד 4 דפנות" – four-sided tilt-bin tower, ≈ 80 x 80 – comp (each level one model; 160–200 cm of bins), base (wheels / legs), top.
-- wall – "מתלה קיר" – wall rack, 60 wide, 1 deep, hangs on a wall – height_cm (60, 120 or 180), comp.
+- wall – "מתלה קיר" – wall rack, 60 wide, 1 deep, hangs on a wall – height_cm (60, 120 or 200), comp.
 - tena – "תא-נע DELUX" – closed gondola cabinet with sliding wings, 220 cm high; tena_size 4 → 127 x 63, 7 → 190 x 63, 10 → 250 x 63 – tena_size, doors (lockable sliding doors exist only for size 4 or 10).
 - smart – "תא-נע SMART" – open steel gondola rack, 135 x 68, 210 cm high.
 - tamb – "ארון מתכת מאובטח לרב תא" – 67 x 45, 195 high, tambour (roller shutter) front, a stack of tilt bins inside – comp (models 3,4,5,6,9), align (back / front).
@@ -38,7 +38,7 @@ Names people use (Hebrew speech, also with transcription mistakes):
 - unit: "רב תא", "רב-תא 5", "רבתא", "יחידה", "מגירות מתהפכות". The number after it is the model: "רב תא 6" = model 6.
 - stand: "מעמד", "מתקן", "מתקן חד צדדי" (stand_type single), "עגלה דו צדדית" / "מתקן דו צדדי" (double), "מעמד רב תא".
 - excl: "עגלת אקסקלוסיב", "עגלת EXCLUSIVE", "אקסקלוסיב" (a cart). part: "מחיצה", "מחיצת אקסקלוסיב", "מחיצת EXCLUSIVE" ("טורים" = cols; "משני הצדדים" = it is double-sided anyway).
-- quad: "מעמד 4 דפנות", "מגדל", "ארבע צדדי". wall: "מתלה קיר", "מתלי קיר" (also mis-heard as "מתחי קיר", "מטלה קיר"). "של שני מטר" / "2 מ'" = height_cm 180 (the tallest wall rack).
+- quad: "מעמד 4 דפנות", "מגדל", "ארבע צדדי". wall: "מתלה קיר", "מתלי קיר" (also mis-heard as "מתחי קיר", "מטלה קיר"). "של שני מטר" / "2 מ'" = height_cm 200.
 - arc: "ארקליות", "ארקלית 2", "אחסונית", "ארגז ליקוט". "4 ארקליות 3 בשורה" → add arc model 3, count 4, row x.
 - tena: "תא נע", "תא-נע דלוקס", "דלוקס", "DELUXE" – sized by WINGS: "דלוקס 4 כנפיים" = tena_size 4, "7 כנפיים" = 7, "10 כנפיים" = 10.
 - smart: "תא נע סמארט", "סמארט", "SMART". tamb: "ארון מאובטח", "ארון רב תא מאובטח". mtamb: "ארון תריס". mdoor: "ארון מדפים", "ארון 4 מדפים", "ארון דלתות". tech: "ארון עבודה טכני", "ארון טכני", "ארון עבודה", "ארון מגירות", "ארון סדנה".
@@ -47,7 +47,7 @@ MEDIKUP glossary (the team's own words, Hebrew / spoken / English; transcription
 - lf: "לה פורטצה" / "La Fortezza"; "לה פורטצה עם ארקליות" = lf with lafortezza.arc_mode mixed ("רק ארקלית 3" / "מלא בארקליות" = full). mtamb: "ארון תריס", "rolling door cabinet", "tambour cabinet"; "ארון תריס עם ארקליות" = mtamb with shelf_bins. mdoor: "ארון משרדי", "office cabinet", "two door office cabinet".
 - tech: "ארון טכני", "ארון כחול", "ארון 100 ס\"מ", "technical cabinet" (plain = tech_variant 1, 4 shelves); "ארון טכני עם מגירה" / "single drawer technical cabinet" = 3; "ארון טכני עם 3 מגירות" / "three drawer technical cabinet" = 4.
 - shelf: "מדפים לעומס בינוני", "מדפים", "mid-weight shelf system", "mid level shelves" ("madafim le'omes beynoni"). lock: "לוקר", "לוקר 6 תאים", "ארונית שישה לוקרים", "6 door locker".
-- wall: "מתלה קיר", "מתלה לרב תא", "wall unit", "wall mount tilt bin unit"; "מתלה קיר 60 / 120 / 180" = height_cm 60 / 120 / 180 (wall racks come only in these 3 heights; "200" / "2 מטר" = 180).
+- wall: "מתלה קיר", "מתלה לרב תא", "wall unit", "wall mount tilt bin unit"; "מתלה קיר 60 / 120 / 200" = height_cm 60 / 120 / 200 (wall racks come only in these 3 heights; 180 is a STAND height, not a wall rack).
 - quad: "מעמד 4 דפנות", "מעמד ארבע דפנות" ("ma'amad arba dfanot"), "four sided stand".
 - stand heights: "מעמד 180" / "מעמד 200" (also "116") = height_cm 180 / 200 / 116.
 - stand: "מעמד חד צדדי" / "one sided stand" = stand_type single; "עגלה חד צדדית" / "one sided cart" = single on wheels; "על עמודים" / "on legs" = base legs; "על גלגלים" / "on wheels" = base wheels. excl: "עגלת אקסקלוסיב", "exclusive cart", "עגלה דו צדדית מיושרת לחזית". part: "מחיצת אקסקלוסיב", "מחיצת אחסון", "exclusive partition".
