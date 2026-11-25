@@ -10,8 +10,11 @@ const EXT = { 'audio/webm':'webm', 'audio/mp4':'mp4', 'audio/x-m4a':'m4a', 'audi
 const HINT_HE = 'שיחה על תכנון אחסון ב-HISTORGIC של MEDIKUP. מילים שיכולות להופיע: רב תא, רב-תא 2, 3, 4, 5, 6, 9, מגירות מתהפכות, ארקלית, ארקליות, '
   + 'מעמד, מעמד 4 דפנות, עגלה, עגלת רב תא, ארון, ארון תריס, ארון 2 דלתות, ארון מנעול, תא נע, מדפים, מדף בעומס בינוני, מתקן קיר, '
   + 'שולחן עבודה, עמדת מחשב, כיסא, עציץ, קיר אחורי, קיר שמאלי, קיר ימני, קיר קדמי, ויטרינה, דלת הזזה, מעבר, עמוד, צינור, קיר גבס, '
-  + 'סנטימטר, מטר, מילימטר, תוסיף, תמחק, תזיז, תסובב, תקרב, תרחיק, צמוד, ליד, מול, באמצע.';
-const HINT_EN = 'Storage planning in HISTORGIC by MEDIKUP: tilt-bin units, pick bins, stands, carts, cabinets, tambour cabinet, shelving, wall rack, desk, back wall, left wall, right wall, front wall, shop window.';
+  + 'רצפה, אפוקסי, בטון חשוף, גומי כחול, פח מרוג, דק עץ, אריחים, קירות, פח גלי, איסכורית, בלוקים, לבנים, בטון יצוק, גובה תקרה, '
+  + 'חלון נטוי, קיפ, קלרסטורי, טרנסום, חלון גבוה, דלת כפולה, דלת אלון, דלת זכוכית, משקוף, קשת, ארון חשמל, לוח חשמל, עמדת כיבוי אש, '
+  + 'רדיאטור, תעלת מיזוג, צינור אופקי, צינור אנכי, קורת I, ברז, מדרגות, במה, חצי קיר, אנתרציט, אגוז, כסוף, תפתח, תסגור, '
+  + 'סנטימטר, מטר, מילימטר, תוסיף, תמחק, תזיז, תסובב, תקרב, תרחיק, צמוד, ליד, מול, באמצע, בפינה, מתחת ל, מעל.';
+const HINT_EN = 'Storage planning in HISTORGIC by MEDIKUP: tilt-bin units, pick bins, stands, carts, cabinets, tambour cabinet, shelving, wall rack, desk, back wall, left wall, right wall, front wall, shop window, storefront, epoxy floor, exposed concrete, diamond plate, wood deck, corrugated metal, cinder block, brick, tilt window, clerestory, transom, double door, sliding door, archway, electrical cabinet, breaker panel, fire hose cabinet, radiator, HVAC duct, I-beam, faucet, steps, half wall, drywall, anthracite, walnut.';
 
 async function rawBody(req) {
   if (Buffer.isBuffer(req.body)) return req.body;
