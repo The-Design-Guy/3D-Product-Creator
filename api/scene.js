@@ -54,6 +54,7 @@ MEDIKUP glossary (the team's own words, Hebrew / spoken / English; transcription
 - wb: "שולחן טכני", "שולחן עבודה טכני", "technical table".
 - General: "עמוד" = a shelving upright / stand pole, or a room column (decide by context); "שורה" row; "טור" / "עמודה" column; "קבוצה" group; "מחיצה" partition; "אורך" length; "רוחב" width; "גובה" height; "עומק" depth; "עגלה" cart; "מדרגה/ות" step(s); "הזזה" sliding; "החייאה" emergency (e.g. "עגלת החייאה" = an emergency cart → furn is not it; say it is not in the catalogue yet).
 - NUMBERS SPOKEN AS WORDS (very common – treat exactly like the digit): אחת / אחד / one = 1; שתיים / שתים / שניים / שני / שתי / two = 2; שלוש / שלושה / שלש / three = 3; ארבע / ארבעה / four = 4; חמש / חמישה / five = 5; שש / שישה / six = 6; שבע / seven = 7; שמונה / eight = 8; תשע / תשעה / nine = 9; עשר / עשרה / ten = 10. The number right after a product name is its MODEL: "רב תא שתיים" = "רב תא 2" = unit model 2, "רב תא שלוש" = model 3, "רב תא תשע" = 9 (unit models: 2,3,4,5,6,9); "ארקלית אחת" = "ארקלית 1" = arc model 1, "ארקלית שתיים" = 2, "ארקלית שלוש" = 3, "ארקלית ארבע" = 4 (arc models 1–4). The same in comp ("שלוש שורות של רב תא חמש" = comp [{model:5,count:3}]), in counts ("תוסיף שתי ארקליות שלוש" = 2 x arc model 3: the number BEFORE the name is how many, the number AFTER it is the model), in tena wings ("דלוקס עשר כנפיים" = 10) and in English ("tilt bin unit five", "pick bin two"). Transcription may glue them ("רבתא שתיים", "ארקלית2") – same meaning.
+- EXTRAS (furn) looks – furn_look by furn_kind: desk: oak ("אלון", oak top on a charcoal frame), industrial ("תעשייתי"), scandi ("סקנדינבי", wooden legs), white ("לבן"); furn_drawers true = "עם מגירות" / "with drawers". chair: mesh ("רשת", black), exec ("מנהלים", "עור", leather), grey ("בד אפור"), shell ("מעטפת לבנה"). screen ("מסך", "מוניטור", "monitor"): std ("27"), slim ("24"), ultra ("רחב"), curved ("מעוקל"), dual ("שני מסכים", "מסך כפול"); a screen is put on the nearest desk by the app – just add it. plant: palm ("דקל"), monstera / monstera2 / monstera3 / monstera4 ("מונסטרה", white / concrete / round / stone pot), cactus ("קקטוס"), snake ("סנסווריה", "לשון חמותי"), fern ("שרך"), succulent ("סוקולנטים"), tulips ("צבעונים", "פרחים").
 - NOT AVAILABLE YET (no type exists): "טונון" / "טופ" / "Top" trays, "מודול 60X40" / "מגש 60 על 40", "לוקר כפול" / "2 door locker", "מדפי רשת", "עגלות רפואיות". Do not substitute another product; return no op for it and say in the reply that it is coming soon.
 Rows of tilt bins: "השורות הראשונות" / "השורה הראשונה" = the BOTTOM rows (counted from the floor up). Bigger models always sit lower.
 To fill up to a height: give the fixed part in comp (e.g. "three first rows #5" → comp [{model:5,count:3}]) and fill_model = the model for "the rest" + fill_to_cm = the total height asked ("עד גובה 2 מטר" → 200). The app computes how many fit. Use fill_model also for "full of #6" / "רק רב תא 6" (comp empty, fill_model 6).
@@ -82,7 +83,7 @@ export default async function handler(req, res) {
 
   const settings = nul({
     type:'object', additionalProperties:false,
-    required:['stand_type', 'base', 'height_cm', 'comp', 'arc', 'bin_layout', 'shelf_bins', 'fill_model', 'fill_to_cm', 'wings', 'cols', 'top', 'tena_size', 'doors', 'unit_bins', 'md_color', 'align', 'tech_variant', 'door_bins', 'door_acc', 'furn_kind', 'furn_w_cm', 'wb_variant', 'wb_tools', 'wb_top', 'shelving', 'lafortezza'],
+    required:['stand_type', 'base', 'height_cm', 'comp', 'arc', 'bin_layout', 'shelf_bins', 'fill_model', 'fill_to_cm', 'wings', 'cols', 'top', 'tena_size', 'doors', 'unit_bins', 'md_color', 'align', 'tech_variant', 'door_bins', 'door_acc', 'furn_kind', 'furn_w_cm', 'furn_look', 'furn_drawers', 'wb_variant', 'wb_tools', 'wb_top', 'shelving', 'lafortezza'],
     properties:{
       stand_type:nul({ type:'string', enum:['single', 'double'] }),
       base:nul({ type:'string', enum:['wheels', 'legs'] }),
@@ -109,7 +110,9 @@ export default async function handler(req, res) {
       door_acc:nul({ type:'string', enum:['tools', 'bins', 'both', 'none'], description:'tech (variants 3 / 4): what hangs inside the doors – tools = hand tools (screwdrivers, spanners), bins = ארקליות 4, both (default), none' }),
       door_bins:nul({ type:'object', additionalProperties:false, required:['left', 'right'], description:'tech (variants 3 / 4): ארקלית 4 hanging on each door', properties:{ left:{ type:'integer' }, right:{ type:'integer' } } }),
       align:nul({ type:'string', enum:['back', 'front'] }),
-      furn_kind:nul({ type:'string', enum:['station', 'desk', 'chair', 'plant'] }),
+      furn_kind:nul({ type:'string', enum:['station', 'desk', 'chair', 'plant', 'screen'] }),
+      furn_look:nul({ type:'string', enum:['oak', 'industrial', 'scandi', 'white', 'mesh', 'exec', 'grey', 'shell', 'std', 'slim', 'ultra', 'curved', 'dual', 'palm', 'monstera', 'monstera2', 'monstera3', 'monstera4', 'cactus', 'snake', 'fern', 'succulent', 'tulips'], description:'the look of a desk / chair / screen / plant (see EXTRAS)' }),
+      furn_drawers:nul({ type:'boolean', description:'desk only: a 3-drawer pedestal under it' }),
       furn_w_cm:nul({ type:'integer', enum:[120, 150, 160, 200] }),
       wb_variant:nul({ type:'integer', enum:[1, 2, 3] }),
       wb_tools:nul({ type:'boolean' }),
