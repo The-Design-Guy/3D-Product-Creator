@@ -44,10 +44,12 @@ Names people use (Hebrew speech, also with transcription mistakes):
 - smart: "תא נע סמארט", "סמארט", "SMART". tamb: "ארון מאובטח", "ארון רב תא מאובטח". mtamb: "ארון תריס". mdoor: "ארון מדפים", "ארון 4 מדפים", "ארון דלתות". tech: "ארון עבודה טכני", "ארון טכני", "ארון עבודה", "ארון מגירות", "ארון סדנה".
 MEDIKUP glossary (the team's own words, Hebrew / spoken / English; transcription may spell them phonetically, e.g. "ARKALIT", "TA NA", "ARON TECHNI"):
 - arc: "ארקלית", "אחסונית", "ארגז ליקוט", "pick bin", "arkalit". tena / smart: "תא נע" ("ta na", "gondola"); "תא נע סמארט" / "smart" = smart (the blue one); "תא נע דלוקס" / "deluxe" = tena (the grey one).
-- lf: "לה פורטצה", "לה פורטצה עם ארקליות" (lf with pick bins on the shelves when supported, otherwise say so). mtamb: "ארון תריס", "rolling door cabinet", "tambour cabinet"; "ארון תריס עם ארקליות" = mtamb with shelf_bins. mdoor: "ארון משרדי", "office cabinet", "two door office cabinet".
+- lf: "לה פורטצה" / "La Fortezza"; "לה פורטצה עם ארקליות" = lf with lafortezza.arc_mode mixed ("רק ארקלית 3" / "מלא בארקליות" = full). mtamb: "ארון תריס", "rolling door cabinet", "tambour cabinet"; "ארון תריס עם ארקליות" = mtamb with shelf_bins. mdoor: "ארון משרדי", "office cabinet", "two door office cabinet".
 - tech: "ארון טכני", "ארון כחול", "ארון 100 ס\"מ", "technical cabinet" (plain = tech_variant 1, 4 shelves); "ארון טכני עם מגירה" / "single drawer technical cabinet" = 3; "ארון טכני עם 3 מגירות" / "three drawer technical cabinet" = 4.
 - shelf: "מדפים לעומס בינוני", "מדפים", "mid-weight shelf system", "mid level shelves" ("madafim le'omes beynoni"). lock: "לוקר", "לוקר 6 תאים", "ארונית שישה לוקרים", "6 door locker".
-- wall: "מתלה קיר", "מתלה לרב תא", "wall unit", "wall mount tilt bin unit"; "מתלה קיר 60 / 120 / 200" = height_cm 60 / 120 / 200 ("מתלה 180" is heard for the tall one → 200).
+- wall: "מתלה קיר", "מתלה לרב תא", "wall unit", "wall mount tilt bin unit"; "מתלה קיר 60 / 120 / 200" = height_cm 60 / 120 / 200 (wall racks come only in these 3 heights).
+- quad: "מעמד 4 דפנות", "מעמד ארבע דפנות" ("ma'amad arba dfanot"), "four sided stand".
+- stand heights: "מעמד 180" / "מעמד 200" (also "116") = height_cm 180 / 200 / 116.
 - stand: "מעמד חד צדדי" / "one sided stand" = stand_type single; "עגלה חד צדדית" / "one sided cart" = single on wheels; "על עמודים" / "on legs" = base legs; "על גלגלים" / "on wheels" = base wheels. excl: "עגלת אקסקלוסיב", "exclusive cart", "עגלה דו צדדית מיושרת לחזית". part: "מחיצת אקסקלוסיב", "מחיצת אחסון", "exclusive partition".
 - wb: "שולחן טכני", "שולחן עבודה טכני", "technical table".
 - General: "עמוד" = a shelving upright / stand pole, or a room column (decide by context); "שורה" row; "טור" / "עמודה" column; "קבוצה" group; "מחיצה" partition; "אורך" length; "רוחב" width; "גובה" height; "עומק" depth; "עגלה" cart; "מדרגה/ות" step(s); "הזזה" sliding; "החייאה" emergency (e.g. "עגלת החייאה" = an emergency cart → furn is not it; say it is not in the catalogue yet).
@@ -117,10 +119,11 @@ export default async function handler(req, res) {
         levels:nul({ type:'integer', description:'number of shelf levels (default 4), spread evenly' }),
         back_to_back:nul({ type:'boolean', description:'a second identical run back to back behind it (double depth) – very common' }),
         corner:nul({ type:'string', enum:['none', 'left', 'right'], description:'a second run turning 90° toward the front at that end (L shape); its bays = the first bay' }) } }),
-      lafortezza:nul({ type:'object', additionalProperties:false, required:['bays_cm', 'depth_cm', 'height_cm', 'shelves'], description:'lf (LA FORTEZZA) only', properties:{
+      lafortezza:nul({ type:'object', additionalProperties:false, required:['bays_cm', 'depth_cm', 'height_cm', 'shelves', 'arc_mode'], description:'lf (LA FORTEZZA) only', properties:{
         bays_cm:{ type:'array', items:{ type:'integer', enum:[97, 117] }, description:'the bays of the row, left to right (shelf width); [] = keep' },
         depth_cm:nul({ type:'integer', enum:[30, 40, 50, 60] }), height_cm:nul({ type:'integer', enum:[200, 225, 250] }),
-        shelves:nul({ type:'integer', description:'shelves per bay, 2–8 (default 5)' }) } }),
+        shelves:nul({ type:'integer', description:'shelves per bay, 2–8 (default 5)' }),
+        arc_mode:nul({ type:'string', enum:['mixed', 'full', 'none'], description:'ארקליות on the shelves: mixed = a mixed layout of pick bins, full = only ארקלית 3, none = take them off, null = keep. "לה פורטצה עם ארקליות" with no layout given = mixed' }) } }),
     },
   });
   const bins = nul({ type:'object', additionalProperties:false, required:['face', 'rows', 'cols', 'random', 'all'], properties:{
