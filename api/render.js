@@ -56,6 +56,7 @@ function prompt(description, background, lighting, brief, labels, structure, pro
     `Product: ${description}`,
     /tilt-bin/i.test(description) ? HOLES : '',
     'Keep EVERYTHING about the object identical: geometry, proportions, number of bins and units, their order, the camera angle, framing and perspective.',
+    'CAMERA LOCKED: the photograph is taken from EXACTLY the camera of the first image – the same position, height, angle, tilt, lens (field of view) and framing. Do not move, raise, lower, rotate, zoom, straighten, re-centre or re-crop the view, and do not "correct" the perspective: every product, wall, door and floor line stays where it is in the frame. Only the background around the edges may be filled in.',
     'Do not add, remove, move or redesign any part of the product. Do not add text or logos.',
     brief
       ? 'Client brief (may be in Hebrew). Apply it ONLY to what each section names – the bin contents, the background and surroundings, props around the product – never to the product\'s shape, size, colours or construction:\n<<' + brief + '>>'
